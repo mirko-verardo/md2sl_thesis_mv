@@ -246,8 +246,6 @@ Recent conversation context:
         with open(log_file, 'a') as f:
             f.write(f"Supervisor action decision: {action}\n\n")
         
-        parser_mode = action in ["GENERATE_PARSER", "CORRECT_ERROR"]
-        
         if action == "GENERATE_PARSER":
             parser_prompt = f"""Your task is to take the user's request and convert it into a detailed, specific prompt for a C parser function generator.
 

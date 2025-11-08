@@ -1,10 +1,11 @@
 from datetime import datetime
 from pathlib import Path
+from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
 from models import CompilationCheckTool
-from general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored
+from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored
 
 
 
@@ -378,8 +379,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
             print_colored(f"\n{error_msg}", "1;31")  # Bold Red
             
             ### try to provide more detailed error information
-            import traceback
-            trace = traceback.format_exc()
+            trace = format_exc()
             print_colored("\nDetailed error information:", "1;31")
             print(trace)
             

@@ -71,7 +71,7 @@ def initialize_llm(source: str):
         )
     elif source == "google":
         #model_id = 'gemini-2.5-pro'
-        model_id = 'gemini-2.5-flash'
+        model_id = 'gemini-2.0-flash'
         #model_id = 'gemini-2.5-flash-lite'
         api_key = set_if_undefined("GOOGLE_API_KEY")
 

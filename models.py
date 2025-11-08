@@ -14,22 +14,6 @@ from utils.general import print_colored
 
 
 
-class AgentState(TypedDict):
-    """State schema for the agent graph."""
-    messages: Annotated[Sequence[BaseMessage], add]
-    user_request: str
-    supervisor_memory: list[dict]  # memory for the supervisor to track conversations and code issues
-    generator_specs: str | None
-    generator_code: str | None
-    iteration_count: int
-    max_iterations: int
-    model_source: str
-    next_step: str  # "Supervisor", "Generator", "Validator", or "FINISH"
-    parser_mode: bool  # flag to indicate if we're generating a parser or just chatting
-    session_dir: Path | None  # path to the session directory
-    log_file: Path | None  # path to the log file
-    system_metrics: "SystemMetrics" | None  # system interaction metrics
-
 class SystemMetrics:
     """Class for tracking system interactions and metrics."""
     def __init__(self):
@@ -143,7 +127,23 @@ class SystemMetrics:
             dump(json_data, f, indent=2)
         
         print_colored(f"\nMetrics saved to: {json_file}", "1;36")
-        
+
+class AgentState(TypedDict):
+    """State schema for the agent graph."""
+    messages: Annotated[Sequence[BaseMessage], add]
+    user_request: str
+    supervisor_memory: list[dict]  # memory for the supervisor to track conversations and code issues
+    generator_specs: str | None
+    generator_code: str | None
+    iteration_count: int
+    max_iterations: int
+    model_source: str
+    next_step: str  # "Supervisor", "Generator", "Validator", or "FINISH"
+    parser_mode: bool  # flag to indicate if we're generating a parser or just chatting
+    session_dir: Path | None  # path to the session directory
+    log_file: Path | None  # path to the log file
+    system_metrics: SystemMetrics | None  # system interaction metrics
+
 class ExceptionTool(BaseTool):
     """Tool that just returns the query."""
     name: str = "_Exception"

@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
+from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langgraph.graph import START, END, StateGraph
 from agents.supervisor_agent import supervisor_node
@@ -224,9 +225,8 @@ if __name__ == "__main__":
                 print(response)
                 
         except Exception as e:
-            import traceback
             print_colored(f"\nAn error occurred: {e}", "1;31")
-            print_colored(traceback.format_exc(), "1;31")
+            print_colored(format_exc(), "1;31")
             print_colored("Please try again with a different query.", "1;31")
             
     # Save final metrics
