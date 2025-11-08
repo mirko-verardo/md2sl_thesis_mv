@@ -4,8 +4,8 @@ from pathlib import Path
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from model import AgentState, requirements
-from utils import ExceptionTool, print_colored, extract_c_code, initialize_llm
+from models import AgentState, ExceptionTool
+from utils.general import requirements, print_colored, extract_c_code, initialize_llm
 
 
 
@@ -205,7 +205,7 @@ Keep your explanation concise and user-friendly.
             state["system_metrics"].complete_round()
         
         return {
-            "messages": messages + [AIMessage(content=supervisor_response, name="Supervisor")],
+            "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
             "user_request": user_request,
             "supervisor_memory": supervisor_memory,
             "generator_specs": state["generator_specs"],
@@ -283,7 +283,7 @@ Create a detailed prompt for the generator.
                 f.write(supervisor_response + "\n\n")
             
             return {
-                "messages": messages + [AIMessage(content=supervisor_response, name="Supervisor")],
+                "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
                 "user_request": user_request,
                 "supervisor_memory": supervisor_memory,
                 "generator_specs": supervisor_response,
@@ -335,7 +335,7 @@ Conversation history (for context):
                 f.write(supervisor_response + "\n\n")
             
             return {
-                "messages": messages + [AIMessage(content=supervisor_response, name="Supervisor")],
+                "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
                 "user_request": user_request,
                 "supervisor_memory": supervisor_memory,
                 "generator_specs": supervisor_response,
@@ -429,7 +429,7 @@ Keep your explanation concise and conversational, focusing on the overall assess
                 state["system_metrics"].complete_round()
             
             return {
-                "messages": messages + [AIMessage(content=supervisor_response, name="Supervisor")],
+                "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
                 "user_request": user_request,
                 "supervisor_memory": supervisor_memory,
                 "generator_specs": state.get("generator_specs"),
@@ -510,7 +510,7 @@ Recent conversation history (for context):
                 state["system_metrics"].complete_round()
             
             return {
-                "messages": messages + [AIMessage(content=supervisor_response, name="Supervisor")],
+                "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
                 "user_request": user_request,
                 "supervisor_memory": supervisor_memory,
                 "generator_specs": state.get("generator_specs"),

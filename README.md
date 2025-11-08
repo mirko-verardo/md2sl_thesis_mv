@@ -4,6 +4,14 @@
 
 - **Python**: 3.13.9
 - **Packages**: `requirements.txt`
+- **Variables**: `.env`
+    ```
+    FOLDER_PATH="your-absolute-path"
+    GOOGLE_API_KEY="your-key"
+    OPENAI_API_KEY="your-key"
+    HUGGING_FACE_API_KEY="your-key"
+    ANTHROPIC_API_KEY="your-key"
+    ```
 
 # Sam nothes (old)
 

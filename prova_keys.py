@@ -1,4 +1,4 @@
-from utils import initialize_llm
+from utils.general import initialize_llm
 
 who = "google"
 #who = "openai"
@@ -8,10 +8,7 @@ who = "google"
 llm = initialize_llm(who)
 
 messages = [
-    (
-        "system",
-        "You are a helpful assistant that translates English to Italian. Translate the user sentence.",
-    ),
+    ( "system", "You are a helpful assistant that translates English to Italian. Translate the user sentence."),
     ("human", "Hey, how are you today? Maybe it seems to work here..."),
 ]
 

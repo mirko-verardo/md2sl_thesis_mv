@@ -1,23 +1,19 @@
+import os
 from datetime import datetime
 from json import dump
 from operator import add
 from pathlib import Path
+from subprocess import run
+from tempfile import NamedTemporaryFile
 from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
-from utils import print_colored
+from langchain.tools import BaseTool
+from langchain.callbacks.manager import CallbackManagerForToolRun, AsyncCallbackManagerForToolRun
+from utils.general import print_colored
 
 
 
-### parser requirements
-requirements = """1. Input Handling: The code deals with a pointer to a buffer of bytes or a file descriptor for reading unstructured data.
-2. Internal State: The code maintains an internal state in memory to represent the parsing state that is not returned as output.
-3. Decision-Making: The code takes decisions based on the input and the internal state.
-4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
-5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
-6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)"""
-
-### define state schema
 class AgentState(TypedDict):
     """State schema for the agent graph."""
     messages: Annotated[Sequence[BaseMessage], add]
@@ -34,9 +30,8 @@ class AgentState(TypedDict):
     log_file: Path | None  # path to the log file
     system_metrics: "SystemMetrics" | None  # system interaction metrics
 
-### system metrics class for tracking interactions
 class SystemMetrics:
-    """Class to track system interactions and metrics."""
+    """Class for tracking system interactions and metrics."""
     def __init__(self):
         self.rounds = 0  # Complete rounds (user-supervisor-generator-validator)
         self.current_round = None  # Track the current round ID
@@ -139,7 +134,7 @@ class SystemMetrics:
         
         return json_data
 
-    def save_summary(self, session_dir) -> None:
+    def save_summary(self, session_dir: Path) -> None:
         """Save only the JSON metrics summary to a file."""
         json_data = self.generate_summary()
         
@@ -149,4 +144,90 @@ class SystemMetrics:
         
         print_colored(f"\nMetrics saved to: {json_file}", "1;36")
         
-        return json_file
+class ExceptionTool(BaseTool):
+    """Tool that just returns the query."""
+    name: str = "_Exception"
+    description: str = "Exception tool"
+
+    def _run(self, query: str, run_manager: CallbackManagerForToolRun | None = None) -> str:
+        return query
+
+    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
+        return query
+
+class CompilationCheckTool(BaseTool):
+    """Tool that checks if C code compiles correctly without warnings."""
+    name: str = "compilation_check"
+    description: str = """
+    This tool checks if the provided C code compiles correctly without any warnings.
+    Input should be valid C code.
+    The tool will return compilation results, including any errors or warnings.
+    Use this tool to verify that your C parser implementation is syntactically correct
+    and free of warnings before providing it to the user.
+    """
+    
+    def _run(self, query: str | dict[str, Any], run_manager: CallbackManagerForToolRun | None = None) -> str:
+        """Run the compilation check."""
+        # handle the case where query might be a dictionary
+        if isinstance(query, dict):
+            if 'query' in query:
+                query = query['query']
+            elif 'code' in query:  # Added to handle ReAct agent format
+                query = query['code']
+            else:
+                # try to get the first value if it's a different kind of dict
+                try:
+                    query = next(iter(query.values()))
+                except (StopIteration, AttributeError):
+                    return "Error: Invalid input format for compilation check"
+        
+        # make sure we have a string at this point
+        if not isinstance(query, str):
+            return f"Error: Expected string input, got {type(query).__name__}"
+            
+        # Clean the code by removing markdown delimiters:
+        # Remove ```c from the beginning of lines
+        query = query.replace("```c", "")
+        # Remove ``` from anywhere
+        query = query.replace("```", "")
+        # Trim whitespace
+        query = query.strip()
+        
+        # create a temporary file with the C code
+        with NamedTemporaryFile(suffix='.c', delete=False) as temp_file:
+            temp_file.write(query.encode('utf-8'))
+            temp_file_path = temp_file.name
+        
+        try:
+            # compile the C code with all warnings enabled and treating warnings as errors
+            # using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
+            result = run(
+                ['gcc', '-Wall', '-Wextra', '-Werror', temp_file_path, '-o', temp_file_path + '.out'],
+                capture_output=True,
+                text=True
+            )
+            
+            # prepare the response
+            if result.returncode == 0:
+                response = "Compilation successful! The code compiles without any errors or warnings."
+            else:
+                response = f"Compilation failed with the following errors or warnings:\n{result.stderr}"
+                # add the original code after the error message for easy reference
+                response += f"\n\nOriginal code:\n```c\n{query}\n```"
+            
+            return response
+        finally:
+            # clean up temporary files
+            try:
+                os.unlink(temp_file_path)
+                if os.path.exists(temp_file_path + '.out'):
+                    os.unlink(temp_file_path + '.out')
+            except Exception as e:
+                pass  # ignore cleanup errors
+    
+    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
+        """Run the compilation check asynchronously."""
+        # call the synchronous version
+        #return self._run(query, run_manager)
+        return self._run(query)
+    

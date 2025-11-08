@@ -1,24 +1,16 @@
-#import os
-#import warnings
-#import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from langchain_core.messages import HumanMessage
 from langgraph.graph import START, END, StateGraph
-
-from agents.model import AgentState, SystemMetrics
 from agents.supervisor_agent import supervisor_node
 from agents.generator_agent import generator_node
 from agents.validator_agent import validator_node
-from utils import print_colored
+from models import AgentState, SystemMetrics
+from utils.general import get_model_source_from_input, print_colored
 
-### suppress warnings
-#warnings.filterwarnings("ignore", message="divide by zero encountered in divide")
-#warnings.simplefilter(action='ignore', category=FutureWarning)
-#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-### utility functions
+
 def create_session_directory(source: str, base_path: str = "output") -> tuple[Path, Path]:
     """Create a session directory with timestamp and return its path."""
     full_path = f"{base_path}/{source}/multi_agent"
@@ -42,8 +34,6 @@ def create_session_directory(source: str, base_path: str = "output") -> tuple[Pa
 def route_next(state: AgentState) -> Literal["Generator", "Validator", "Supervisor", "FINISH"]:
     """Route to the next node based on the state."""
     return state["next_step"]
-
-### agent nodes
 
 def build_workflow():
     """Build and return the workflow graph."""
@@ -163,18 +153,8 @@ def run_parser_system(
 
 
 if __name__ == "__main__":
-    print_colored("\n=== C Parser Generator Setup ===", "1;36")
-    print_colored("Available model sources: 'google', 'openai', 'anthropic'", "1;33")
-    
-    # Get model source
-    while True:
-        source = input("\nEnter the model source: ").strip().lower()
-        
-        if source in ['google', 'openai', 'anthropic']:
-            print_colored(f"\nSelected model source: {source}", "1;32")
-            break
-        else:
-            print_colored("Invalid source. Please enter 'google', 'openai', or 'anthropic'.", "1;31")
+    # Prompt user to enter the model source directly
+    source = get_model_source_from_input()
     
     print_colored("\n=== C Parser Generator System ===", "1;36")
     print_colored("You can chat with the Supervisor about C programming or request a parser", "36")

@@ -1,9 +1,10 @@
 python-dotenv==1.2.1
-#langchain==1.0.3
+#langchain==1.0.5
 #langchain-openai==1.0.2
 #langchain-anthropic==1.0.1
 #langchain-google-genai==3.0.1
 #langchain-huggingface==1.0.1
+#langgraph==1.0.2
 langchain==0.3.27
 langchain-openai==0.3.35
 langchain-anthropic==0.3.22

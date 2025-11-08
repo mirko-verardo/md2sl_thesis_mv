@@ -1,8 +1,8 @@
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from model import AgentState, requirements
-from utils import CompilationCheckTool, print_colored, initialize_llm
+from models import AgentState, CompilationCheckTool
+from utils.general import requirements, print_colored, initialize_llm
 
 
 
@@ -27,10 +27,7 @@ def generator_node(state: AgentState) -> AgentState:
     generator_llm.temperature = 0.5
     generator_tools = [CompilationCheckTool()]
     
-    if generator_specs:
-        escaped_generator_specs = generator_specs.replace("{", "{{").replace("}", "}}")
-    else:
-        escaped_generator_specs = ""
+    escaped_generator_specs = generator_specs.replace("{", "{{").replace("}", "}}") if generator_specs else ""
     
     feedback_section = ""
     if has_feedback:
@@ -173,27 +170,25 @@ Generate a complete C parser implementation following all the requirements and s
         print_colored(f"Error during generator execution: {str(e)}", "1;31")
         generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
     
-    print_colored(f"\nGenerator (Iteration {iteration_count + 1}):", "1;35")
+    # increment iteration
+    iteration_count = iteration_count + 1
+    print_colored(f"\nGenerator (Iteration {iteration_count}):", "1;35")
     print(generator_response)
     
     with open(log_file, 'a') as f:
-        f.write(f"Generator (Iteration {iteration_count + 1}):\n")
+        f.write(f"Generator (Iteration {iteration_count}):\n")
         f.write(generator_response + "\n\n")
     
-    new_iteration_count = iteration_count + 1
-    
-    if new_iteration_count > state["max_iterations"]:
-        next_step = "Supervisor"
-    else:
-        next_step = "Validator"
+    next_step = "Supervisor" if iteration_count > state["max_iterations"] else "Validator"
     
     return {
-        "messages": messages + [AIMessage(content=generator_response, name="Generator")],
+        #"messages": messages + [AIMessage(content=generator_response, name="Generator")],
+        "messages": [AIMessage(content=generator_response, name="Generator")],
         "user_request": user_request,
         "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_response,
-        "iteration_count": new_iteration_count,
+        "iteration_count": iteration_count,
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
         "session_dir": session_dir,

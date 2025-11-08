@@ -2,14 +2,14 @@ from datetime import datetime
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from model import AgentState, requirements
-from utils import ExceptionTool, print_colored, extract_c_code, compile_c_code, initialize_llm
+from models import AgentState, ExceptionTool
+from utils.general import requirements, print_colored, extract_c_code, compile_c_code, initialize_llm
 
 
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
-    messages = state["messages"]
+    #messages = state["messages"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     generator_code = state["generator_code"]
@@ -165,58 +165,48 @@ Evaluate the code based on the requirements and provide your assessment.
         f.write(f"Validator assessment (Iteration {iteration_count}/{max_iterations}):\n")
         f.write(validator_response + "\n\n")
 
-    # Check if code is satisfactory or if this is the final iteration
-    is_satisfactory = (
-        "satisfactory" in validator_response.lower() and 
-        "not satisfactory" not in validator_response.lower() and
-        compilation_result['success']
+    # Check if code has been compiled with success
+    is_compiled = compilation_result['success']
+    # Check if code is satisfactory
+    is_satisfactory = is_compiled and (
+        "satisfactory" in validator_response.lower()) and (
+        "not satisfactory" not in validator_response.lower()
     )
+    # Check if code is the final iteration
     is_final_iteration = iteration_count >= max_iterations
 
-    if is_satisfactory or is_final_iteration:        
-        if is_satisfactory:
-            feedback_message = f"The parser implementation has been validated and is SATISFACTORY. It compiles successfully and meets all requirements. Here's the final assessment:\n\n{validator_response}"
-        else:
-            feedback_message = f"After {iteration_count} iterations, this is the best parser implementation available. While it may not be perfect, it should serve as a good starting point. Here's the assessment:\n\n{validator_response}\n\n{compilation_status}"
-        
-        print_colored("\nValidator sending FEEDBACK to Supervisor", "1;33")
-        
-        return {
-            "messages": messages + [AIMessage(content=feedback_message, name="Validator")],
-            "user_request": user_request,
-            "supervisor_memory": state["supervisor_memory"],
-            "generator_specs": state["generator_specs"],
-            "generator_code": generator_code,
-            "iteration_count": iteration_count,
-            "max_iterations": max_iterations,
-            "model_source": state["model_source"],
-            "session_dir": session_dir,
-            "log_file": log_file,
-            "next_step": "Supervisor",
-            "parser_mode": state["parser_mode"],
-            "system_metrics": state.get("system_metrics")
-        }
+    if is_satisfactory:
+        # end
+        next_node = "Supervisor"
+        feedback_message = f"The parser implementation has been validated and is SATISFACTORY. It compiles successfully and meets all requirements. Here's the final assessment:\n\n{validator_response}"
+    elif is_final_iteration:
+        # end
+        next_node = "Supervisor"
+        feedback_message = f"After {iteration_count} iterations, this is the best parser implementation available. While it may not be perfect, it should serve as a good starting point. Here's the assessment:\n\n{validator_response}\n\n{compilation_status}"
+    elif is_compiled:
+        # continue
+        next_node = "Generator"
+        feedback_message = f"The parser implementation needs improvements:\n\n{validator_response}"
     else:
-        # Code needs improvement
-        if not compilation_result['success']:
-            feedback_message = f"The parser implementation needs improvements. It failed to compile with the following errors:\n\n{compilation_result['stderr']}\n\nAdditional feedback:\n{validator_response}"
-        else:
-            feedback_message = f"The parser implementation needs improvements:\n\n{validator_response}"
+        # continue
+        next_node = "Generator"
+        feedback_message = f"The parser implementation needs improvements. It failed to compile with the following errors:\n\n{compilation_result['stderr']}\n\nAdditional feedback:\n{validator_response}"
+    
+    print_colored(f"\nValidator sending FEEDBACK to {next_node}", "1;33")
         
-        print_colored("\nValidator sending FEEDBACK to Generator", "1;33")
-        
-        return {
-            "messages": messages + [AIMessage(content=feedback_message, name="Validator")],
-            "user_request": user_request,
-            "supervisor_memory": state["supervisor_memory"],
-            "generator_specs": state["generator_specs"],
-            "generator_code": generator_code,
-            "iteration_count": iteration_count,
-            "max_iterations": max_iterations,
-            "model_source": state["model_source"],
-            "session_dir": session_dir,
-            "log_file": log_file,
-            "next_step": "Generator",
-            "parser_mode": state["parser_mode"],
-            "system_metrics": state.get("system_metrics")
-        }
+    return {
+        #"messages": messages + [AIMessage(content=feedback_message, name="Validator")],
+        "messages": [AIMessage(content=feedback_message, name="Validator")],
+        "user_request": user_request,
+        "supervisor_memory": state["supervisor_memory"],
+        "generator_specs": state["generator_specs"],
+        "generator_code": generator_code,
+        "iteration_count": iteration_count,
+        "max_iterations": max_iterations,
+        "model_source": state["model_source"],
+        "session_dir": session_dir,
+        "log_file": log_file,
+        "next_step": next_node,
+        "parser_mode": state["parser_mode"],
+        "system_metrics": state.get("system_metrics")
+    }

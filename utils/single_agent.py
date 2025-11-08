@@ -1,244 +1,167 @@
-import os
-import subprocess
-import tempfile
-import re
-from dotenv import load_dotenv
-from pathlib import Path
 from datetime import datetime
-from getpass import getpass
-from pydantic import SecretStr
-from typing import Any
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_huggingface import HuggingFaceEndpoint
-from langchain.agents import AgentExecutor
-from langchain.tools import BaseTool
-from langchain.callbacks.manager import CallbackManagerForToolRun, AsyncCallbackManagerForToolRun
+from pathlib import Path
+from langchain.prompts import PromptTemplate
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain.memory import ConversationBufferMemory
+from models import CompilationCheckTool
+from general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored
 
 
 
-### environment setup
-def set_if_undefined(var: str) -> str:
-    """Set environment variable (API KEY) from .env file."""
-    ### load variables from .env file
-    load_dotenv()
-    ### check if variable exists in environment
-    if not os.environ.get(var):
-        os.environ[var] = getpass(f"Please provide your {var}")
+def __get_template(few_shot: bool) -> str:
+    return """<role>
+You are a C programming assistant specialized in creating parser functions.
+</role>
+
+<main_directive>
+IMPORTANT: 
+- You must always use the compilation_check tool for all the C code you generate. This is not optional.
+- Follow the VERIFICATION PROCESS strictly any time you write C code.
+- The user will ask you to create very general parsers, defining only the data format and without any inputs, outputs or structure details.
+- You cannot ask the user for details or clarifications about the parser. 
+- Be creative and think about the function input, output and structure by yourself. Then, write the code to realize the function you have imagined.
+</main_directive>
+
+<conversation_guidelines>
+You should engage naturally in conversation with users. When users greet you or make casual conversation, respond appropriately without generating any C code. 
+You should only generate code when users explicitly request a parser funtion implementation.
+</conversation_guidelines>
+
+<parser_requirements>
+When the user does request a parser function, each parser you create must implement all of the following characteristics:
+1. Input Handling: The code deals with a pointer to a buffer of bytes or a file descriptor for reading unstructured data.
+2. Internal State: The code maintains an internal state in memory to represent the parsing state that is not returned as output.
+3. Decision-Making: The code takes decisions based on the input and the internal state.
+4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
+5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
+6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)
+</parser_requirements>
+
+""" + ("" if not few_shot else """<examples>
+Here are some examples to clarify what is and isn't acceptable:
+
+UNACCEPTABLE EXAMPLE - This does not satisfy our requirements for a parser function:
+```c
+void FUN_00401050(void) {{
+code **ppcVar1;
+for (ppcVar1 = (code **)&DAT_00411198; *ppcVar1 != (code *)0xffffffff; ppcVar1 = ppcVar1 + -1) {{
+(**ppcVar1)();
+}}
+return;
+}}
+```
+
+ACCEPTABLE EXAMPLE - This satisfies our requirements for a parser function:
+```c
+void parseCSV(const char *input) {{
+char copy[100];
+strcpy(copy, input);
+char* token = strtok(copy, ",");
+while (token != NULL) {{
+if (isInteger(token)) {{
+printf("Parsed Integer: %s\\n", token);
+}} else {{
+printf("Invalid Input: %s\\n", token);
+}}
+token = strtok(NULL, ",");
+}}
+}}
+```
+
+ACCEPTABLE EXAMPLE - This satisfies our requirements for a parser function component:
+```c
+char *skip_whitespace(char *s) {{
+while (*s && isspace((unsigned char)*s)) s++;
+return s;
+}}
+```
+</examples>
+
+""") + """<critical_rules>
+CRITICAL: 
+- When writing code, you must provide complete implementations with NO placeholders, ellipses (...) or todos. Every function must be fully implemented.
+- If the code is not complete, it will not compile and the compilation_check tool will fail.
+- Before generating any code, always reason through your approach step by step.
+</critical_rules>
+
+<verification_process>
+CODE VERIFICATION PROCESS (ALWAYS MANDATORY):
+- Write your complete C code implementation.
+- Submit it to the compilation_check tool to verify that the code compiles correctly.
+- If there are any errors or warings, fix them and verify the compilation again. This process may take several iterations.
+- Let the structure of the code be simple, so that it is easier to generate code that compiles correctly.
+- Continue this process until compilation succeeds without any errors.
+- Once the compilation is successful, IMMEDIATELY move to Final Answer with the verified code. DO NOT run additional compilation checks on the same code.
+- If the compilation is successful, answer to the user with the final code.
+NEVER SKIP THE COMPILATION CHECK. If you do not verify that your code compiles cleanly, your response is incomplete and incorrect. The verification is REQUIRED for all C code responses without exception.
+</verification_process>
+
+<available_tools>
+You have access to these tools:
+{tools}
+Tool names: {tool_names}
+Call the tool using compilation_check(your_code_here). 
+</available_tools>
+
+<format_instructions>
+Use the following format:
+Question: the input question.
+Thought: think about what to do.
+Action: the tool to use: {tool_names}.
+Action Input: the input to the tool.
+Observation:
+- if the compilation is successful, proceed to Final Answer without additional compilation checks.
+- if the compilation is not successful, repeat Thought/Action/Action Input/Observation as needed.
+Final Answer: the final answer to the original question with the final code you have generated.
+</format_instructions>
+
+<chat_history>
+The previous conversation between you and the user is as follows:
+{chat_history}
+</chat_history>
+
+Now, the user is asking: {input}
+{agent_scratchpad}
+"""
+
+def setup_agent(source: str, few_shot=False) -> AgentExecutor:
+    """Set up and return the agent and memory objects specifically for Claude using ReAct pattern."""
+    ### initialize model
+    llm = initialize_llm(source)
     
-    ### get the API key from environment
-    api_key = os.environ.get(var) or ""
-    return api_key
-
-def initialize_llm(source: str):
-    """Initialize a hosted model with appropriate parameters."""
-    if source == "huggingface":
-        # model_id = 'codellama/CodeLlama-34b-Instruct-hf'
-        # https://evalplus.github.io/leaderboard.html
-        # model_id = 'microsoft/Phi-3-mini-4k-instruct' # 56esimo
-        # model_id = 'meta-llama/Meta-Llama-3-8B-Instruct' # 60eismo
-        model_id = 'bigcode/starcoder2-15b' # 79eismo
-        api_key = set_if_undefined("HUGGING_FACE_API_KEY")
-        llm = HuggingFaceEndpoint(
-            model=model_id,
-            huggingfacehub_api_token = api_key,
-            repo_id=model_id,
-            task="text-generation",
-            temperature=0.5, 
-            repetition_penalty=1.3,
-            do_sample=True,
-            top_p=0.9,
-            max_new_tokens=2048  # increase for longer parser implementations
-        )
+    ### use the CompilationCheckTool
+    tools = [CompilationCheckTool()]
     
-    elif source == "google":
-        # model_id = 'gemini-1.5-pro'
-        model_id = 'gemini-2.0-flash'
-        # model_id = 'gemini-2.0-flash-lite'
-        api_key = set_if_undefined("GOOGLE_API_KEY")
-        llm = ChatGoogleGenerativeAI(
-            model=model_id,
-            temperature=0.5, # 0.2 # Slight temperature increase to improve reasoning
-            max_tokens=None,
-            google_api_key = api_key,
-            timeout=None,
-            max_retries=5,
-            #top_p=0.95,  # Higher top_p for more creative reasoning
-            #top_k=40,  # Reasonable top_k value
-            # other params...
-        )
-    elif source == "openai":
-        model_id = 'gpt-4o-mini'
-        api_key = set_if_undefined("OPENAI_API_KEY")
-        llm = ChatOpenAI(
-            model=model_id,
-            temperature=0.5,
-            timeout=None,
-            max_retries=5,
-            api_key=SecretStr(api_key)
-        )
-        
-    elif source == "anthropic":
-        # model_id = 'claude-3-5-sonnet-20240620'
-        model_id = 'claude-3-7-sonnet-20250219'
-        # api_key = set_if_undefined("ANTHROPIC_API_KEY_PROF")
-        api_key = set_if_undefined("ANTHROPIC_API_KEY_SAM")
-        llm = ChatAnthropic(
-            model_name=model_id,
-            #model=model_id,
-            stop=None,
-            temperature=0.5,
-            max_tokens_to_sample=6144,
-            #max_tokens=6144,
-            timeout=None,
-            max_retries=5,
-            api_key=SecretStr(api_key)
-        )
-    else:
-        raise ValueError("Invalid source")
+    ### create the system message 
+    template = __get_template(few_shot=few_shot)
 
-    return llm
-
-class ExceptionTool(BaseTool):
-    """Tool that just returns the query."""
-    name: str = "_Exception"
-    description: str = "Exception tool"
-
-    def _run(self, query: str, run_manager: CallbackManagerForToolRun | None = None) -> str:
-        return query
-
-    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
-        return query
-
-### compilationchecktool
-class CompilationCheckTool(BaseTool):
-    """Tool that checks if C code compiles correctly without warnings."""
-    name: str = "compilation_check"
-    description: str = """
-    This tool checks if the provided C code compiles correctly without any warnings.
-    Input should be valid C code.
-    The tool will return compilation results, including any errors or warnings.
-    Use this tool to verify that your C parser implementation is syntactically correct
-    and free of warnings before providing it to the user.
-    """
-
-    #def _run(self, query: str, run_manager: CallbackManagerForToolRun | None = None) -> str:
-    def _run(self, query, run_manager: CallbackManagerForToolRun | None = None) -> str:
-        """Run the compilation check."""
-        ### handle the case where query might be a dictionary
-        if isinstance(query, dict):
-            if 'query' in query:
-                query = query['query']
-            elif 'code' in query:  # Added to handle ReAct agent format
-                query = query['code']
-            else:
-                ### try to get the first value if it's a different kind of dict
-                try:
-                    query = next(iter(query.values()))
-                except (StopIteration, AttributeError):
-                    return "Error: Invalid input format for compilation check"
-        
-        ### make sure we have a string at this point
-        if not isinstance(query, str):
-            return f"Error: Expected string input, got {type(query).__name__}"
-            
-        ### Clean the code by removing markdown delimiters
-        # Remove ```c from the beginning of lines
-        query = query.replace("```c", "")
-        # Remove ``` from anywhere
-        query = query.replace("```", "")
-        # Trim whitespace
-        query = query.strip()
-        
-        ### create a temporary file with the C code
-        with tempfile.NamedTemporaryFile(suffix='.c', delete=False) as temp_file:
-            temp_file.write(query.encode('utf-8'))
-            temp_file_path = temp_file.name
-        
-        try:
-            ### compile the C code with all warnings enabled and treating warnings as errors
-            ### using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
-            result = subprocess.run(
-                ['gcc', '-Wall', '-Wextra', '-Werror', temp_file_path, '-o', temp_file_path + '.out'],
-                capture_output=True,
-                text=True
-            )
-            
-            ### prepare the response
-            if result.returncode == 0:
-                response = "Compilation successful! The code compiles without any errors or warnings."
-            else:
-                response = f"Compilation failed with the following errors or warnings:\n{result.stderr}"
-                ### add the original code after the error message for easy reference
-                response += f"\n\nOriginal code:\n```c\n{query}\n```"
-            
-            return response
-        finally:
-            ### clean up temporary files
-            try:
-                os.unlink(temp_file_path)
-                if os.path.exists(temp_file_path + '.out'):
-                    os.unlink(temp_file_path + '.out')
-            except Exception as e:
-                pass  ### ignore cleanup errors
+    ### create a prompt
+    prompt = PromptTemplate.from_template(template)
+    ### create memory
+    memory = ConversationBufferMemory(memory_key="chat_history", output_key='output', return_messages=True)
+    ### create the ReAct agent
+    agent = create_react_agent(llm, tools, prompt)
     
-    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
-        """Run the compilation check asynchronously."""
-        ### call the synchronous version
-        #return self._run(query, run_manager)
-        return self._run(query)
-    
-def extract_c_code(text: str) -> str | None:
-    """Extract C code from the LLM response."""
-    ### find code between ```c and ``` markers
-    code_blocks = re.findall(r'```c(.*?)```', text, re.DOTALL)
-    
-    ### if not found, try without language specifier
-    if not code_blocks:
-        code_blocks = re.findall(r'```(.*?)```', text, re.DOTALL)
-    
-    ### if still no code blocks found, check if the entire text is C code
-    ### by looking for common C headers or patterns
-    if not code_blocks:
-        if text.strip().startswith('#include') or re.search(r'int\s+main\s*\(', text):
-            return text.strip()
-    
-    ### return the first code block if any were found
-    return code_blocks[0].strip() if code_blocks else None
+    return AgentExecutor(
+        agent=agent,
+        tools=tools,
+        memory=memory,
+        verbose=True,
+        handle_parsing_errors=True,
+        return_intermediate_steps=True,
+        max_iterations=5,
+        early_stopping_method="force",
+    )
 
-def compile_c_code(c_file_path: Path) -> dict[str, Any]:
-    """Compile the C code using gcc and return compilation result, considering warnings as issues."""
-    output_file = c_file_path.with_suffix('')
-    
-    ### run gcc to compile the code with all warnings enabled and treated as errors
-    result = subprocess.run(
-        ['gcc', '-Wall', '-Wextra', '-Werror', str(c_file_path), '-o', str(output_file)],
-        capture_output=True,
-        text=True)
-    
-    ### with -Werror, compilation success means no warnings
-    return {
-        'success': result.returncode == 0,  ### compilation success (executable created, no warnings)
-        'fully_clean': result.returncode == 0,    ### same as success since warnings cause failure with -Werror
-        'stdout': result.stdout,
-        'stderr': result.stderr,
-        'executable': output_file if result.returncode == 0 else None,
-        'has_warnings': False  ### with -Werror, warnings cause compilation failure, so this will always be False if successful
-    }
-
-def print_colored(text: str, color_code: str) -> None:
-    """Print text with color."""
-    print(f"\033[{color_code}m{text}\033[0m")
-
-def start_chat(folder_path: str, folder_name: str, agent_executor: AgentExecutor) -> None:
+def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
     """Start chat with the agent. Save output files to the specified folder.
     
     Args:
-        folder_path: Path where the 'output' folder will be created and files saved
         folder_name: Name of the subfolder within output directory
         agent_executor: The initialized agent executor
     """
+    ### folder_path: Path where the 'output' folder will be created and files saved
+    folder_path = set_if_undefined("FOLDER_PATH")
     ### folder_path to a Path object if it's a string
     base_dir = Path(folder_path)
     
