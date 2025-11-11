@@ -152,11 +152,9 @@ def compile_c_code(c_file_path: Path) -> dict[str, Any]:
     # with -Werror, compilation success means no warnings
     return {
         'success': result.returncode == 0,  # compilation success (executable created, no warnings)
-        'fully_clean': result.returncode == 0,    # same as success since warnings cause failure with -Werror
         'stdout': result.stdout,
         'stderr': result.stderr,
-        'executable': output_file if result.returncode == 0 else None,
-        'has_warnings': False  # with -Werror, warnings cause compilation failure, so this will always be False if successful
+        'executable': output_file if result.returncode == 0 else None
     }
 
 def print_colored(text: str, color_code: str) -> None:

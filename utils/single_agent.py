@@ -135,7 +135,7 @@ def setup_agent(source: str, few_shot=False) -> AgentExecutor:
     tools = [CompilationCheckTool()]
     
     # create the system message 
-    template = __get_template(few_shot=few_shot)
+    template = __get_template(few_shot)
 
     # create a prompt
     prompt = PromptTemplate.from_template(template)
@@ -174,38 +174,33 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
     # chat history for the current session
     session_history = []
     
-    # print welcome message
-    print_colored("\n=== C Parser Generator Chat ===", "1;36")  # Bold Cyan
-    print_colored("Ask for any parser or C function. Type 'exit' to quit.\n", "36")  # Cyan
-    
     conversation_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     # create 'session_id' directory in output folder
     session_dir = output_dir / f"session_{conversation_id}"
     session_dir.mkdir(exist_ok=True)
 
-    print(f"Output directory: {session_dir}")
-
     log_file = session_dir / f"conversation_{conversation_id}.txt"
-
     f = open(log_file, 'a', encoding="utf-8")
-    f.write(f"=== C Parser Generator Chat - {datetime.now()} ===\n")
+
+    # print welcome message
+    log(f, "=== C Parser Generator Chat ===", colors.CYAN, bold=True)
+    print_colored("Ask for any parser or C function. Type 'exit' to quit.\n", colors.CYAN)
+    print(f"Output directory: {session_dir}")
     
     # main chat loop
     while True:
-        # get user input
-        print_colored("\nYou: ", "1;32")  # Bold Green
+        # get and log user input
+        log(f, "You:", colors.GREEN, bold=True)
         user_input = input()
-        
-        # log user input
-        f.write(f"\nYou: {user_input}\n")
+        f.write(f"\n{user_input}\n")
         
         # check for exit command
         if user_input.lower() in ['exit', 'quit', 'bye']:
-            print_colored("\nExiting chat. Goodbye!", "1;36")
+            print_colored("\nExiting chat. Goodbye!", "1;36") # Bold Cyan
             break
         
         # response from agent
-        print_colored("\nAgent is thinking...", "33")  # Yellow
+        print_colored("\nAgent is thinking...", colors.YELLOW)
         
         try:
             # set a timeout for the agent response (in seconds)
@@ -239,8 +234,8 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                         
                         # split each code lines
                         code_preview = code_to_check.split("\n")
-                        # extract only first 10 lines for preview
-                        code_preview = "\n".join(code_preview[:10]) + "\n..." if len(code_preview) > 10 else code_to_check
+                        # extract only first 5 lines for preview
+                        code_preview = "\n".join(code_preview[:5]) + "\n..." if len(code_preview) > 5 else code_to_check
 
                         log(f, "Checking code (preview):", colors.BLUE)
                         log(f, code_preview)
@@ -253,23 +248,23 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
 
                             # extract errors (more robust approach) and truncate if too long
                             errors = action_output
-                            if "\n\nOriginal code:" in action_output:
-                                errors = action_output.split("\n\nOriginal code:")[0]
+                            if "Original code:" in action_output:
+                                errors = action_output.split("Original code:")[0]
                                 # find the last occurrence of ":" before errors and take everything after it
-                                last_colon_pos = errors.rfind(":")
-                                if last_colon_pos != -1:
-                                    errors = errors[last_colon_pos + 1:]
+                                #last_colon_pos = errors.rfind(":")
+                                #if last_colon_pos != -1:
+                                    #errors = errors[last_colon_pos + 1:]
                             errors = errors.strip()
-                            errors_lines = errors.split("\n")
-                            if len(errors_lines) > 10:
-                                errors = "\n".join(errors_lines[:10]) + "\n..."
-                            print(errors)
+                            errors_preview = errors.split("\n")
+                            errors_preview = "\n".join(errors_preview[:10]) + "\n..." if len(errors_preview) > 10 else errors
+                            #print(errors_preview)
+                            log(f, errors_preview)
                         
                         # anyway
-                        f.write(f"\n{action_output}\n")
+                        #f.write(f"\n{action_output}\n")
 
-                # if compilation was attempted but the last attempt failed, print a warning
-                if compilation_attempts > 0 and last_compilation_result and "Compilation failed" in last_compilation_result:
+                # if the last compilation attempt failed, print a warning
+                if last_compilation_result and "Compilation failed" in last_compilation_result:
                     log(f, "WARNING: Last compilation attempt failed! The agent may provide code that doesn't compile.", 
                         colors.RED, bold=True)
 
@@ -326,10 +321,10 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                         log(ff, f"Executable created at: {compilation_result['executable']}")
                     
                 # log compilation results
-                f.write(f"\n--- Compilation Results ---\n")
-                f.write(f"\nCompilation {'successful' if compilation_result['success'] else 'failed'}\n")
-                if compilation_result['stderr']:
-                    f.write(f"\nStandard error:\n{compilation_result['stderr']}\n")
+                #f.write(f"\n--- Compilation Results ---\n")
+                #f.write(f"\nCompilation {'successful' if compilation_result['success'] else 'failed'}\n")
+                #if compilation_result['stderr']:
+                #    f.write(f"\nStandard error:\n{compilation_result['stderr']}\n")
                 
                 print(f"\nCompilation details saved to: {result_file_path}")
             
