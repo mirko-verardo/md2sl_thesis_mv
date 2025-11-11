@@ -13,6 +13,15 @@
     ANTHROPIC_API_KEY="your-key"
     ```
 
+## Prompt
+
+- *difficult*: generate a parser function for parsing files in geojson format
+- *simple*: generate a simple parser function for parsing files in json format
+
+## Errors
+
+- compilation_check: agents make confusion between them? can i avoid it?
+
 # Sam nothes (old)
 
 1. `zero_shot agent.py`

@@ -37,6 +37,11 @@ def get_model_source_from_input() -> str:
     """Get the model source name from the user input"""
     print_colored("\n=== C Parser Generator Setup ===", "1;36")
     print_colored("Available model sources: 'google', 'openai', 'anthropic'", "1;33")
+
+    # speed up
+    source = "google"
+    print_colored(f"\nSelected model source: {source}", "1;32")
+    return source
     
     # get model source
     while True:
@@ -158,3 +163,9 @@ def print_colored(text: str, color_code: str) -> None:
     """Print text with color."""
     print(f"\033[{color_code}m{text}\033[0m")
 
+def log(file, text: str, color_code: str | None = None, bold: bool = False) -> None:
+    if color_code and bold:
+        color_code = f"1;{color_code}"
+    text = f"\n{text}"
+    print_colored(text, color_code) if color_code else print(text)
+    file.write(f"{text}\n")
