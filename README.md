@@ -18,9 +18,13 @@
 - *difficult*: generate a parser function for parsing files in geojson format
 - *simple*: generate a simple parser function for parsing files in json format
 
-## Errors
+## Questions
+
+### Supervisor
 
 - compilation_check: agents make confusion between them? can i avoid it?
+- conversation_context: passed in 2 different modes?
+- system_metrics complete_round(): not in GENERATE_PARSER and CORRECT_ERROR?
 
 # Sam nothes (old)
 

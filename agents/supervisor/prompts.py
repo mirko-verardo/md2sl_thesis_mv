@@ -35,7 +35,7 @@ Please provide a friendly response to the user that:
 Keep your explanation concise and user-friendly.
 """
 
-def get_supervisor_input_actions(user_request: str, conversation_log: str) -> str:
+def get_supervisor_input_actions(user_request: str, conversation_context: str) -> str:
     return f"""Based on the user's request and our conversation history, determine what action I should take.
 Respond with ONLY ONE of these actions (and nothing else):
 1. "GENERATE_PARSER" - if the user wants me to create a new parser
@@ -46,7 +46,7 @@ Respond with ONLY ONE of these actions (and nothing else):
 User's request: "{user_request}"
 
 Recent conversation context: 
-{conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log}
+{conversation_context}
 """
 
 def get_supervisor_input_generate_parser(user_request: str) -> str:
@@ -68,7 +68,7 @@ User request: {user_request}
 Create a detailed prompt for the generator.
 """
 
-def get_supervisor_input_correct_error(user_request: str, conversation_log: str, parser: dict[str, Any]) -> str:
+def get_supervisor_input_correct_error(user_request: str, conversation_context: str, parser: dict[str, Any]) -> str:
     return f"""Create detailed specifications for updating the parser to address these issues.
 Be specific about what changes need to be made and why.
 
@@ -86,7 +86,7 @@ Was code satisfactory: {"Yes" if parser.get('is_satisfactory', False) else "No"}
 User reported issues or requested changes: {user_request}
 
 Conversation history (for context):
-{conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log}
+{conversation_context}
 """
 
 def get_supervisor_input_assess_code(user_request: str, parser: dict[str, Any]) -> str:
@@ -141,7 +141,7 @@ Create a comprehensive response that:
 Keep your explanation concise and conversational, focusing on the overall assessment rather than providing the entire code.
 """
 
-def get_supervisor_input_general_conversation(user_request: str, conversation_log: str, parser: dict[str, Any] | None) -> str:
+def get_supervisor_input_general_conversation(user_request: str, conversation_context: str, parser: dict[str, Any] | None) -> str:
     keywords = ["memory", "remember", "previous", "code", "generated", "parser"]
     is_asking_about_memory = parser and any(keyword in user_request.lower() for keyword in keywords)
     
@@ -156,7 +156,7 @@ Let them know they can ask to see a summary of the code by saying something like
 User: {user_request}
 
 Recent conversation history (for context):
-{conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log}
+{conversation_context}
 
 Information about your most recent parser:
 I have a recently generated parser from {parser.get('timestamp')}
@@ -173,5 +173,5 @@ Respond in a conversational, friendly tone.
 User: {user_request}
 
 Recent conversation history (for context):
-{conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log}
+{conversation_context}
 """
