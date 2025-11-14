@@ -70,7 +70,7 @@ IMPORTANT: This is iteration {iteration_count} and you received the following fe
 Please, correct the code you have generated, addressing all these issues while ensuring your implementation remains complete with no placeholders.
 </feedback>
 
-""" if feedback else "") + """<format_instructions>
+""" if feedback else "") + f"""<format_instructions>
 Use the following format:
 Question: the input question.
 Thought: think about what to do.
