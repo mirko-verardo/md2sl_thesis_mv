@@ -6,7 +6,7 @@ from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, ExceptionTool
 from utils.general import print_colored, extract_c_code, initialize_llm
-from agents.supervisor import prompts
+from agents.supervisor import supervisor_prompts
 
 
 
@@ -77,33 +77,6 @@ def update_supervisor_memory(state: AgentState, conversation_log: str) -> list[d
     
     return supervisor_memory
 
-def get_supervisor_template() -> str:
-    return """<role>
-You are a helpful C programming expert. You are a supervisor managing the process of creating parser functions.
-</role>
-
-<main_directive>
-Since there are limits to how much code the generator can generate, keep the structure of the parser function simple, short and focused on the core functionality.
-</main_directive>
-
-<available_tools>
-You have access to these tools: {tools}
-Tool names: {tool_names}
-</available_tools>
-
-<format_instructions>
-Use the following format:
-Question: the input question.
-Thought: think about what to do.
-Final Answer: the final answer to the original question.
-</format_instructions>
-
-User request: {input}
-Context: {conversation_context}
-
-{agent_scratchpad}
-"""
-
 def supervisor_node(state: AgentState) -> AgentState:
     """Supervisor agent that converses with the user and manages the parser generation process."""
     messages = state["messages"]
@@ -119,14 +92,12 @@ def supervisor_node(state: AgentState) -> AgentState:
     most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
     conversation_context = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
     
+    supervisor_template = supervisor_prompts.get_supervisor_template()
+    
+    # Initialize model for supervisor
     supervisor_llm = initialize_llm(model_source)
     supervisor_llm.temperature = 0.6
     supervisor_tools = [ExceptionTool()]
-    
-    validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
-    has_validated_parser = len(validator_messages) > 0 and state["iteration_count"] > 0
-    
-    supervisor_template = get_supervisor_template()
     
     # Create a prompt using PromptTemplate.from_template
     supervisor_prompt = PromptTemplate.from_template(supervisor_template)
@@ -141,6 +112,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         handle_parsing_errors=True
     )
     
+    validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
+    has_validated_parser = len(validator_messages) > 0 and state["iteration_count"] > 0
+
     if has_validated_parser:
         last_message = validator_messages[-1].content
         is_satisfactory = "satisfactory" in last_message.lower() and "not satisfactory" not in last_message.lower()
@@ -165,7 +139,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             
         print_colored(f"\nStored new parser in memory (satisfactory: {is_satisfactory}, compilation: {compilation_status})", "1;36")
         
-        response_prompt = prompts.get_supervisor_input_validated(user_request, c_code, last_message, is_satisfactory, compilation_status)
+        response_prompt = supervisor_prompts.get_supervisor_input_validated(user_request, c_code, last_message, is_satisfactory, compilation_status)
         
         supervisor_result = supervisor_executor.invoke({
             "input": response_prompt,
@@ -185,7 +159,7 @@ def supervisor_node(state: AgentState) -> AgentState:
         next_step = "FINISH"
         parser_mode = False
     else:
-        context_prompt = prompts.get_supervisor_input_actions(user_request, conversation_context)
+        context_prompt = supervisor_prompts.get_supervisor_input_actions(user_request, conversation_context)
 
         action_result = supervisor_executor.invoke({
             "input": context_prompt,
@@ -200,7 +174,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             f.write(f"Supervisor action decision: {action}\n\n")
         
         if action == "GENERATE_PARSER":
-            parser_prompt = prompts.get_supervisor_input_generate_parser(user_request)
+            parser_prompt = supervisor_prompts.get_supervisor_input_generate_parser(user_request)
 
             specs_result = supervisor_executor.invoke({
                 "input": parser_prompt,
@@ -217,7 +191,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             next_step = "Generator"
             parser_mode = True            
         elif action == "CORRECT_ERROR" and most_recent_parser:
-            correction_prompt = prompts.get_supervisor_input_correct_error(user_request, conversation_context, most_recent_parser)
+            correction_prompt = supervisor_prompts.get_supervisor_input_correct_error(user_request, conversation_context, most_recent_parser)
 
             correction_result = supervisor_executor.invoke({
                 "input": correction_prompt,
@@ -234,7 +208,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             next_step = "Generator"
             parser_mode = True
         elif action == "ASSESS_CODE" and most_recent_parser:
-            assess_prompt = prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
+            assess_prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
             assess_result = supervisor_executor.invoke({
                 "input": assess_prompt,
                 "conversation_context": "",
@@ -254,7 +228,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             parser_mode = False
         else:
             # GENERAL_CONVERSATION
-            prompt = prompts.get_supervisor_input_general_conversation(user_request, conversation_context, most_recent_parser)
+            prompt = supervisor_prompts.get_supervisor_input_general_conversation(user_request, conversation_context, most_recent_parser)
             result = supervisor_executor.invoke({
                 "input": prompt,
                 "conversation_context": "",

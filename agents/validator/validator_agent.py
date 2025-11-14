@@ -3,13 +3,16 @@ from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, ExceptionTool
-from utils.general import requirements, print_colored, extract_c_code, compile_c_code, initialize_llm
+from agents.validator.validator_prompts import get_validator_template
+from utils import colors
+from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
 
 
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
     #messages = state["messages"]
+    generator_specs = state["generator_specs"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     generator_code = state["generator_code"]
@@ -42,95 +45,27 @@ def validator_node(state: AgentState) -> AgentState:
     if state.get("system_metrics"):
         state["system_metrics"].record_parser_validation(c_file_name, compilation_result['success'])
 
-    # Log compilation results
-    with open(log_file, 'a') as f:
-        f.write(f"--- Compilation Test Results (Iteration {iteration_count}) ---\n")
-        f.write(f"Compilation {'successful' if compilation_result['success'] else 'failed'}\n")
-        if compilation_result['stderr']:
-            f.write(f"Errors:\n{compilation_result['stderr']}\n\n")
-    
     # Print compilation status
     if compilation_result['success']:
-        print_colored("Compilation successful!", "1;32")
         compilation_status = "✅ Compilation successful!"
+        color = colors.GREEN
     else:
-        print_colored("Compilation failed. Errors:", "1;31")
-        print(compilation_result['stderr'])
         compilation_status = "❌ Compilation failed with the following errors:\n" + compilation_result['stderr']
+        color = colors.RED
     
+    # Log compilation results
+    with open(log_file, 'a', encoding="utf-8") as f:
+        log(f, f"--- Compilation Test Results (Iteration {iteration_count}) ---")
+        log(f, compilation_status, color, bold=True)
+    
+    # Validator's template with ReAct format
+    generator_specs_coalesced = generator_specs if generator_specs is not None else ""
+    validator_template = get_validator_template(generator_specs_coalesced, generator_code, compilation_status, iteration_count, max_iterations)
+
     # Initialize model for validator
     validator_llm = initialize_llm(model_source)
     validator_llm.temperature = 0.4
     validator_tools = [ExceptionTool()]
-    
-    # Escape curly braces in variable strings
-    escaped_generator_code = generator_code.replace("{", "{{").replace("}", "}}")
-    escaped_compilation_status = compilation_status.replace("{", "{{").replace("}", "}}")
-    escaped_generator_specs = state["generator_specs"].replace("{", "{{").replace("}", "}}") if state["generator_specs"] else ""
-    
-    # Validator's template with ReAct format
-    validator_template = f"""<role>
-You are a specialized C programming validator that evaluates parser code against strict requirements.
-</role>
-
-<available_tools>
-You have access to these tools: {{tools}}
-Tool names: {{tool_names}}
-</available_tools>
-
-<parser_requirements>
-Review this C parser code to determine if it meets the following requirements:
-{requirements}
-</parser_requirements>
-
-<specifications>
-Additionally, it must meet these specific specifications:
-{escaped_generator_specs}
-</specifications>
-
-<code_to_review>
-```c
-{escaped_generator_code}
-```
-</code_to_review>
-
-<compilation_result>
-Compilation result:
-{escaped_compilation_status}
-</compilation_result>
-
-<validation_process>
-Validate the code following these steps:
-1. Evaluate whether the code compiles correctly. If it doesn't compile, this is a critical issue that must be addressed.
-2. Evaluate each general requirement and whether the code satisfies it. Remember that requirement #6 (Composition) is only necessary if and only if one of requirements 1-5 is not satisfied. If all the requirements 1-5 are met, requirement #6 becomes optional.
-3. Check if the code implements all the specifications from the supervisor.
-4. Verify that the code has COMPLETE IMPLEMENTATIONS with no placeholders, todos or ellipses (...). Every single function must be fully implemented. There should be no comments like "// ... (Implementation details)" OR "// ... (Full implementation below)" or references to previous code developed. No part of the code should be skipped.
-5. Ignore the readability, the efficiency and the maintainability of the generated code.
-</validation_process>
-
-<task>
-Then provide your final verdict: Is the code SATISFACTORY or NOT SATISFACTORY?
-
-A code is NOT SATISFACTORY if:
-1. It fails to compile
-2. It doesn't meet all the required specifications
-3. It contains placeholders or incomplete implementations
-If the code is NOT SATISFACTORY, provide specific feedback with details on what needs to be improved and briefly explain how.
-
-This is iteration {iteration_count} of maximum {max_iterations}.
-</task>
-
-<format_instructions>
-Use the following format:
-Question: the input question.
-Thought: think about what to do.
-Final Answer: the final answer to the original question.
-</format_instructions>
-
-Evaluate the code based on the requirements and provide your assessment.
-
-{{agent_scratchpad}}
-"""
 
     # Create a prompt using PromptTemplate.from_template
     validator_prompt = PromptTemplate.from_template(validator_template)
@@ -153,17 +88,15 @@ Evaluate the code based on the requirements and provide your assessment.
             "agent_scratchpad": []
         })
         validator_response = validator_result["output"]
+        validator_response_color = colors.BLUE
     except Exception as e:
-        print_colored(f"Error during validator execution: {str(e)}", "1;31")
         validator_response = f"Error occurred during code validation: {str(e)}\n\nPlease try again."
-    
-    print_colored(f"\nValidator assessment (Iteration {iteration_count}/{max_iterations}):", "1;34")
-    print(validator_response)
+        validator_response_color = colors.RED
     
     # Log the validator's assessment
     with open(log_file, 'a') as f:
-        f.write(f"Validator assessment (Iteration {iteration_count}/{max_iterations}):\n")
-        f.write(validator_response + "\n\n")
+        log(f, f"Validator assessment (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
+        log(f, validator_response)
 
     # Check if code has been compiled with success
     is_compiled = compilation_result['success']
@@ -199,7 +132,7 @@ Evaluate the code based on the requirements and provide your assessment.
         "messages": [AIMessage(content=feedback_message, name="Validator")],
         "user_request": user_request,
         "supervisor_memory": state["supervisor_memory"],
-        "generator_specs": state["generator_specs"],
+        "generator_specs": generator_specs,
         "generator_code": generator_code,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,

@@ -4,9 +4,9 @@ from typing import Literal
 from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langgraph.graph import START, END, StateGraph
-from agents.supervisor_agent import supervisor_node
-from agents.generator_agent import generator_node
-from agents.validator_agent import validator_node
+from agents.supervisor.supervisor_agent import supervisor_node
+from agents.generator.generator_agent import generator_node
+from agents.validator.validator_agent import validator_node
 from models import AgentState, SystemMetrics
 from utils.general import get_model_source_from_input, print_colored
 

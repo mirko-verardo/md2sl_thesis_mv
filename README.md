@@ -18,6 +18,15 @@
 - *difficult*: generate a parser function for parsing files in geojson format
 - *simple*: generate a simple parser function for parsing files in json format
 
+## Unit Testing
+
+1. Manual file to parse and check some predefined test case on it
+2. Generate automatically through an agent file to parse and test case on it to test
+3. Metrics:
+    - accuracy: files parsed with test case ok / total files parsed
+    - coverage: lines executed / total lines
+    - execution time
+
 ## Questions
 
 ### Supervisor
