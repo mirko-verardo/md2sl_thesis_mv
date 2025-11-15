@@ -11,7 +11,6 @@ from utils.general import print_colored, log, extract_c_code, compile_c_code, in
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
-    #messages = state["messages"]
     generator_specs = state["generator_specs"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
@@ -32,7 +31,7 @@ def validator_node(state: AgentState) -> AgentState:
     c_file_name = f"parser_{timestamp}.c"
     c_file_path = session_dir / c_file_name
     
-    with open(c_file_path, 'w') as f:
+    with open(c_file_path, 'w', encoding="utf-8") as f:
         f.write(clean_c_code)
     
     print_colored(f"\nSaved C code to: {c_file_path} for compilation testing", "1;36")
@@ -40,13 +39,15 @@ def validator_node(state: AgentState) -> AgentState:
     # Compile the code
     print_colored("\n--- Testing Compilation ---", "1;33")
     compilation_result = compile_c_code(c_file_path)
+    # Check if code has been compiled with success
+    is_compiled = compilation_result['success']
     
     # Record parser validation in metrics
     if state.get("system_metrics"):
-        state["system_metrics"].record_parser_validation(c_file_name, compilation_result['success'])
+        state["system_metrics"].record_parser_validation(c_file_name, is_compiled)
 
     # Print compilation status
-    if compilation_result['success']:
+    if is_compiled:
         compilation_status = "✅ Compilation successful!"
         color = colors.GREEN
     else:
@@ -54,9 +55,9 @@ def validator_node(state: AgentState) -> AgentState:
         color = colors.RED
     
     # Log compilation results
-    with open(log_file, 'a', encoding="utf-8") as f:
-        log(f, f"--- Compilation Test Results (Iteration {iteration_count}) ---")
-        log(f, compilation_status, color, bold=True)
+    f = open(log_file, 'a', encoding="utf-8")
+    log(f, f"--- Compilation Test Results (Iteration {iteration_count}) ---")
+    log(f, compilation_status, color, bold=True)
     
     # Validator's template with ReAct format
     generator_specs_coalesced = generator_specs if generator_specs is not None else ""
@@ -82,11 +83,7 @@ def validator_node(state: AgentState) -> AgentState:
     
     # Invoke the agent
     try:
-        validator_result = validator_executor.invoke({
-            "tools": validator_tools,
-            "tool_names": [tool.name for tool in validator_tools],
-            "agent_scratchpad": []
-        })
+        validator_result = validator_executor.invoke({})
         validator_response = validator_result["output"]
         validator_response_color = colors.BLUE
     except Exception as e:
@@ -94,12 +91,10 @@ def validator_node(state: AgentState) -> AgentState:
         validator_response_color = colors.RED
     
     # Log the validator's assessment
-    with open(log_file, 'a') as f:
-        log(f, f"Validator assessment (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
-        log(f, validator_response)
+    log(f, f"Validator assessment (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
+    log(f, validator_response)
+    f.close()
 
-    # Check if code has been compiled with success
-    is_compiled = compilation_result['success']
     # Check if code is satisfactory
     is_satisfactory = is_compiled and (
         "satisfactory" in validator_response.lower()) and (
@@ -126,9 +121,8 @@ def validator_node(state: AgentState) -> AgentState:
         feedback_message = f"The parser implementation needs improvements. It failed to compile with the following errors:\n\n{compilation_result['stderr']}\n\nAdditional feedback:\n{validator_response}"
     
     print_colored(f"\nValidator sending FEEDBACK to {next_node}", "1;33")
-        
+    
     return {
-        #"messages": messages + [AIMessage(content=feedback_message, name="Validator")],
         "messages": [AIMessage(content=feedback_message, name="Validator")],
         "user_request": user_request,
         "supervisor_memory": state["supervisor_memory"],

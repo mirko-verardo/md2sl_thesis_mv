@@ -24,22 +24,23 @@ Thought: think about what to do.
 Final Answer: the final answer to the original question.
 </format_instructions>
 
-User request: {input}
-Context: {conversation_context}
+<user_request>
+{input}
+</user_request>
+
+<conversation_history>
+{conversation_history}
+</conversation_history>
+
+<adaptive_instructions>
+{prompt}
+</adaptive_instructions>
 
 {agent_scratchpad}
 """
 
-def get_supervisor_input_validated(
-        user_request: str, 
-        c_code: str, 
-        last_message: str, 
-        is_satisfactory: bool,
-        compilation_status: str
-    ) -> str:
-    return f"""You are a helpful C programming expert. The user requested a parser function, and we've generated one for them.
-
-The user's original request was: {user_request}
+def get_supervisor_input_validated(c_code: str, last_message: str, is_satisfactory: bool, compilation_status: str) -> str:
+    return f"""You are a helpful C programming expert. The user has requested a parser function and we've generated one for him.
 
 The generated parser code is:
 ```c
@@ -62,21 +63,16 @@ Please provide a friendly response to the user that:
 Keep your explanation concise and user-friendly.
 """
 
-def get_supervisor_input_actions(user_request: str, conversation_context: str) -> str:
-    return f"""Based on the user's request and our conversation history, determine what action I should take.
+def get_supervisor_input_actions() -> str:
+    return """Based on the user's request and our conversation history, determine what action I should take.
 Respond with ONLY ONE of these actions (and nothing else):
 1. "GENERATE_PARSER" - if the user wants me to create a new parser
 2. "CORRECT_ERROR" - if the user is reporting issues with previously generated code
 3. "ASSESS_CODE" - if the user wants me to evaluate previously generated code or is asking to see previously generated code
 4. "GENERAL_CONVERSATION" - for general questions or conversations
-
-User's request: "{user_request}"
-
-Recent conversation context: 
-{conversation_context}
 """
 
-def get_supervisor_input_generate_parser(user_request: str) -> str:
+def get_supervisor_input_generate_parser() -> str:
     return f"""Your task is to take the user's request and convert it into a detailed, specific prompt for a C parser function generator.
 
 The parser function must follow these requirements:
@@ -90,16 +86,12 @@ The prompt you create should include:
 5. What component functions will be needed
 6. Memory management strategy
 
-User request: {user_request}
-
 Create a detailed prompt for the generator.
 """
 
-def get_supervisor_input_correct_error(user_request: str, conversation_context: str, parser: dict[str, Any]) -> str:
+def get_supervisor_input_correct_error(parser: dict[str, Any]) -> str:
     return f"""Create detailed specifications for updating the parser to address these issues.
 Be specific about what changes need to be made and why.
-
-Original user request: {user_request}
 
 Previous parser code:
 ```c
@@ -109,11 +101,6 @@ Previous parser code:
 Previous validator assessment: {parser.get('validator_assessment', 'Not available')}
 Compilation status: {parser.get('compilation_status', 'Unknown')}
 Was code satisfactory: {"Yes" if parser.get('is_satisfactory', False) else "No"}
-
-User reported issues or requested changes: {user_request}
-
-Conversation history (for context):
-{conversation_context}
 """
 
 def get_supervisor_input_assess_code(user_request: str, parser: dict[str, Any]) -> str:
@@ -122,8 +109,6 @@ def get_supervisor_input_assess_code(user_request: str, parser: dict[str, Any]) 
             
     if is_asking_for_code:
         return f"""The user is asking about previously generated code.
-
-User request: {user_request}
 
 The complete most recently generated code is:
 ```c
@@ -146,8 +131,6 @@ Focus on explaining the code's functionality rather than showing the entire code
     else:
         return f"""The user is asking about the quality or validation status of previously generated code.
 
-User request: {user_request}
-
 The most recently generated code was:
 ```c
 {parser['code']}
@@ -168,7 +151,7 @@ Create a comprehensive response that:
 Keep your explanation concise and conversational, focusing on the overall assessment rather than providing the entire code.
 """
 
-def get_supervisor_input_general_conversation(user_request: str, conversation_context: str, parser: dict[str, Any] | None) -> str:
+def get_supervisor_input_general_conversation(user_request: str, parser: dict[str, Any] | None) -> str:
     keywords = ["memory", "remember", "previous", "code", "generated", "parser"]
     is_asking_about_memory = parser and any(keyword in user_request.lower() for keyword in keywords)
     
@@ -180,25 +163,15 @@ def get_supervisor_input_general_conversation(user_request: str, conversation_co
 
 Let them know they can ask to see a summary of the code by saying something like "summarize the code" or "what did the parser do?"
 
-User: {user_request}
-
-Recent conversation history (for context):
-{conversation_context}
-
 Information about your most recent parser:
 I have a recently generated parser from {parser.get('timestamp')}
 - Satisfactory: {parser.get('is_satisfactory', 'Unknown')}
 - Compilation: {parser.get('compilation_status', 'Unknown')}
 """
     else:
-        return f"""If they're asking about parsers, you can offer to generate a C parser for them by responding to their specific needs.
+        return """If they're asking about parsers, you can offer to generate a C parser for them by responding to their specific needs.
 If they're asking about previous code you've generated, refer ONLY to your most recent parser.
 Otherwise, provide a helpful, concise response that addresses their question.
 
 Respond in a conversational, friendly tone.
-
-User: {user_request}
-
-Recent conversation history (for context):
-{conversation_context}
 """

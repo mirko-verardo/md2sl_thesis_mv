@@ -15,13 +15,16 @@
 
 ## Prompt
 
-- *difficult*: generate a parser function for parsing files in geojson format
-- *simple*: generate a simple parser function for parsing files in json format
+- *difficult*: 
+    - generate a parser function for geojson files
+- *simple*: 
+    - generate a simple parser function for xml files
+    - generate a simple parser function in C for pdf files
 
 ## Unit Testing
 
-1. Manual file to parse and check some predefined test case on it
-2. Generate automatically through an agent file to parse and test case on it to test
+1. Manual file to parse and check some predefined test cases on it
+2. Generate automatically through an agent file to parse and test cases on it
 3. Metrics:
     - accuracy: files parsed with test case ok / total files parsed
     - coverage: lines executed / total lines
@@ -29,12 +32,12 @@
 
 ## Questions
 
-### Supervisor
-
-- compilation_check: agents make confusion between them? can i avoid it?
-    - ```tool_code compilation_check``` is not a valid tool, try one of [compilation_check]
-- conversation_context: passed in 2 different modes?
-- system_metrics complete_round(): not in GENERATE_PARSER and CORRECT_ERROR?
+- "Agent stopped due to iteration limit or time limit" problem with multiagent
+- can last iteration fail and the middle ones instead create a working code?
+- **Supervisor**: difference between actions
+    - system_metrics complete_round(): not in GENERATE_PARSER and CORRECT_ERROR?
+    - compilation_check: agents make confusion between them? can i avoid it?
+        - ```tool_code compilation_check``` is not a valid tool, try one of [compilation_check]
 
 # Sam nothes (old)
 

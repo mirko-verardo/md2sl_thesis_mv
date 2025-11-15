@@ -50,16 +50,11 @@ def generator_node(state: AgentState) -> AgentState:
     )
     
     try:
-        generator_result = generator_executor.invoke({
-            "tools": generator_tools,
-            "tool_names": [tool.name for tool in generator_tools],
-            "agent_scratchpad": []
-        })
+        generator_result = generator_executor.invoke({})
         generator_response = generator_result["output"]
         generator_response_color = colors.MAGENTA
         
         if "intermediate_steps" in generator_result:
-            tool_used = False
             compilation_attempts = 0
             
             for step in generator_result["intermediate_steps"]:
@@ -68,8 +63,6 @@ def generator_node(state: AgentState) -> AgentState:
                 
                 if action.tool == "compilation_check":
                     compilation_attempts += 1
-                    tool_used = True
-
                     compilation_success = "Compilation successful" in action_output
                     
                     if state.get("system_metrics"):
@@ -81,7 +74,7 @@ def generator_node(state: AgentState) -> AgentState:
                     else:
                         print_colored("Compilation failed!", "1;31")
             
-            if not tool_used:
+            if compilation_attempts == 0:
                 print_colored("\nWarning: Compilation check tool was NOT used!", "1;33")
                 
     except Exception as e:
@@ -89,16 +82,15 @@ def generator_node(state: AgentState) -> AgentState:
         generator_response_color = colors.RED
     
     # increment iteration
-    iteration_count = iteration_count + 1
+    iteration_count += 1
     
-    with open(log_file, 'a') as f:
+    with open(log_file, 'a', encoding="utf-8") as f:
         log(f, f"Generator (Iteration {iteration_count}):", generator_response_color, bold=True)
         log(f, generator_response)
     
     next_step = "Supervisor" if iteration_count > state["max_iterations"] else "Validator"
     
     return {
-        #"messages": messages + [AIMessage(content=generator_response, name="Generator")],
         "messages": [AIMessage(content=generator_response, name="Generator")],
         "user_request": user_request,
         "supervisor_memory": state["supervisor_memory"],

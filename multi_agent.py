@@ -137,8 +137,7 @@ def run_parser_system(
                 final_state["system_metrics"].save_summary(session_dir)
             
             # Get supervisor response
-            supervisor_messages = [msg for msg in final_messages if 
-                                  hasattr(msg, 'name') and msg.name == "Supervisor"]
+            supervisor_messages = [msg for msg in final_messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
             
             if supervisor_messages:
                 final_response = supervisor_messages[-1].content

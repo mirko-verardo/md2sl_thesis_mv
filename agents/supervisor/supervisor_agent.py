@@ -5,7 +5,8 @@ from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, ExceptionTool
-from utils.general import print_colored, extract_c_code, initialize_llm
+from utils import colors
+from utils.general import print_colored, log, extract_c_code, initialize_llm
 from agents.supervisor import supervisor_prompts
 
 
@@ -13,7 +14,7 @@ from agents.supervisor import supervisor_prompts
 def read_conversation_log(log_file: Path | None) -> str:
     """Read the entire conversation log to provide context for the supervisor."""
     try:
-        with open(log_file, 'r') as f:
+        with open(log_file, 'r', encoding="utf-8") as f:
             return f.read()
     except Exception as e:
         print_colored(f"Warning: Could not read log file: {e}", "1;33")
@@ -84,13 +85,11 @@ def supervisor_node(state: AgentState) -> AgentState:
     model_source = state["model_source"]
     session_dir = state["session_dir"]
     log_file = state["log_file"]
-    supervisor_memory = state["supervisor_memory"]
     
     conversation_log = read_conversation_log(log_file)
-    updated_memory = update_supervisor_memory(state, conversation_log)
-    supervisor_memory = updated_memory if updated_memory is not None else supervisor_memory
+    supervisor_memory = update_supervisor_memory(state, conversation_log)
     most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
-    conversation_context = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
+    #conversation_log = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
     
     supervisor_template = supervisor_prompts.get_supervisor_template()
     
@@ -114,6 +113,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
     has_validated_parser = len(validator_messages) > 0 and state["iteration_count"] > 0
+
+    f = open(log_file, 'a', encoding="utf-8")
 
     if has_validated_parser:
         last_message = validator_messages[-1].content
@@ -139,15 +140,13 @@ def supervisor_node(state: AgentState) -> AgentState:
             
         print_colored(f"\nStored new parser in memory (satisfactory: {is_satisfactory}, compilation: {compilation_status})", "1;36")
         
-        response_prompt = supervisor_prompts.get_supervisor_input_validated(user_request, c_code, last_message, is_satisfactory, compilation_status)
-        
-        supervisor_result = supervisor_executor.invoke({
-            "input": response_prompt,
-            "conversation_context": conversation_context,
-            "tools": supervisor_tools,
-            "tool_names": [tool.name for tool in supervisor_tools]
+        prompt = supervisor_prompts.get_supervisor_input_validated(c_code, last_message, is_satisfactory, compilation_status)
+        result = supervisor_executor.invoke({
+            "input": user_request,
+            "conversation_history": conversation_log,
+            "prompt": prompt
         })
-        supervisor_response = supervisor_result["output"]
+        supervisor_response = result["output"]
         
         if state.get("system_metrics"):
             state["system_metrics"].complete_round()
@@ -159,30 +158,24 @@ def supervisor_node(state: AgentState) -> AgentState:
         next_step = "FINISH"
         parser_mode = False
     else:
-        context_prompt = supervisor_prompts.get_supervisor_input_actions(user_request, conversation_context)
-
-        action_result = supervisor_executor.invoke({
-            "input": context_prompt,
-            "conversation_context": "",
-            "tools": supervisor_tools,
-            "tool_names": [tool.name for tool in supervisor_tools]
+        prompt = supervisor_prompts.get_supervisor_input_actions()
+        result = supervisor_executor.invoke({
+            "input": user_request,
+            "conversation_history": conversation_log,
+            "prompt": prompt
         })
-        action = action_result["output"].strip()
+        action = result["output"].strip()
         
-        print_colored(f"\nSupervisor determined action: {action}", "1;36")
-        with open(log_file, 'a') as f:
-            f.write(f"Supervisor action decision: {action}\n\n")
+        log(f, f"Supervisor action choosen: {action}", colors.CYAN, bold=True)
         
         if action == "GENERATE_PARSER":
-            parser_prompt = supervisor_prompts.get_supervisor_input_generate_parser(user_request)
-
-            specs_result = supervisor_executor.invoke({
-                "input": parser_prompt,
-                "conversation_context": conversation_context,
-                "tools": supervisor_tools,
-                "tool_names": [tool.name for tool in supervisor_tools]
+            prompt = supervisor_prompts.get_supervisor_input_generate_parser()
+            result = supervisor_executor.invoke({
+                "input": user_request,
+                "conversation_history": conversation_log,
+                "prompt": prompt
             })
-            supervisor_response = specs_result["output"]
+            supervisor_response = result["output"]
             
             purpose = "creating detailed specifications"
             generator_specs = supervisor_response
@@ -191,15 +184,13 @@ def supervisor_node(state: AgentState) -> AgentState:
             next_step = "Generator"
             parser_mode = True            
         elif action == "CORRECT_ERROR" and most_recent_parser:
-            correction_prompt = supervisor_prompts.get_supervisor_input_correct_error(user_request, conversation_context, most_recent_parser)
-
-            correction_result = supervisor_executor.invoke({
-                "input": correction_prompt,
-                "conversation_context": "",
-                "tools": supervisor_tools,
-                "tool_names": [tool.name for tool in supervisor_tools]
+            prompt = supervisor_prompts.get_supervisor_input_correct_error(most_recent_parser)
+            result = supervisor_executor.invoke({
+                "input": user_request,
+                "conversation_history": conversation_log,
+                "prompt": prompt
             })
-            supervisor_response = correction_result["output"]
+            supervisor_response = result["output"]
             
             purpose = "creating updated specifications"
             generator_specs = supervisor_response
@@ -208,14 +199,14 @@ def supervisor_node(state: AgentState) -> AgentState:
             next_step = "Generator"
             parser_mode = True
         elif action == "ASSESS_CODE" and most_recent_parser:
-            assess_prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
-            assess_result = supervisor_executor.invoke({
-                "input": assess_prompt,
-                "conversation_context": "",
-                "tools": supervisor_tools,
-                "tool_names": [tool.name for tool in supervisor_tools]
+            prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
+            result = supervisor_executor.invoke({
+                "input": user_request,
+                #"conversation_history": "",
+                "conversation_history": conversation_log,
+                "prompt": prompt
             })
-            supervisor_response = assess_result["output"]
+            supervisor_response = result["output"]
             
             if state.get("system_metrics"):
                 state["system_metrics"].complete_round()
@@ -228,12 +219,11 @@ def supervisor_node(state: AgentState) -> AgentState:
             parser_mode = False
         else:
             # GENERAL_CONVERSATION
-            prompt = supervisor_prompts.get_supervisor_input_general_conversation(user_request, conversation_context, most_recent_parser)
+            prompt = supervisor_prompts.get_supervisor_input_general_conversation(user_request, most_recent_parser)
             result = supervisor_executor.invoke({
-                "input": prompt,
-                "conversation_context": "",
-                "tools": supervisor_tools,
-                "tool_names": [tool.name for tool in supervisor_tools]
+                "input": user_request,
+                "conversation_history": conversation_log,
+                "prompt": prompt
             })
             supervisor_response = result["output"]
             
@@ -246,13 +236,10 @@ def supervisor_node(state: AgentState) -> AgentState:
             iteration_count = state["iteration_count"]
             next_step = "FINISH"
             parser_mode = False
-        
-    print_colored(f"\nSupervisor ({purpose}):", "1;34")
-    print(supervisor_response)
-    
-    with open(log_file, 'a') as f:
-        f.write(f"Supervisor ({purpose}):\n")
-        f.write(supervisor_response + "\n\n")
+
+    log(f, f"Supervisor ({purpose}):", colors.BLUE, bold=True)
+    log(f, supervisor_response)
+    f.close()
     
     return {
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
