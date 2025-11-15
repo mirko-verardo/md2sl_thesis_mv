@@ -1,19 +1,13 @@
-from utils.multi_agent import requirements, escape_for_prompt
-
-
-
-def get_validator_template(specifications: str, code: str, compilation_status: str, iteration_count: int, max_iterations: int) -> str:
-    specifications = escape_for_prompt(specifications)
-    code = escape_for_prompt(code)
-    compilation_status = escape_for_prompt(compilation_status)
-
-    return f"""<role>
+def get_validator_template() -> str:
+    """Validator's template with ReAct format"""
+    
+    return """<role>
 You are a specialized C programming validator that evaluates parser code against strict requirements.
 </role>
 
 <available_tools>
-You have access to these tools: {{tools}}
-Tool names: {{tool_names}}
+You have access to these tools: {tools}
+Tool names: {tool_names}
 </available_tools>
 
 <parser_requirements>
@@ -33,8 +27,7 @@ Additionally, it must meet these specific specifications:
 </code_to_review>
 
 <compilation_result>
-Compilation result:
-{compilation_status}
+Compilation result: {compilation_status}
 </compilation_result>
 
 <validation_process>
@@ -67,5 +60,5 @@ Final Answer: the final answer to the original question.
 
 Evaluate the code based on the requirements and provide your assessment.
 
-{{agent_scratchpad}}
+{agent_scratchpad}
 """

@@ -17,6 +17,7 @@
 
 - *difficult*: 
     - generate a parser function for geojson files
+    - generate a parser function for MIME files
 - *simple*: 
     - generate a simple parser function for xml files
     - generate a simple parser function in C for pdf files
@@ -33,11 +34,10 @@
 ## Questions
 
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
-- can last iteration fail and the middle ones instead create a working code?
-- **Supervisor**: difference between actions
+- Problem: last iteration can fail and the middle ones instead create a working code
+- **Supervisor**:
     - system_metrics complete_round(): not in GENERATE_PARSER and CORRECT_ERROR?
-    - compilation_check: agents make confusion between them? can i avoid it?
-        - ```tool_code compilation_check``` is not a valid tool, try one of [compilation_check]
+    - What does ExceptionTool() needed for?
 
 # Sam nothes (old)
 

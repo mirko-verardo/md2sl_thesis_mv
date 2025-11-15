@@ -5,6 +5,7 @@ from models import AgentState, CompilationCheckTool
 from agents.generator.generator_prompts import get_generator_template
 from utils import colors
 from utils.general import print_colored, log, initialize_llm
+from utils.multi_agent import requirements
 
 
 
@@ -24,17 +25,25 @@ def generator_node(state: AgentState) -> AgentState:
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
     has_feedback = len(validator_messages) > 0 and iteration_count > 0
 
-    generator_specs_coalesced = generator_specs if generator_specs is not None else ""
-    feedback = validator_messages[-1].content if has_feedback else ""
-    generator_template = get_generator_template(generator_specs_coalesced, iteration_count, feedback)
+    # Manage prompt's input
+    generator_input = {
+        "requirements": requirements,
+        "specifications": generator_specs if generator_specs is not None else ""
+    }
+    if has_feedback:
+        generator_input.update({
+            "feedback": validator_messages[-1].content,
+            "iteration_count": iteration_count
+        })
+
+    # Create the prompt
+    generator_template = get_generator_template(has_feedback)
+    generator_prompt = PromptTemplate.from_template(generator_template)
 
     # Initialize model for generator
     generator_llm = initialize_llm(model_source)
     generator_llm.temperature = 0.5
     generator_tools = [CompilationCheckTool()]
-
-    # Create a prompt using PromptTemplate.from_template
-    generator_prompt = PromptTemplate.from_template(generator_template)
     
     # Create the ReAct agent instead of OpenAI tools agent
     generator_agent = create_react_agent(generator_llm, generator_tools, generator_prompt)
@@ -50,7 +59,7 @@ def generator_node(state: AgentState) -> AgentState:
     )
     
     try:
-        generator_result = generator_executor.invoke({})
+        generator_result = generator_executor.invoke(generator_input)
         generator_response = generator_result["output"]
         generator_response_color = colors.MAGENTA
         

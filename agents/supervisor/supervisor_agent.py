@@ -91,15 +91,14 @@ def supervisor_node(state: AgentState) -> AgentState:
     most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
     #conversation_log = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
     
+    # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
-    
+    supervisor_prompt = PromptTemplate.from_template(supervisor_template)
+
     # Initialize model for supervisor
     supervisor_llm = initialize_llm(model_source)
     supervisor_llm.temperature = 0.6
     supervisor_tools = [ExceptionTool()]
-    
-    # Create a prompt using PromptTemplate.from_template
-    supervisor_prompt = PromptTemplate.from_template(supervisor_template)
     
     # Create the ReAct agent instead of OpenAI tools agent
     supervisor_agent = create_react_agent(supervisor_llm, supervisor_tools, supervisor_prompt)
@@ -122,10 +121,14 @@ def supervisor_node(state: AgentState) -> AgentState:
         compilation_status = "Compilation successful" if "compilation successful" in last_message.lower() else "Compilation failed"
         
         c_code = state["generator_code"]
-        final_clean_c_code = extract_c_code(c_code)
+        # Extract clean c code
+        clean_c_code = extract_c_code(c_code)
+        if not clean_c_code:
+            print_colored("Warning: Could not extract clean C code, using original code", "1;33")
+            clean_c_code = c_code
+
         memory_entry = {
-            'code': c_code,
-            'clean_code': final_clean_c_code,
+            'code': clean_c_code,
             'specs': state["generator_specs"],
             'timestamp': datetime.now().isoformat(),
             'iteration': state["iteration_count"],
@@ -135,16 +138,18 @@ def supervisor_node(state: AgentState) -> AgentState:
         }
         
         supervisor_memory.append(memory_entry)
-        
-        #most_recent_parser = memory_entry
             
         print_colored(f"\nStored new parser in memory (satisfactory: {is_satisfactory}, compilation: {compilation_status})", "1;36")
         
-        prompt = supervisor_prompts.get_supervisor_input_validated(c_code, last_message, is_satisfactory, compilation_status)
+        prompt = supervisor_prompts.get_supervisor_input_validated()
         result = supervisor_executor.invoke({
             "input": user_request,
             "conversation_history": conversation_log,
-            "prompt": prompt
+            "prompt": prompt,
+            "c_code": clean_c_code,
+            "validator_assessment": last_message,
+            "code_satisfaction": "Yes" if is_satisfactory else "No",
+            "compilation_status": compilation_status
         })
         supervisor_response = result["output"]
         
@@ -202,7 +207,6 @@ def supervisor_node(state: AgentState) -> AgentState:
             prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
             result = supervisor_executor.invoke({
                 "input": user_request,
-                #"conversation_history": "",
                 "conversation_history": conversation_log,
                 "prompt": prompt
             })

@@ -5,6 +5,3 @@ requirements = """1. Input Handling: The code deals with a pointer to a buffer o
 4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
 5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
 6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)"""
-
-def escape_for_prompt(prompt: str) -> str:
-    return prompt.replace("{", "{{").replace("}", "}}")

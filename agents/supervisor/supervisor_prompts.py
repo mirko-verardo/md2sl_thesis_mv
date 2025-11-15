@@ -39,17 +39,17 @@ Final Answer: the final answer to the original question.
 {agent_scratchpad}
 """
 
-def get_supervisor_input_validated(c_code: str, last_message: str, is_satisfactory: bool, compilation_status: str) -> str:
-    return f"""You are a helpful C programming expert. The user has requested a parser function and we've generated one for him.
+def get_supervisor_input_validated() -> str:
+    return """You are a helpful C programming expert. The user has requested a parser function and we've generated one for him.
 
 The generated parser code is:
 ```c
 {c_code}
 ```
 
-The validator's assessment: {last_message}
+The validator's assessment: {validator_assessment}
 
-Is the code satisfactory? {"Yes" if is_satisfactory else "No"}
+Is the code satisfactory? {code_satisfaction}
 Compilation status: {compilation_status}
 
 Please provide a friendly response to the user that:

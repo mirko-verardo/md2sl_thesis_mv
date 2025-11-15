@@ -6,6 +6,7 @@ from models import AgentState, ExceptionTool
 from agents.validator.validator_prompts import get_validator_template
 from utils import colors
 from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
+from utils.multi_agent import requirements
 
 
 
@@ -58,18 +59,25 @@ def validator_node(state: AgentState) -> AgentState:
     f = open(log_file, 'a', encoding="utf-8")
     log(f, f"--- Compilation Test Results (Iteration {iteration_count}) ---")
     log(f, compilation_status, color, bold=True)
+
+    # Manage prompt's input
+    validator_input = {
+        "requirements": requirements,
+        "specifications": generator_specs if generator_specs is not None else "",
+        "code": generator_code,
+        "compilation_status": compilation_status,
+        "iteration_count": iteration_count,
+        "max_iterations": max_iterations
+    }
     
-    # Validator's template with ReAct format
-    generator_specs_coalesced = generator_specs if generator_specs is not None else ""
-    validator_template = get_validator_template(generator_specs_coalesced, generator_code, compilation_status, iteration_count, max_iterations)
+    # Create the prompt
+    validator_template = get_validator_template()
+    validator_prompt = PromptTemplate.from_template(validator_template)
 
     # Initialize model for validator
     validator_llm = initialize_llm(model_source)
     validator_llm.temperature = 0.4
     validator_tools = [ExceptionTool()]
-
-    # Create a prompt using PromptTemplate.from_template
-    validator_prompt = PromptTemplate.from_template(validator_template)
     
     # Create the ReAct agent instead of OpenAI tools agent
     validator_agent = create_react_agent(validator_llm, validator_tools, validator_prompt)
@@ -83,7 +91,7 @@ def validator_node(state: AgentState) -> AgentState:
     
     # Invoke the agent
     try:
-        validator_result = validator_executor.invoke({})
+        validator_result = validator_executor.invoke(validator_input)
         validator_response = validator_result["output"]
         validator_response_color = colors.BLUE
     except Exception as e:

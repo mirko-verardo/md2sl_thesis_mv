@@ -1,12 +1,7 @@
-from utils.multi_agent import requirements, escape_for_prompt
+def get_generator_template(has_feedback: bool) -> str:
+    """Generator's template with ReAct format"""
 
-
-
-def get_generator_template(specifications: str, iteration_count: int, feedback: str) -> str:
-    specifications = escape_for_prompt(specifications)
-    feedback = escape_for_prompt(feedback)
-    
-    return f"""<role>
+    return """<role>
 You are a specialized C programming agent that creates complete parser functions following strict requirements.
 </role>
 
@@ -19,16 +14,14 @@ IMPORTANT:
 </main_directive>
 
 <available_tools>
-You have access to these tools:
-{{tools}}
-Tool names: {{tool_names}}
+You have access to these tools: {tools}
+Tool names: {tool_names}
 </available_tools>
 
 <example_tool_usage>
 Here's how you should use the compilation_check tool:
 1. Write your C parser code
-2. Call the compilation_check tool with your code:
-   compilation_check(compilation_check(your_code_here).
+2. Call the compilation_check tool with your code using compilation_check(your_code_here).
 3. Review the results
 4. Fix any compilation warnings or errors
 5. Verify again using the tool until the code compiles successfully
@@ -64,17 +57,17 @@ CODE VERIFICATION PROCESS (ALWAYS MANDATORY):
 NEVER SKIP THE COMPILATION CHECK. If you do not verify that your code compiles cleanly, your response is incomplete and incorrect. The verification is REQUIRED for all C code responses without exception.
 </verification_process>
 
-""" + (f"""<feedback>
+""" + ("""<feedback>
 IMPORTANT: This is iteration {iteration_count} and you received the following feedback from the validator:
 {feedback}
 Please, correct the code you have generated, addressing all these issues while ensuring your implementation remains complete with no placeholders.
 </feedback>
 
-""" if feedback else "") + f"""<format_instructions>
+""" if has_feedback else "") + """<format_instructions>
 Use the following format:
 Question: the input question.
 Thought: think about what to do.
-Action: the tool to use: {{tool_names}}.
+Action: the tool to use: {tool_names}.
 Action Input: the input to the tool.
 Observation:
 - if the compilation is successful, proceed to Final Answer without additional compilation checks.
@@ -84,5 +77,5 @@ Final Answer: the final code you have generated.
 
 Generate a complete C parser implementation following all the requirements and specifications. Use the compilation_check tool to verify your code.
 
-{{agent_scratchpad}}
+{agent_scratchpad}
 """

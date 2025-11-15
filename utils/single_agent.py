@@ -99,8 +99,7 @@ NEVER SKIP THE COMPILATION CHECK. If you do not verify that your code compiles c
 </verification_process>
 
 <available_tools>
-You have access to these tools:
-{tools}
+You have access to these tools: {tools}
 Tool names: {tool_names}
 Call the tool using compilation_check(your_code_here). 
 </available_tools>
