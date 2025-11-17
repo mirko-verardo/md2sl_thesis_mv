@@ -5,7 +5,7 @@ from models import AgentState, CompilationCheckTool
 from agents.generator.generator_prompts import get_generator_template
 from utils import colors
 from utils.general import print_colored, log, initialize_llm
-from utils.multi_agent import requirements
+from utils.multi_agent import get_parser_requirements
 
 
 
@@ -13,10 +13,8 @@ def generator_node(state: AgentState) -> AgentState:
     """Generator agent that creates C code."""
     messages = state["messages"]
     generator_specs = state["generator_specs"]
-    user_request = state["user_request"]
     iteration_count = state["iteration_count"]
     model_source = state["model_source"]
-    session_dir = state["session_dir"]
     log_file = state["log_file"]
     
     if state.get("system_metrics") and (iteration_count == 0 or state["next_step"] == "Generator"):
@@ -27,7 +25,7 @@ def generator_node(state: AgentState) -> AgentState:
 
     # Manage prompt's input
     generator_input = {
-        "requirements": requirements,
+        "requirements": get_parser_requirements(),
         "specifications": generator_specs if generator_specs is not None else ""
     }
     if has_feedback:
@@ -101,14 +99,14 @@ def generator_node(state: AgentState) -> AgentState:
     
     return {
         "messages": [AIMessage(content=generator_response, name="Generator")],
-        "user_request": user_request,
+        "user_request": state["user_request"],
         "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_response,
         "iteration_count": iteration_count,
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
-        "session_dir": session_dir,
+        "session_dir": state["session_dir"],
         "log_file": log_file,
         "next_step": next_step,
         "parser_mode": state["parser_mode"],

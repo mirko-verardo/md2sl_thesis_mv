@@ -6,20 +6,19 @@ from models import AgentState, ExceptionTool
 from agents.validator.validator_prompts import get_validator_template
 from utils import colors
 from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
-from utils.multi_agent import requirements
+from utils.multi_agent import get_parser_requirements
 
 
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
     generator_specs = state["generator_specs"]
+    generator_code = state["generator_code"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
-    generator_code = state["generator_code"]
-    user_request = state["user_request"]
+    model_source = state["model_source"]
     session_dir = state["session_dir"]
     log_file = state["log_file"]
-    model_source = state["model_source"]
     
     # Extract clean c code
     clean_c_code = extract_c_code(generator_code)
@@ -62,9 +61,9 @@ def validator_node(state: AgentState) -> AgentState:
 
     # Manage prompt's input
     validator_input = {
-        "requirements": requirements,
+        "requirements": get_parser_requirements(),
         "specifications": generator_specs if generator_specs is not None else "",
-        "code": generator_code,
+        "code": clean_c_code,
         "compilation_status": compilation_status,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations
@@ -132,7 +131,7 @@ def validator_node(state: AgentState) -> AgentState:
     
     return {
         "messages": [AIMessage(content=feedback_message, name="Validator")],
-        "user_request": user_request,
+        "user_request": state["user_request"],
         "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_code,

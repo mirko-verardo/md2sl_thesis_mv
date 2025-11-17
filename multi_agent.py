@@ -9,6 +9,7 @@ from agents.generator.generator_agent import generator_node
 from agents.validator.validator_agent import validator_node
 from models import AgentState, SystemMetrics
 from utils.general import get_model_source_from_input, print_colored
+from utils.multi_agent import get_satisfaction, get_compilation_status
 
 
 
@@ -189,12 +190,15 @@ if __name__ == "__main__":
             else:
                 for i, mem in enumerate(supervisor_memory):
                     print_colored(f"Memory entry {i}:", "1;33")
-                    print(f"  Timestamp: {mem.get('timestamp')}")
                     print(f"  Iteration: {mem.get('iteration')}")
-                    print(f"  Satisfactory: {mem.get('is_satisfactory', 'Unknown')}")
+
+                    ass = mem.get('validator_assessment')
+                    print(f"  Satisfactory: {get_satisfaction(ass)}")
+                    print(f"  Compilation: {get_compilation_status(ass)}")
                     
                     # Show code excerpt
-                    code_excerpt = mem.get('code', '')[:300] + "..." if len(mem.get('code', '')) > 300 else mem.get('code', '')
+                    code_excerpt = mem.get('code', '')
+                    code_excerpt = code_excerpt[:300] + "..." if len(code_excerpt) > 300 else code_excerpt
                     print(f"  Code excerpt: {code_excerpt}")
             continue
         

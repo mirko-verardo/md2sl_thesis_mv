@@ -1,17 +1,16 @@
 import re
-from datetime import datetime
 from pathlib import Path
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, ExceptionTool
-from utils import colors
+from utils import colors, multi_agent
 from utils.general import print_colored, log, extract_c_code, initialize_llm
 from agents.supervisor import supervisor_prompts
 
 
 
-def read_conversation_log(log_file: Path | None) -> str:
+def __read_conversation_log(log_file: Path | None) -> str:
     """Read the entire conversation log to provide context for the supervisor."""
     try:
         with open(log_file, 'r', encoding="utf-8") as f:
@@ -20,7 +19,7 @@ def read_conversation_log(log_file: Path | None) -> str:
         print_colored(f"Warning: Could not read log file: {e}", "1;33")
         return ""
 
-def extract_validator_assessment(conversation_log: str, iteration_count: int) -> str | None:
+def __extract_validator_assessment(conversation_log: str, iteration_count: int) -> str | None:
     """Extract the validator's assessment from the conversation log."""
 
     # search for a specific pattern
@@ -34,62 +33,57 @@ def extract_validator_assessment(conversation_log: str, iteration_count: int) ->
     matches = re.findall(pattern, conversation_log, re.DOTALL)
     if matches:
         return matches[-1].strip()
-        
+    
     return None
 
-def update_supervisor_memory(state: AgentState, conversation_log: str) -> list[dict]:
+def __update_supervisor_memory(s_memory: list[dict], conversation_log: str, code: str | None, i_count: int) -> list[dict]:
     """Update the supervisor's memory with information from the conversation log."""
-    supervisor_memory = state["supervisor_memory"]
-    generator_code = state["generator_code"]
-    iteration_count = state["iteration_count"]
-    
-    if generator_code and iteration_count > 0:
+    if code and i_count > 0:
         # get assessment
-        validator_assessment = None
-        is_satisfactory = False
-        if conversation_log:
-            validator_assessment = extract_validator_assessment(conversation_log, iteration_count)
-            if validator_assessment:
-                is_satisfactory = "satisfactory" in validator_assessment.lower() and "not satisfactory" not in validator_assessment.lower()
-
+        v_assessment = __extract_validator_assessment(conversation_log, i_count)
+        
         # update assessment if code exists
         code_exists = False
-        for entry in supervisor_memory:
-            if entry.get("code") == generator_code:
+        for entry in s_memory:
+            if entry.get("code") == code:
                 code_exists = True
-                if validator_assessment:
-                    entry["validator_assessment"] = validator_assessment
-                    entry["is_satisfactory"] = is_satisfactory
+                if v_assessment:
+                    entry["validator_assessment"] = v_assessment
                 break
         
         # else add assessment
         if not code_exists:
             new_entry = {
-                'code': generator_code,
-                'specs': state["generator_specs"],
-                'timestamp': datetime.now().isoformat(),
-                'iteration': iteration_count,
-                'validator_assessment': validator_assessment,
-                'is_satisfactory': is_satisfactory
+                'code': code,
+                'iteration': i_count,
+                'validator_assessment': v_assessment
             }
-            supervisor_memory.append(new_entry)
+            s_memory.append(new_entry)
     
-    print_colored(f"\nSupervisor memory status (entries: {len(supervisor_memory)})", "1;33")
-    
-    return supervisor_memory
+    return s_memory
 
 def supervisor_node(state: AgentState) -> AgentState:
     """Supervisor agent that converses with the user and manages the parser generation process."""
     messages = state["messages"]
     user_request = state["user_request"]
+    supervisor_memory = state["supervisor_memory"]
+    generator_code = state["generator_code"]
+    iteration_count = state["iteration_count"]
     model_source = state["model_source"]
     session_dir = state["session_dir"]
     log_file = state["log_file"]
+
+    # Extract clean c code
+    clean_c_code = extract_c_code(generator_code)
+    if not clean_c_code:
+        print_colored("Warning: Could not extract clean C code, using original code", "1;33")
+        clean_c_code = generator_code
     
-    conversation_log = read_conversation_log(log_file)
-    supervisor_memory = update_supervisor_memory(state, conversation_log)
-    most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
+    conversation_log = __read_conversation_log(log_file)
+    supervisor_memory = __update_supervisor_memory(supervisor_memory, conversation_log, clean_c_code, iteration_count)
     #conversation_log = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
+
+    print_colored(f"\nSupervisor memory status (entries: {len(supervisor_memory)})", "1;33")
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
@@ -111,35 +105,23 @@ def supervisor_node(state: AgentState) -> AgentState:
     )
     
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
-    has_validated_parser = len(validator_messages) > 0 and state["iteration_count"] > 0
+    has_validated_parser = len(validator_messages) > 0 and iteration_count > 0
 
     f = open(log_file, 'a', encoding="utf-8")
 
     if has_validated_parser:
         last_message = validator_messages[-1].content
-        is_satisfactory = "satisfactory" in last_message.lower() and "not satisfactory" not in last_message.lower()
-        compilation_status = "Compilation successful" if "compilation successful" in last_message.lower() else "Compilation failed"
-        
-        c_code = state["generator_code"]
-        # Extract clean c code
-        clean_c_code = extract_c_code(c_code)
-        if not clean_c_code:
-            print_colored("Warning: Could not extract clean C code, using original code", "1;33")
-            clean_c_code = c_code
 
         memory_entry = {
             'code': clean_c_code,
-            'specs': state["generator_specs"],
-            'timestamp': datetime.now().isoformat(),
-            'iteration': state["iteration_count"],
-            'validator_assessment': last_message,
-            'is_satisfactory': is_satisfactory,
-            'compilation_status': compilation_status
+            'iteration': iteration_count,
+            'validator_assessment': last_message
         }
-        
         supervisor_memory.append(memory_entry)
-            
-        print_colored(f"\nStored new parser in memory (satisfactory: {is_satisfactory}, compilation: {compilation_status})", "1;36")
+        
+        code_satisfaction = multi_agent.get_satisfaction(last_message)
+        compilation_status = multi_agent.get_compilation_status(last_message)
+        print_colored(f"\nStored new parser in memory (satisfactory: {code_satisfaction}, compilation: {compilation_status})", "1;36")
         
         prompt = supervisor_prompts.get_supervisor_input_validated()
         result = supervisor_executor.invoke({
@@ -148,8 +130,9 @@ def supervisor_node(state: AgentState) -> AgentState:
             "prompt": prompt,
             "c_code": clean_c_code,
             "validator_assessment": last_message,
-            "code_satisfaction": "Yes" if is_satisfactory else "No",
-            "compilation_status": compilation_status
+            "code_satisfaction": code_satisfaction,
+            "compilation_status": compilation_status,
+            "code_satisfaction_instructions": multi_agent.get_satisfaction_instructions(last_message)
         })
         supervisor_response = result["output"]
         
@@ -157,9 +140,9 @@ def supervisor_node(state: AgentState) -> AgentState:
             state["system_metrics"].complete_round()
         
         purpose = "providing final parser"
-        generator_specs = state.get("generator_specs")
-        generator_code = state.get("generator_code")
-        iteration_count = 0
+        generator_specs_new = state.get("generator_specs")
+        generator_code_new = generator_code
+        iteration_count_new = 0
         next_step = "FINISH"
         parser_mode = False
     else:
@@ -172,43 +155,56 @@ def supervisor_node(state: AgentState) -> AgentState:
         action = result["output"].strip()
         
         log(f, f"Supervisor action choosen: {action}", colors.CYAN, bold=True)
+
+        most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
         
         if action == "GENERATE_PARSER":
             prompt = supervisor_prompts.get_supervisor_input_generate_parser()
             result = supervisor_executor.invoke({
                 "input": user_request,
                 "conversation_history": conversation_log,
-                "prompt": prompt
+                "prompt": prompt,
+                "requirements": multi_agent.get_parser_requirements()
             })
             supervisor_response = result["output"]
             
             purpose = "creating detailed specifications"
-            generator_specs = supervisor_response
-            generator_code = None
-            iteration_count = 0
+            generator_specs_new = supervisor_response
+            generator_code_new = None
+            iteration_count_new = 0
             next_step = "Generator"
-            parser_mode = True            
+            parser_mode = True
         elif action == "CORRECT_ERROR" and most_recent_parser:
-            prompt = supervisor_prompts.get_supervisor_input_correct_error(most_recent_parser)
+            most_recent_assessment = most_recent_parser["validator_assessment"]
+            prompt = supervisor_prompts.get_supervisor_input_correct_error()
             result = supervisor_executor.invoke({
                 "input": user_request,
                 "conversation_history": conversation_log,
-                "prompt": prompt
+                "prompt": prompt,
+                "c_code": most_recent_parser["code"],
+                "validator_assessment": multi_agent.get_assessment(most_recent_assessment),
+                "code_satisfaction": multi_agent.get_satisfaction(most_recent_assessment),
+                "compilation_status": multi_agent.get_compilation_status(most_recent_assessment)
             })
             supervisor_response = result["output"]
             
             purpose = "creating updated specifications"
-            generator_specs = supervisor_response
-            generator_code = None
-            iteration_count = 0
+            generator_specs_new = supervisor_response
+            generator_code_new = None
+            iteration_count_new = 0
             next_step = "Generator"
             parser_mode = True
         elif action == "ASSESS_CODE" and most_recent_parser:
-            prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request, most_recent_parser)
+            most_recent_assessment = most_recent_parser["validator_assessment"]
+            prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request)
             result = supervisor_executor.invoke({
                 "input": user_request,
                 "conversation_history": conversation_log,
-                "prompt": prompt
+                "prompt": prompt,
+                "c_code": most_recent_parser["code"],
+                "validator_assessment": multi_agent.get_assessment(most_recent_assessment),
+                "code_satisfaction": multi_agent.get_satisfaction(most_recent_assessment),
+                "compilation_status": multi_agent.get_compilation_status(most_recent_assessment)
             })
             supervisor_response = result["output"]
             
@@ -216,28 +212,44 @@ def supervisor_node(state: AgentState) -> AgentState:
                 state["system_metrics"].complete_round()
             
             purpose = "providing code assessment"
-            generator_specs = state.get("generator_specs")
-            generator_code = state.get("generator_code")
-            iteration_count = state["iteration_count"]
+            generator_specs_new = state.get("generator_specs")
+            generator_code_new = generator_code
+            iteration_count_new = iteration_count
             next_step = "FINISH"
             parser_mode = False
         else:
             # GENERAL_CONVERSATION
-            prompt = supervisor_prompts.get_supervisor_input_general_conversation(user_request, most_recent_parser)
-            result = supervisor_executor.invoke({
-                "input": user_request,
-                "conversation_history": conversation_log,
-                "prompt": prompt
-            })
+            keywords = ["memory", "remember", "previous", "code", "generated", "parser"]
+            is_asking_about_memory = most_recent_parser and any(keyword in user_request.lower() for keyword in keywords)
+            if is_asking_about_memory:
+                most_recent_assessment = most_recent_parser["validator_assessment"]
+                prompt = supervisor_prompts.get_supervisor_input_general_conversation_1()
+                input = {
+                    "input": user_request,
+                    "conversation_history": conversation_log,
+                    "prompt": prompt,
+                    "c_code": most_recent_parser["code"],
+                    "code_satisfaction": multi_agent.get_satisfaction(most_recent_assessment),
+                    "compilation_status": multi_agent.get_compilation_status(most_recent_assessment)
+                }
+            else:
+                prompt = supervisor_prompts.get_supervisor_input_general_conversation_2()
+                input = {
+                    "input": user_request,
+                    "conversation_history": conversation_log,
+                    "prompt": prompt
+                }
+            
+            result = supervisor_executor.invoke(input)
             supervisor_response = result["output"]
             
             if state.get("system_metrics"):
                 state["system_metrics"].complete_round()
             
             purpose = "conversation"
-            generator_specs = state.get("generator_specs")
-            generator_code = state.get("generator_code")
-            iteration_count = state["iteration_count"]
+            generator_specs_new = state.get("generator_specs")
+            generator_code_new = generator_code
+            iteration_count_new = iteration_count
             next_step = "FINISH"
             parser_mode = False
 
@@ -249,9 +261,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
         "user_request": user_request,
         "supervisor_memory": supervisor_memory,
-        "generator_specs": generator_specs,
-        "generator_code": generator_code,
-        "iteration_count": iteration_count,
+        "generator_specs": generator_specs_new,
+        "generator_code": generator_code_new,
+        "iteration_count": iteration_count_new,
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
         "session_dir": session_dir,
