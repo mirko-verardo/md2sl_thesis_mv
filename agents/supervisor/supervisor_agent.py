@@ -19,46 +19,45 @@ def __read_conversation_log(log_file: Path | None) -> str:
         print_colored(f"Warning: Could not read log file: {e}", "1;33")
         return ""
 
-def __extract_validator_assessment(conversation_log: str, iteration_count: int) -> str | None:
+def __extract_validator_assessment(c_log: str, i_count: int) -> str | None:
     """Extract the validator's assessment from the conversation log."""
 
     # search for a specific pattern
-    pattern = rf"Validator assessment \(Iteration {iteration_count}/{iteration_count}\):\n(.*?)(?:\n\n|\Z)"
-    matches = re.findall(pattern, conversation_log, re.DOTALL)
+    pattern = rf"Validator assessment \(Iteration {i_count}/{i_count}\):\n(.*?)(?:\n\n|\Z)"
+    matches = re.findall(pattern, c_log, re.DOTALL)
     if matches:
         return matches[-1].strip()
     
     # search for a more general one
     pattern = r"Validator assessment.*?:\n(.*?)(?:\n\n|\Z)"
-    matches = re.findall(pattern, conversation_log, re.DOTALL)
+    matches = re.findall(pattern, c_log, re.DOTALL)
     if matches:
         return matches[-1].strip()
     
     return None
 
-def __update_supervisor_memory(s_memory: list[dict], conversation_log: str, code: str | None, i_count: int) -> list[dict]:
+def __update_supervisor_memory(s_memory: list[dict], c_log: str, code: str, i_count: int) -> list[dict]:
     """Update the supervisor's memory with information from the conversation log."""
-    if code and i_count > 0:
-        # get assessment
-        v_assessment = __extract_validator_assessment(conversation_log, i_count)
-        
-        # update assessment if code exists
-        code_exists = False
-        for entry in s_memory:
-            if entry.get("code") == code:
-                code_exists = True
-                if v_assessment:
-                    entry["validator_assessment"] = v_assessment
-                break
-        
-        # else add assessment
-        if not code_exists:
-            new_entry = {
-                'code': code,
-                'iteration': i_count,
-                'validator_assessment': v_assessment
-            }
-            s_memory.append(new_entry)
+    # get assessment
+    v_assessment = __extract_validator_assessment(c_log, i_count)
+    
+    # update assessment if code exists
+    code_exists = False
+    for entry in s_memory:
+        if entry.get("code") == code:
+            code_exists = True
+            if v_assessment:
+                entry["validator_assessment"] = v_assessment
+            break
+    
+    # else add assessment
+    if not code_exists:
+        new_entry = {
+            'code': code,
+            'iteration': i_count,
+            'validator_assessment': v_assessment
+        }
+        s_memory.append(new_entry)
     
     return s_memory
 
@@ -72,18 +71,16 @@ def supervisor_node(state: AgentState) -> AgentState:
     model_source = state["model_source"]
     session_dir = state["session_dir"]
     log_file = state["log_file"]
-
-    # Extract clean c code
-    clean_c_code = extract_c_code(generator_code)
-    if not clean_c_code:
-        print_colored("Warning: Could not extract clean C code, using original code", "1;33")
-        clean_c_code = generator_code
     
     conversation_log = __read_conversation_log(log_file)
-    supervisor_memory = __update_supervisor_memory(supervisor_memory, conversation_log, clean_c_code, iteration_count)
-    #conversation_log = conversation_log[-2000:] if len(conversation_log) > 2000 else conversation_log
 
-    print_colored(f"\nSupervisor memory status (entries: {len(supervisor_memory)})", "1;33")
+    if generator_code is not None and iteration_count > 0:
+        # Extract clean c code
+        clean_c_code = extract_c_code(generator_code)
+        if clean_c_code is None:
+            clean_c_code = generator_code
+        supervisor_memory = __update_supervisor_memory(supervisor_memory, conversation_log, clean_c_code, iteration_count)
+        print_colored(f"\nSupervisor memory status (entries: {len(supervisor_memory)})", "1;33")
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
@@ -105,7 +102,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     )
     
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
-    has_validated_parser = len(validator_messages) > 0 and iteration_count > 0
+    has_validated_parser = len(validator_messages) > 0 and generator_code is not None and iteration_count > 0
 
     f = open(log_file, 'a', encoding="utf-8")
 
