@@ -17,6 +17,7 @@
 
 - *difficult*: 
     - generate a parser function for geojson files
+    - generate a parser function for geojson files that supports all geometry types
     - generate a parser function for MIME files
 - *simple*: 
     - generate a simple parser function for xml files

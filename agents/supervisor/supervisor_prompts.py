@@ -97,12 +97,8 @@ Code satisfaction: {code_satisfaction}
 Compilation status: {compilation_status}
 """
 
-def get_supervisor_input_assess_code(user_request: str) -> str:
-    keywords = ["show", "code", "generated", "memory", "what was the", "see the", "provide the"]
-    is_asking_for_code = any(keyword in user_request.lower() for keyword in keywords)
-            
-    if is_asking_for_code:
-        return """The user is asking about previously generated code.
+def get_supervisor_input_assess_code_1() -> str:
+    return """The user is asking about previously generated code.
 
 The complete most recently generated code is:
 ```c
@@ -117,13 +113,14 @@ Create a response that highlights:
 1. Acknowledges their request
 2. Summarizes what the parser does and its key components (3-5 sentences)
 3. Explicitly mentions the validator's assessment
-4. Clearly states whether the code compiles successfully
+4. Clearly states whether the code compiles successfully or not
 5. States whether the code was deemed satisfactory or not
 
 Focus on explaining the code's functionality rather than showing the entire codebase. Only provide specific code snippets if the user explicitly asks for them.
 """
-    else:
-        return """The user is asking about the quality or validation status of previously generated code.
+
+def get_supervisor_input_assess_code_2() -> str:
+    return """The user is asking about the quality or validation status of previously generated code.
 
 The most recently generated code was:
 ```c
@@ -138,7 +135,7 @@ Create a comprehensive response that:
 1. Acknowledges their question
 2. Provides a brief summary of what the parser does (2-3 sentences)
 3. CLEARLY explains the validator's assessment
-4. EXPLICITLY states whether the code compiles successfully
+4. EXPLICITLY states whether the code compiles successfully or not
 5. CLEARLY states whether the code was deemed satisfactory or not
 6. Mentions key strengths or limitations
 

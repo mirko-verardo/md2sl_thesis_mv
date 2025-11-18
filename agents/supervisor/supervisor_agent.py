@@ -53,9 +53,9 @@ def __update_supervisor_memory(s_memory: list[dict], c_log: str, code: str, i_co
     # else add assessment
     if not code_exists:
         new_entry = {
-            'code': code,
-            'iteration': i_count,
-            'validator_assessment': v_assessment
+            "code": code,
+            "iteration": i_count,
+            "validator_assessment": v_assessment
         }
         s_memory.append(new_entry)
     
@@ -66,15 +66,17 @@ def supervisor_node(state: AgentState) -> AgentState:
     messages = state["messages"]
     user_request = state["user_request"]
     supervisor_memory = state["supervisor_memory"]
+    generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
     iteration_count = state["iteration_count"]
     model_source = state["model_source"]
-    session_dir = state["session_dir"]
     log_file = state["log_file"]
+    system_metrics = state["system_metrics"]
     
     conversation_log = __read_conversation_log(log_file)
 
-    if generator_code is not None and iteration_count > 0:
+    is_not_first_iteration = generator_code is not None and iteration_count > 0
+    if is_not_first_iteration:
         # Extract clean c code
         clean_c_code = extract_c_code(generator_code)
         if clean_c_code is None:
@@ -102,7 +104,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     )
     
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
-    has_validated_parser = len(validator_messages) > 0 and generator_code is not None and iteration_count > 0
+    has_validated_parser = len(validator_messages) > 0 and is_not_first_iteration
 
     f = open(log_file, 'a', encoding="utf-8")
 
@@ -110,9 +112,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         last_message = validator_messages[-1].content
 
         memory_entry = {
-            'code': clean_c_code,
-            'iteration': iteration_count,
-            'validator_assessment': last_message
+            "code": clean_c_code,
+            "iteration": iteration_count,
+            "validator_assessment": last_message
         }
         supervisor_memory.append(memory_entry)
         
@@ -133,11 +135,8 @@ def supervisor_node(state: AgentState) -> AgentState:
         })
         supervisor_response = result["output"]
         
-        if state.get("system_metrics"):
-            state["system_metrics"].complete_round()
-        
         purpose = "providing final parser"
-        generator_specs_new = state.get("generator_specs")
+        generator_specs_new = generator_specs
         generator_code_new = generator_code
         iteration_count_new = 0
         next_step = "FINISH"
@@ -193,7 +192,12 @@ def supervisor_node(state: AgentState) -> AgentState:
             parser_mode = True
         elif action == "ASSESS_CODE" and most_recent_parser:
             most_recent_assessment = most_recent_parser["validator_assessment"]
-            prompt = supervisor_prompts.get_supervisor_input_assess_code(user_request)
+            keywords = ["show", "code", "generated", "memory", "what was the", "see the", "provide the"]
+            is_asking_for_code = any(keyword in user_request.lower() for keyword in keywords)
+            if is_asking_for_code:
+                prompt = supervisor_prompts.get_supervisor_input_assess_code_1()
+            else:
+                prompt = supervisor_prompts.get_supervisor_input_assess_code_2()
             result = supervisor_executor.invoke({
                 "input": user_request,
                 "conversation_history": conversation_log,
@@ -205,11 +209,8 @@ def supervisor_node(state: AgentState) -> AgentState:
             })
             supervisor_response = result["output"]
             
-            if state.get("system_metrics"):
-                state["system_metrics"].complete_round()
-            
             purpose = "providing code assessment"
-            generator_specs_new = state.get("generator_specs")
+            generator_specs_new = generator_specs
             generator_code_new = generator_code
             iteration_count_new = iteration_count
             next_step = "FINISH"
@@ -240,11 +241,8 @@ def supervisor_node(state: AgentState) -> AgentState:
             result = supervisor_executor.invoke(input)
             supervisor_response = result["output"]
             
-            if state.get("system_metrics"):
-                state["system_metrics"].complete_round()
-            
             purpose = "conversation"
-            generator_specs_new = state.get("generator_specs")
+            generator_specs_new = generator_specs
             generator_code_new = generator_code
             iteration_count_new = iteration_count
             next_step = "FINISH"
@@ -263,9 +261,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         "iteration_count": iteration_count_new,
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
-        "session_dir": session_dir,
+        "session_dir": state["session_dir"],
         "log_file": log_file,
         "next_step": next_step,
         "parser_mode": parser_mode,
-        "system_metrics": state.get("system_metrics")
+        "system_metrics": system_metrics
     }

@@ -16,9 +16,10 @@ def generator_node(state: AgentState) -> AgentState:
     iteration_count = state["iteration_count"]
     model_source = state["model_source"]
     log_file = state["log_file"]
+    system_metrics = state["system_metrics"]
     
-    if state.get("system_metrics") and (iteration_count == 0 or state["next_step"] == "Generator"):
-        state["system_metrics"].increment_generator_validator_interaction()
+    if iteration_count == 0 or state["next_step"] == "Generator":
+        system_metrics.increment_generator_validator_interaction()
     
     validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
     has_feedback = len(validator_messages) > 0 and iteration_count > 0
@@ -72,8 +73,7 @@ def generator_node(state: AgentState) -> AgentState:
                     compilation_attempts += 1
                     compilation_success = "Compilation successful" in action_output
                     
-                    if state.get("system_metrics"):
-                        state["system_metrics"].record_tool_usage(compilation_success)
+                    system_metrics.record_tool_usage(compilation_success)
                     print_colored(f"\nCompilation check tool used (Attempt {compilation_attempts})", "1;32")
                     
                     if compilation_success:
@@ -110,5 +110,5 @@ def generator_node(state: AgentState) -> AgentState:
         "log_file": log_file,
         "next_step": next_step,
         "parser_mode": state["parser_mode"],
-        "system_metrics": state.get("system_metrics")
+        "system_metrics": system_metrics
     }

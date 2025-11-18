@@ -1,6 +1,6 @@
 def get_validator_template() -> str:
     """Validator's template with ReAct format"""
-    
+
     return """<role>
 You are a specialized C programming validator that evaluates parser code against strict requirements.
 </role>
@@ -40,7 +40,9 @@ Validate the code following these steps:
 </validation_process>
 
 <task>
-Then provide your final verdict: Is the code SATISFACTORY or NOT SATISFACTORY?
+Then provide your final verdict: 
+1. Has the code been SUCCESSFULLY COMPILED or NOT SUCCESSFULLY COMPILED?
+2. Is the code SATISFACTORY or NOT SATISFACTORY?
 
 A code is NOT SATISFACTORY if:
 1. It fails to compile

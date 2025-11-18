@@ -140,9 +140,9 @@ class AgentState(TypedDict):
     model_source: str
     next_step: str  # "Supervisor", "Generator", "Validator", or "FINISH"
     parser_mode: bool  # flag to indicate if we're generating a parser or just chatting
-    session_dir: Path | None  # path to the session directory
-    log_file: Path | None  # path to the log file
-    system_metrics: SystemMetrics | None  # system interaction metrics
+    session_dir: Path  # path to the session directory
+    log_file: Path  # path to the log file
+    system_metrics: SystemMetrics  # system interaction metrics
 
 class ExceptionTool(BaseTool):
     """Tool that just returns the query."""

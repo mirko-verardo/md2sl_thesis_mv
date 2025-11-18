@@ -6,7 +6,7 @@ from models import AgentState, ExceptionTool
 from agents.validator.validator_prompts import get_validator_template
 from utils import colors
 from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
-from utils.multi_agent import get_parser_requirements
+from utils.multi_agent import get_parser_requirements, get_satisfaction
 
 
 
@@ -19,6 +19,7 @@ def validator_node(state: AgentState) -> AgentState:
     model_source = state["model_source"]
     session_dir = state["session_dir"]
     log_file = state["log_file"]
+    system_metrics = state["system_metrics"]
     
     # Extract clean c code
     clean_c_code = extract_c_code(generator_code)
@@ -43,8 +44,7 @@ def validator_node(state: AgentState) -> AgentState:
     is_compiled = compilation_result['success']
     
     # Record parser validation in metrics
-    if state.get("system_metrics"):
-        state["system_metrics"].record_parser_validation(c_file_name, is_compiled)
+    system_metrics.record_parser_validation(c_file_name, is_compiled)
 
     # Print compilation status
     if is_compiled:
@@ -103,10 +103,7 @@ def validator_node(state: AgentState) -> AgentState:
     f.close()
 
     # Check if code is satisfactory
-    is_satisfactory = is_compiled and (
-        "satisfactory" in validator_response.lower()) and (
-        "not satisfactory" not in validator_response.lower()
-    )
+    is_satisfactory = is_compiled and get_satisfaction(validator_response)
     # Check if code is the final iteration
     is_final_iteration = iteration_count >= max_iterations
 
@@ -121,11 +118,11 @@ def validator_node(state: AgentState) -> AgentState:
     elif is_compiled:
         # continue
         next_node = "Generator"
-        feedback_message = f"The parser implementation needs improvements:\n\n{validator_response}"
+        feedback_message = f"The parser implementation compiles successfully but needs improvements:\n\n{validator_response}"
     else:
         # continue
         next_node = "Generator"
-        feedback_message = f"The parser implementation needs improvements. It failed to compile with the following errors:\n\n{compilation_result['stderr']}\n\nAdditional feedback:\n{validator_response}"
+        feedback_message = f"The parser implementation needs improvements. Here's the assessment:\n\n{validator_response}\n\n{compilation_status}"
     
     print_colored(f"\nValidator sending FEEDBACK to {next_node}", "1;33")
     
@@ -142,5 +139,5 @@ def validator_node(state: AgentState) -> AgentState:
         "log_file": log_file,
         "next_step": next_node,
         "parser_mode": state["parser_mode"],
-        "system_metrics": state.get("system_metrics")
+        "system_metrics": system_metrics
     }

@@ -79,78 +79,6 @@ def build_workflow():
     
     return workflow.compile()
 
-def run_parser_system(
-        question: str, 
-        max_iterations: int, 
-        model_source: str, 
-        session_dir: Path, 
-        log_file: Path, 
-        supervisor_memory: list[dict], 
-        system_metrics: SystemMetrics
-    ) -> tuple[str, list[dict], SystemMetrics]:
-    """Run the parser system with the given question."""
-    # Create a session directory if not provided
-    if session_dir is None or log_file is None:
-        session_dir, log_file = create_session_directory(model_source)
-        
-    # Initialize the graph
-    graph = build_workflow()
-        
-    # Start a new round
-    system_metrics.start_new_round(question)
-    
-    print_colored(f"Memory before workflow: {len(supervisor_memory)} entries", "1;36")
-    
-    # Initial state
-    initial_state = {
-        "messages": [ HumanMessage(content=question) ],
-        "user_request": question,
-        "supervisor_memory": supervisor_memory,
-        "generator_specs": None,
-        "generator_code": None,
-        "iteration_count": 0,
-        "max_iterations": max_iterations,
-        "model_source": model_source,
-        "session_dir": session_dir,
-        "log_file": log_file,
-        "next_step": "Supervisor",
-        "parser_mode": False,
-        "system_metrics": system_metrics
-    }
-    
-    final_response = None
-    updated_memory = supervisor_memory.copy()
-    
-    # Run the graph
-    for step in graph.stream(initial_state):
-        if "__end__" in step:
-            print_colored("\nWorkflow completed successfully!", "1;36")
-            
-            # Process final state
-            final_state = step["__end__"]
-            final_messages = final_state["messages"]
-            updated_memory = final_state["supervisor_memory"]
-            
-            print_colored(f"Memory after workflow: {len(updated_memory)} entries", "1;36")
-                
-            # Save metrics
-            if session_dir and final_state.get("system_metrics"):
-                final_state["system_metrics"].save_summary(session_dir)
-            
-            # Get supervisor response
-            supervisor_messages = [msg for msg in final_messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
-            
-            if supervisor_messages:
-                final_response = supervisor_messages[-1].content
-                print_colored("\nFinal response:", "1;32")
-                print(final_response)
-            else:
-                print_colored("\nNo final supervisor message found", "1;31")
-            
-            break
-    
-    return final_response, updated_memory, system_metrics
-
 
 
 if __name__ == "__main__":
@@ -168,6 +96,9 @@ if __name__ == "__main__":
     # Initialize memory and metrics
     supervisor_memory = []
     system_metrics = SystemMetrics()
+
+    # Initialize the graph
+    graph = build_workflow()
     
     # Main interaction loop
     while True:
@@ -175,7 +106,7 @@ if __name__ == "__main__":
         user_input = input()
         
         # Log user input
-        with open(log_file, 'a') as f:
+        with open(log_file, 'a', encoding="utf-8") as f:
             f.write(f"\nUser: {user_input}\n\n")
         
         if user_input.lower() in ['exit', 'quit', 'bye']:
@@ -190,47 +121,66 @@ if __name__ == "__main__":
             else:
                 for i, mem in enumerate(supervisor_memory):
                     print_colored(f"Memory entry {i}:", "1;33")
-                    print(f"  Iteration: {mem.get('iteration')}")
+                    print(f"  Iteration: {mem["iteration"]}")
 
-                    ass = mem.get('validator_assessment')
+                    ass = mem["validator_assessment"]
                     print(f"  Satisfactory: {get_satisfaction(ass)}")
                     print(f"  Compilation: {get_compilation_status(ass)}")
                     
                     # Show code excerpt
-                    code_excerpt = mem.get('code', '')
+                    code_excerpt = mem["code"]
                     code_excerpt = code_excerpt[:300] + "..." if len(code_excerpt) > 300 else code_excerpt
                     print(f"  Code excerpt: {code_excerpt}")
             continue
         
         try:
-            # Run parser system
-            response, new_memory, updated_metrics = run_parser_system(
-                question=user_input,
-                max_iterations=3,
-                model_source=source,
-                session_dir=session_dir,
-                log_file=log_file,
-                supervisor_memory=supervisor_memory,
-                system_metrics=system_metrics
-            )
+            # Start a new round
+            system_metrics.start_new_round(user_input)
+
+            # Initialize the graph
+            #graph = build_workflow()
             
-            # Update memory if new content
-            if new_memory is not None and len(new_memory) > len(supervisor_memory):
-                supervisor_memory = new_memory
-                print_colored(f"\nMemory updated: Now contains {len(supervisor_memory)} parsers", "1;36")
-                
-            # Update metrics
-            system_metrics = updated_metrics
-                
-            # Print response if needed
-            if response and not response.startswith("\033"):
-                print_colored("\nSystem Response:", "1;34")
-                print(response)
-                
+            print_colored(f"Memory before workflow: {len(supervisor_memory)} entries", "1;36")
+            
+            # Initial state
+            initial_state = {
+                "messages": [ HumanMessage(content=user_input) ],
+                "user_request": user_input,
+                "supervisor_memory": supervisor_memory,
+                "generator_specs": None,
+                "generator_code": None,
+                "iteration_count": 0,
+                "max_iterations": 3,
+                "model_source": source,
+                "session_dir": session_dir,
+                "log_file": log_file,
+                "next_step": "Supervisor",
+                "parser_mode": False,
+                "system_metrics": system_metrics
+            }
+
+            result = graph.invoke(initial_state)
+
+            messages = result["messages"]
+            supervisor_memory = result["supervisor_memory"]
+            system_metrics = result["system_metrics"]
+            
+            print_colored(f"Memory after workflow: {len(supervisor_memory)} entries", "1;36")
+
+            # Save metrics
+            system_metrics.complete_round()
+            system_metrics.save_summary(session_dir)
+
+            # Get all messages
+            for m in messages:
+                m.pretty_print()
+            
+            # Get supervisor response
+            #supervisor_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
+            #supervisor_response = supervisor_messages[-1].content if supervisor_messages else "no message found"
+            #print_colored("\nSupervisor response:", "1;32")
+            #print(supervisor_response)
         except Exception as e:
             print_colored(f"\nAn error occurred: {e}", "1;31")
             print_colored(format_exc(), "1;31")
             print_colored("Please try again with a different query.", "1;31")
-            
-    # Save final metrics
-    system_metrics.save_summary(session_dir)
