@@ -1,4 +1,4 @@
-def get_generator_template(has_feedback: bool) -> str:
+def get_generator_template() -> str:
     """Generator's template with ReAct format"""
 
     return """<role>
@@ -15,25 +15,24 @@ IMPORTANT:
 
 <available_tools>
 You have access to these tools: {tools}
-Tool names: {tool_names}
 </available_tools>
 
 <example_tool_usage>
 Here's how you should use the compilation_check tool:
 1. Write your C parser code
-2. Call the compilation_check tool with your code using compilation_check(your_code_here).
+2. Call the compilation_check tool with your code as input
 3. Review the results
 4. Fix any compilation warnings or errors
 5. Verify again using the tool until the code compiles successfully
 </example_tool_usage>
 
 <parser_requirements>
-Each parser you create must implement the following characteristics:
+Each parser you create must implement the following requirements:
 {requirements}
 </parser_requirements>
 
 <specifications>
-The code you create must follow also the following requirements from the supervisor:
+The code you create must follow also the following specifications from the supervisor:
 {specifications}
 </specifications>
 
@@ -57,18 +56,14 @@ CODE VERIFICATION PROCESS (ALWAYS MANDATORY):
 NEVER SKIP THE COMPILATION CHECK. If you do not verify that your code compiles cleanly, your response is incomplete and incorrect. The verification is REQUIRED for all C code responses without exception.
 </verification_process>
 
-""" + ("""<feedback>
-IMPORTANT: This is iteration {iteration_count} and you received the following feedback from the validator:
 {feedback}
-Please, correct the code you have generated, addressing all these issues while ensuring your implementation remains complete with no placeholders.
-</feedback>
 
-""" if has_feedback else "") + """<format_instructions>
+<format_instructions>
 Use the following format:
 Question: the input question.
 Thought: think about what to do.
-Action: the tool to use: {tool_names}.
-Action Input: the input to the tool.
+Action: the action to take, can be one of {tool_names}.
+Action Input: the input to the action.
 Observation:
 - if the compilation is successful, proceed to Final Answer without additional compilation checks.
 - if the compilation is not successful, repeat Thought/Action/Action Input/Observation as needed.
@@ -76,6 +71,12 @@ Final Answer: the final code you have generated.
 </format_instructions>
 
 Generate a complete C parser implementation following all the requirements and specifications. Use the compilation_check tool to verify your code.
-
 {agent_scratchpad}
 """
+
+def get_feedback_template() -> str:
+    return """<feedback>
+IMPORTANT: You received the following feedback from the validator:
+{validator_assessment}
+Please, correct the code you have generated, addressing all these issues while ensuring your implementation remains complete with no placeholders.
+</feedback>"""

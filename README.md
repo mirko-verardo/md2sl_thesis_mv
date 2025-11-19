@@ -13,6 +13,11 @@
     ANTHROPIC_API_KEY="your-key"
     ```
 
+## Improvements
+
+- bugfix on multiagent message passing
+- aaa
+
 ## Prompt
 
 - *difficult*: 
@@ -34,11 +39,14 @@
 
 ## Questions
 
+- TODO: add validation_assessment as field in AgentState
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
 - Problem: last iteration can fail and the middle ones instead create a working code
-- **Supervisor**:
-    - system_metrics complete_round(): not in GENERATE_PARSER and CORRECT_ERROR?
-    - What does ExceptionTool() needed for?
+- **Supervisor** and **Validator** prompts misses these ones for ReAct patter:
+    - Action
+    - Action Input
+    - Observation
+- What is ExceptionTool() needed for in **Supervisor** and **Validator**?
 
 # Sam nothes (old)
 

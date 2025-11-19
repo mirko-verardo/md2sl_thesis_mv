@@ -1,8 +1,9 @@
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from models import AgentState, CompilationCheckTool
-from agents.generator.generator_prompts import get_generator_template
+from langchain.tools import Tool
+from models import AgentState, CompilationCheckTool, mister_wolf
+from agents.generator.generator_prompts import get_generator_template, get_feedback_template
 from utils import colors
 from utils.general import print_colored, log, initialize_llm
 from utils.multi_agent import get_parser_requirements
@@ -11,48 +12,55 @@ from utils.multi_agent import get_parser_requirements
 
 def generator_node(state: AgentState) -> AgentState:
     """Generator agent that creates C code."""
-    messages = state["messages"]
     generator_specs = state["generator_specs"]
+    validator_assessment = state["validator_assessment"]
     iteration_count = state["iteration_count"]
+    max_iterations = state["max_iterations"]
     model_source = state["model_source"]
     log_file = state["log_file"]
     system_metrics = state["system_metrics"]
     
-    if iteration_count == 0 or state["next_step"] == "Generator":
-        system_metrics.increment_generator_validator_interaction()
-    
-    validator_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Validator"]
-    has_feedback = len(validator_messages) > 0 and iteration_count > 0
+    # TODO: da rivedere
+    system_metrics.increment_generator_validator_interaction()
 
     # Manage prompt's input
     generator_input = {
         "requirements": get_parser_requirements(),
-        "specifications": generator_specs if generator_specs is not None else ""
+        "specifications": generator_specs if generator_specs is not None else "",
+        "feedback": ""
     }
-    if has_feedback:
+    if validator_assessment:
         generator_input.update({
-            "feedback": validator_messages[-1].content,
-            "iteration_count": iteration_count
+            "feedback": get_feedback_template(),
+            "validator_assessment": validator_assessment
         })
 
     # Create the prompt
-    generator_template = get_generator_template(has_feedback)
+    generator_template = get_generator_template()
     generator_prompt = PromptTemplate.from_template(generator_template)
 
     # Initialize model for generator
     generator_llm = initialize_llm(model_source)
     generator_llm.temperature = 0.5
-    generator_tools = [CompilationCheckTool()]
+    #generator_tools = [CompilationCheckTool()]
+    generator_tools = [
+        Tool(name="compilation_check", func=mister_wolf, description="blah blah blah")
+    ]
     
     # Create the ReAct agent instead of OpenAI tools agent
     generator_agent = create_react_agent(generator_llm, generator_tools, generator_prompt)
+
+    if validator_assessment == "Retry":
+        max_i = 15 if iteration_count > 1 else 10
+    else:
+        max_i = 5
     
     generator_executor = AgentExecutor(
         agent=generator_agent,
         tools=generator_tools,
         verbose=True,
         handle_parsing_errors=True,
-        max_iterations=5,
+        max_iterations=max_i,
         early_stopping_method="force",
         return_intermediate_steps=True
     )
@@ -92,10 +100,8 @@ def generator_node(state: AgentState) -> AgentState:
     iteration_count += 1
     
     with open(log_file, 'a', encoding="utf-8") as f:
-        log(f, f"Generator (Iteration {iteration_count}):", generator_response_color, bold=True)
+        log(f, f"Generator (Iteration {iteration_count}/{max_iterations}):", generator_response_color, bold=True)
         log(f, generator_response)
-    
-    next_step = "Supervisor" if iteration_count > state["max_iterations"] else "Validator"
     
     return {
         "messages": [AIMessage(content=generator_response, name="Generator")],
@@ -103,12 +109,12 @@ def generator_node(state: AgentState) -> AgentState:
         "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_response,
+        "validator_assessment": None,
         "iteration_count": iteration_count,
-        "max_iterations": state["max_iterations"],
+        "max_iterations": max_iterations,
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "log_file": log_file,
-        "next_step": next_step,
-        "parser_mode": state["parser_mode"],
+        "next_step": "Validator",
         "system_metrics": system_metrics
     }

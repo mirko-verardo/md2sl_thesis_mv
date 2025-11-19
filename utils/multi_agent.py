@@ -16,16 +16,16 @@ def get_satisfaction(assessment: str | None) -> str:
         return "Unknown"
     assessment = assessment.lower()
     is_satisfactory = "satisfactory" in assessment and "not satisfactory" not in assessment
-    return "The code is satisfactory" if is_satisfactory else "The code is NOT satisfactory"
+    return "SATISFACTORY" if is_satisfactory else "NOT SATISFACTORY"
 
 def get_satisfaction_instructions(assessment: str) -> str:
     assessment = assessment.lower()
     is_satisfactory = "satisfactory" in assessment and "not satisfactory" not in assessment
-    return "Mentions that the code is satisfactory" if is_satisfactory else "IMPORTANTLY, mentions that the code is NOT satisfactory according to the validator and briefly explains why"
+    return "Mentions that the code is SATISFACTORY" if is_satisfactory else "IMPORTANTLY, mentions that the code is NOT SATISFACTORY according to the validator and briefly explains why"
 
 def get_compilation_status(assessment: str | None) -> str:
     if assessment is None:
         return "Unknown"
     assessment = assessment.lower()
     is_compiled = "successfully compiled" in assessment and "not successfully compiled" not in assessment
-    return "The code is successfully compiled" if is_compiled else "The code is NOT successfully compiled"
+    return "SUCCESSFULLY COMPILED" if is_compiled else "NOT SUCCESSFULLY COMPILED"

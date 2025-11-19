@@ -63,8 +63,7 @@ def build_workflow():
         "Generator", 
         route_next,
         {
-            "Validator": "Validator",
-            "Supervisor": "Supervisor"
+            "Validator": "Validator"
         }
     )
     
@@ -93,7 +92,8 @@ if __name__ == "__main__":
     # Create session
     session_dir, log_file = create_session_directory(source)
     
-    # Initialize memory and metrics
+    # Initialize messages, memory and metrics
+    messages = []
     supervisor_memory = []
     system_metrics = SystemMetrics()
 
@@ -124,8 +124,8 @@ if __name__ == "__main__":
                     print(f"  Iteration: {mem["iteration"]}")
 
                     ass = mem["validator_assessment"]
-                    print(f"  Satisfactory: {get_satisfaction(ass)}")
-                    print(f"  Compilation: {get_compilation_status(ass)}")
+                    print(f"  Code satisfaction: {get_satisfaction(ass)}")
+                    print(f"  Compilation status: {get_compilation_status(ass)}")
                     
                     # Show code excerpt
                     code_excerpt = mem["code"]
@@ -144,18 +144,18 @@ if __name__ == "__main__":
             
             # Initial state
             initial_state = {
-                "messages": [ HumanMessage(content=user_input) ],
+                "messages": messages + [ HumanMessage(content=user_input) ],
                 "user_request": user_input,
                 "supervisor_memory": supervisor_memory,
                 "generator_specs": None,
                 "generator_code": None,
+                "validator_assessment": None,
                 "iteration_count": 0,
                 "max_iterations": 3,
                 "model_source": source,
                 "session_dir": session_dir,
                 "log_file": log_file,
                 "next_step": "Supervisor",
-                "parser_mode": False,
                 "system_metrics": system_metrics
             }
 

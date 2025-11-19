@@ -19,18 +19,15 @@ Thought: think about what to do.
 Final Answer: the final answer to the original question.
 </format_instructions>
 
-<user_request>
-{input}
-</user_request>
-
 <conversation_history>
 {conversation_history}
 </conversation_history>
 
 <adaptive_instructions>
-{prompt}
+{adaptive_instructions}
 </adaptive_instructions>
 
+Now, the user is asking: {input}
 {agent_scratchpad}
 """
 
@@ -86,82 +83,44 @@ Create a detailed prompt for the generator.
 def get_supervisor_input_correct_error() -> str:
     return """Create detailed specifications for updating the parser to address these issues.
 Be specific about what changes need to be made and why.
-
-Previous parser code:
-```c
-{c_code}
-```
-
-Previous validator assessment: {validator_assessment}
-Code satisfaction: {code_satisfaction}
-Compilation status: {compilation_status}
 """
+#Previous parser code:
+#```c
+#{c_code}
+#```
+#
+#Previous validator assessment: {validator_assessment}
+#Code satisfaction: {code_satisfaction}
+#Compilation status: {compilation_status}
+#"""
 
-def get_supervisor_input_assess_code_1() -> str:
-    return """The user is asking about previously generated code.
-
-The complete most recently generated code is:
-```c
-{c_code}
-```
-
-Validator's assessment: {validator_assessment}
-Code satisfaction: {code_satisfaction}
-Compilation status: {compilation_status}
-
-Create a response that highlights:
-1. Acknowledges their request
-2. Summarizes what the parser does and its key components (3-5 sentences)
-3. Explicitly mentions the validator's assessment
-4. Clearly states whether the code compiles successfully or not
-5. States whether the code was deemed satisfactory or not
-
-Focus on explaining the code's functionality rather than showing the entire codebase. Only provide specific code snippets if the user explicitly asks for them.
-"""
-
-def get_supervisor_input_assess_code_2() -> str:
+def get_supervisor_input_assess_code() -> str:
+#    return """The user is asking about the quality or validation status of previously generated code.
+#
+#The most recently generated code was:
+#```c
+#{c_code}
+#```
+#
+#Validator's assessment: {validator_assessment}
+#Code satisfaction: {code_satisfaction}
+#Compilation status: {compilation_status}
     return """The user is asking about the quality or validation status of previously generated code.
 
-The most recently generated code was:
-```c
-{c_code}
-```
-
-Validator's assessment: {validator_assessment}
-Code satisfaction: {code_satisfaction}
-Compilation status: {compilation_status}
-
 Create a comprehensive response that:
-1. Acknowledges their question
+1. Acknowledges his question
 2. Provides a brief summary of what the parser does (2-3 sentences)
 3. CLEARLY explains the validator's assessment
 4. EXPLICITLY states whether the code compiles successfully or not
-5. CLEARLY states whether the code was deemed satisfactory or not
+5. EXPLICITLY states whether the code was deemed satisfactory or not
 6. Mentions key strengths or limitations
 
 Keep your explanation concise and conversational, focusing on the overall assessment rather than providing the entire code.
 """
 
-def get_supervisor_input_general_conversation_1() -> str:
-    return """Respond to the user mentioning that you have a recently generated parser in memory. Focus ONLY on the most recent parser. Remember to explicitly mention:
-1. Whether the code was satisfactory according to the validator
-2. Whether the code compiled successfully
-3. A brief summary of what the parser does (if you know this information)
-
-Let him know he can ask to see a summary of the code by saying something like "summarize the code" or "what did the parser do?"
-
-Information about your most recent parser:
-- Code:
-```c
-{c_code}
-```
-- Code satisfaction: {code_satisfaction}
-- Compilation status: {compilation_status}
-"""
-
-def get_supervisor_input_general_conversation_2() -> str:
+def get_supervisor_input_general_conversation() -> str:
     return """If the user is asking about parsers, you can offer to generate a C parser for him by responding to his specific needs.
-If the user is asking about previous code you've generated, refer ONLY to your most recent parser.
+If the user is asking about previous code you've generated, answer his question as best as you can using your conversation history.
 Otherwise, provide a helpful, concise response that addresses his question.
 Respond in a conversational, friendly tone.
 """

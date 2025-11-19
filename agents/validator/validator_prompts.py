@@ -16,7 +16,7 @@ Review this C parser code to determine if it meets the following requirements:
 </parser_requirements>
 
 <specifications>
-Additionally, it must meet these specific specifications:
+Additionally, it must meet these following specifications:
 {specifications}
 </specifications>
 
@@ -48,19 +48,17 @@ A code is NOT SATISFACTORY if:
 1. It fails to compile
 2. It doesn't meet all the required specifications
 3. It contains placeholders or incomplete implementations
-If the code is NOT SATISFACTORY, provide specific feedback with details on what needs to be improved and briefly explain how.
 
-This is iteration {iteration_count} of maximum {max_iterations}.
+If the code is NOT SATISFACTORY, provide specific feedback with details on what needs to be improved and briefly explain how.
 </task>
 
 <format_instructions>
 Use the following format:
 Question: the input question.
 Thought: think about what to do.
-Final Answer: the final answer to the original question.
+Final Answer: the final assessment you have generated.
 </format_instructions>
 
 Evaluate the code based on the requirements and provide your assessment.
-
 {agent_scratchpad}
 """
