@@ -12,7 +12,6 @@ def supervisor_node(state: AgentState) -> AgentState:
     """Supervisor agent that converses with the user and manages the parser generation process."""
     messages = state["messages"]
     user_request = state["user_request"]
-    supervisor_memory = state["supervisor_memory"]
     generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
     validator_assessment = state["validator_assessment"]
@@ -43,6 +42,10 @@ def supervisor_node(state: AgentState) -> AgentState:
     )
 
     conversation_history = get_buffer_string(messages)
+    prompt_input = {
+        "input": user_request,
+        "conversation_history": get_buffer_string(messages)
+    }
 
     if generator_code and validator_assessment:
         # TODO: da spostare dentro il validator per gestire il limite di iterazioni
@@ -50,13 +53,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         clean_c_code = extract_c_code(generator_code)
         if clean_c_code is None:
             clean_c_code = generator_code
-
-        #memory_entry = {
-        #    "code": clean_c_code,
-        #    "iteration": iteration_count,
-        #    "validator_assessment": validator_assessment
-        #}
-        #supervisor_memory.append(memory_entry)
         
         prompt = supervisor_prompts.get_supervisor_input_validated()
         result = supervisor_executor.invoke({
@@ -87,7 +83,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         
         log(f, f"Supervisor action choosen: {action}", colors.CYAN, bold=True)
 
-        #most_recent_parser = supervisor_memory[-1] if supervisor_memory else None
         most_recent_parser = True
         
         if action == "GENERATE_PARSER":
@@ -167,7 +162,6 @@ def supervisor_node(state: AgentState) -> AgentState:
     return {
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
         "user_request": user_request,
-        "supervisor_memory": supervisor_memory,
         "generator_specs": generator_specs_new,
         "generator_code": generator_code_new,
         "validator_assessment": None,

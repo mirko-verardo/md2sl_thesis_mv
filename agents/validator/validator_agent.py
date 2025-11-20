@@ -145,7 +145,6 @@ def validator_node(state: AgentState) -> AgentState:
     return {
         "messages": [AIMessage(content=feedback_message, name="Validator")],
         "user_request": state["user_request"],
-        "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_code,
         "validator_assessment": feedback_message,

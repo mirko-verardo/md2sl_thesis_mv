@@ -106,7 +106,6 @@ def generator_node(state: AgentState) -> AgentState:
     return {
         "messages": [AIMessage(content=generator_response, name="Generator")],
         "user_request": state["user_request"],
-        "supervisor_memory": state["supervisor_memory"],
         "generator_specs": generator_specs,
         "generator_code": generator_response,
         "validator_assessment": None,

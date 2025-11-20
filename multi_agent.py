@@ -9,7 +9,6 @@ from agents.generator.generator_agent import generator_node
 from agents.validator.validator_agent import validator_node
 from models import AgentState, SystemMetrics
 from utils.general import get_model_source_from_input, print_colored
-from utils.multi_agent import get_satisfaction, get_compilation_status
 
 
 
@@ -92,9 +91,8 @@ if __name__ == "__main__":
     # Create session
     session_dir, log_file = create_session_directory(source)
     
-    # Initialize messages, memory and metrics
+    # Initialize messages and metrics
     messages = []
-    supervisor_memory = []
     system_metrics = SystemMetrics()
 
     # Initialize the graph
@@ -113,26 +111,6 @@ if __name__ == "__main__":
             print_colored("\nExiting. Goodbye!", "1;36")
             break
         
-        # Handle memory inspection command
-        if user_input.lower() in ['show memory', 'memory status', 'list memory', 'memory']:
-            print_colored("\n=== Current Memory Status ===", "1;34")
-            if not supervisor_memory:
-                print_colored("No parsers in memory yet.", "1;33")
-            else:
-                for i, mem in enumerate(supervisor_memory):
-                    print_colored(f"Memory entry {i}:", "1;33")
-                    print(f"  Iteration: {mem["iteration"]}")
-
-                    ass = mem["validator_assessment"]
-                    print(f"  Code satisfaction: {get_satisfaction(ass)}")
-                    print(f"  Compilation status: {get_compilation_status(ass)}")
-                    
-                    # Show code excerpt
-                    code_excerpt = mem["code"]
-                    code_excerpt = code_excerpt[:300] + "..." if len(code_excerpt) > 300 else code_excerpt
-                    print(f"  Code excerpt: {code_excerpt}")
-            continue
-        
         try:
             # Start a new round
             system_metrics.start_new_round(user_input)
@@ -140,13 +118,10 @@ if __name__ == "__main__":
             # Initialize the graph
             #graph = build_workflow()
             
-            print_colored(f"Memory before workflow: {len(supervisor_memory)} entries", "1;36")
-            
             # Initial state
             initial_state = {
                 "messages": messages + [ HumanMessage(content=user_input) ],
                 "user_request": user_input,
-                "supervisor_memory": supervisor_memory,
                 "generator_specs": None,
                 "generator_code": None,
                 "validator_assessment": None,
@@ -162,10 +137,7 @@ if __name__ == "__main__":
             result = graph.invoke(initial_state)
 
             messages = result["messages"]
-            supervisor_memory = result["supervisor_memory"]
             system_metrics = result["system_metrics"]
-            
-            print_colored(f"Memory after workflow: {len(supervisor_memory)} entries", "1;36")
 
             # Save metrics
             system_metrics.complete_round()

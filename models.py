@@ -132,7 +132,6 @@ class AgentState(TypedDict):
     """State schema for the agent graph."""
     messages: Annotated[Sequence[BaseMessage], add]
     user_request: str
-    supervisor_memory: list[dict]  # memory for the supervisor to track conversations and code issues
     generator_specs: str | None
     generator_code: str | None
     validator_assessment: str | None
@@ -225,46 +224,8 @@ class CompilationCheckTool(BaseTool):
         # make sure we have a string at this point
         if not isinstance(query, str):
             return f"Error: Expected string input, got {type(query).__name__}"
-            
-        # Clean the code by removing markdown delimiters:
-        # Remove ```c from the beginning of lines
-        query = query.replace("```c", "")
-        # Remove ``` from anywhere
-        query = query.replace("```", "")
-        # Trim whitespace
-        query = query.strip()
         
-        # create a temporary file with the C code
-        with NamedTemporaryFile(suffix='.c', delete=False) as temp_file:
-            temp_file.write(query.encode('utf-8'))
-            temp_file_path = temp_file.name
-        
-        try:
-            # compile the C code with all warnings enabled and treating warnings as errors
-            # using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
-            result = run(
-                ['gcc', '-Wall', '-Wextra', '-Werror', temp_file_path, '-o', temp_file_path + '.out'],
-                capture_output=True,
-                text=True
-            )
-            
-            # prepare the response
-            if result.returncode == 0:
-                response = "Compilation successful! The code compiles without any errors or warnings."
-            else:
-                response = f"Compilation failed with the following errors or warnings:\n{result.stderr}"
-                # add the original code after the error message for easy reference
-                response += f"\n\nOriginal code:\n```c\n{query}\n```"
-            
-            return response
-        finally:
-            # clean up temporary files
-            try:
-                os.unlink(temp_file_path)
-                if os.path.exists(temp_file_path + '.out'):
-                    os.unlink(temp_file_path + '.out')
-            except Exception as e:
-                pass  # ignore cleanup errors
+        return mister_wolf(query)
     
     async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
         """Run the compilation check asynchronously."""
