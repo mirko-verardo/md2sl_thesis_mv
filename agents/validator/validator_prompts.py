@@ -15,10 +15,7 @@ Review this C parser code to determine if it meets the following requirements:
 {requirements}
 </parser_requirements>
 
-<specifications>
-Additionally, it must meet these following specifications:
 {specifications}
-</specifications>
 
 <code_to_review>
 ```c
@@ -57,4 +54,11 @@ Final Answer: the final assessment you have generated.
 
 Evaluate the code based on the requirements and provide your assessment.
 {agent_scratchpad}
+"""
+
+def get_specifications_template() -> str:
+    return """<specifications>
+Additionally, it must meet these following specifications:
+{supervisor_specifications}
+</specifications>
 """

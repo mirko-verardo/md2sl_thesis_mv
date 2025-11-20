@@ -81,7 +81,8 @@ Create a detailed prompt for the generator.
 """
 
 def get_supervisor_input_correct_error() -> str:
-    return """Create detailed specifications for updating the parser to address these issues.
+    return """Create detailed specifications for updating the parser to address its issues.
+Check conversation history to find what could be corrected or improved. 
 Be specific about what changes need to be made and why.
 """
 #Previous parser code:

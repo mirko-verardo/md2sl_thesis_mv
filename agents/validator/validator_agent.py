@@ -3,7 +3,7 @@ from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState
-from agents.validator.validator_prompts import get_validator_template
+from agents.validator import validator_prompts
 from utils import colors
 from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
 from utils.multi_agent import get_parser_requirements, get_satisfaction
@@ -80,11 +80,12 @@ def validator_node(state: AgentState) -> AgentState:
         }
         if generator_specs:
             validator_input.update({
-                "specifications": generator_specs
+                "specifications": validator_prompts.get_specifications_template(),
+                "supervisor_specifications": generator_specs
             })
         
         # Create the prompt
-        validator_template = get_validator_template()
+        validator_template = validator_prompts.get_validator_template()
         validator_prompt = PromptTemplate.from_template(validator_template)
 
         # Initialize model for validator

@@ -51,6 +51,7 @@
     - Action Input
     - Observation
 - What is ExceptionTool() needed for in **Supervisor** and **Validator**?
+- Invalid Format: Missing 'Action:' after 'Thought:'
 
 # Sam nothes (old)
 

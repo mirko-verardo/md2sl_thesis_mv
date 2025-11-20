@@ -8,8 +8,7 @@ from tempfile import NamedTemporaryFile
 from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
-from langchain.tools import BaseTool, Tool
-from langchain.callbacks.manager import CallbackManagerForToolRun, AsyncCallbackManagerForToolRun
+from langchain.tools import Tool
 from utils.general import print_colored
 
 
@@ -145,6 +144,7 @@ class AgentState(TypedDict):
 
 # Define tools
 def compilation_check(code: str) -> str:
+    """Function that checks if C code compiles correctly without warnings."""
     # Clean the code by removing markdown delimiters:
     # Remove ```c from the beginning of lines
     code = code.replace("```c", "")
@@ -193,42 +193,4 @@ CompilationCheck = Tool(
     Use this tool to verify that your C parser implementation is syntactically correct
     and free of warnings before providing it to the user."""
 )
-
-class CompilationCheckTool(BaseTool):
-    """Tool that checks if C code compiles correctly without warnings."""
-    name: str = "compilation_check"
-    description: str = """
-    This tool checks if the provided C code compiles correctly without any warnings.
-    Input should be valid C code.
-    The tool will return compilation results, including any errors or warnings.
-    Use this tool to verify that your C parser implementation is syntactically correct
-    and free of warnings before providing it to the user.
-    """
-    
-    def _run(self, query: str | dict[str, Any], run_manager: CallbackManagerForToolRun | None = None) -> str:
-        """Run the compilation check."""
-        # handle the case where query might be a dictionary
-        if isinstance(query, dict):
-            if 'query' in query:
-                query = query['query']
-            elif 'code' in query:  # Added to handle ReAct agent format
-                query = query['code']
-            else:
-                # try to get the first value if it's a different kind of dict
-                try:
-                    query = next(iter(query.values()))
-                except (StopIteration, AttributeError):
-                    return "Error: Invalid input format for compilation check"
-        
-        # make sure we have a string at this point
-        if not isinstance(query, str):
-            return f"Error: Expected string input, got {type(query).__name__}"
-        
-        return compilation_check(query)
-    
-    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
-        """Run the compilation check asynchronously."""
-        # call the synchronous version
-        #return self._run(query, run_manager)
-        return self._run(query)
     
