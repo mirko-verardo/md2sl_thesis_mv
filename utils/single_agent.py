@@ -4,7 +4,7 @@ from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
-from models import CompilationCheckTool
+from models import CompilationCheckTool, CompilationCheck
 from utils import colors
 from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored, log
 
@@ -131,7 +131,8 @@ def setup_agent(source: str, few_shot=False) -> AgentExecutor:
     llm = initialize_llm(source)
     
     # use the CompilationCheckTool
-    tools = [CompilationCheckTool()]
+    #tools = [CompilationCheckTool()]
+    tools = [ CompilationCheck ]
     
     # create the system message 
     template = __get_template(few_shot)

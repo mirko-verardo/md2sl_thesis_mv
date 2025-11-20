@@ -27,7 +27,7 @@ Additionally, it must meet these following specifications:
 </code_to_review>
 
 <compilation_result>
-Compilation result: {compilation_status}
+{compilation_status}
 </compilation_result>
 
 <validation_process>
@@ -40,15 +40,11 @@ Validate the code following these steps:
 </validation_process>
 
 <task>
-Then provide your final verdict: 
-1. Has the code been SUCCESSFULLY COMPILED or NOT SUCCESSFULLY COMPILED?
-2. Is the code SATISFACTORY or NOT SATISFACTORY?
-
+Then provide your final verdict, telling if the code is SATISFACTORY or NOT SATISFACTORY.
 A code is NOT SATISFACTORY if:
 1. It fails to compile
 2. It doesn't meet all the required specifications
 3. It contains placeholders or incomplete implementations
-
 If the code is NOT SATISFACTORY, provide specific feedback with details on what needs to be improved and briefly explain how.
 </task>
 

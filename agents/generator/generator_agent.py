@@ -1,9 +1,8 @@
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from langchain.tools import Tool
-from models import AgentState, CompilationCheckTool, mister_wolf
-from agents.generator.generator_prompts import get_generator_template, get_feedback_template
+from models import AgentState, CompilationCheck
+from agents.generator import generator_prompts
 from utils import colors
 from utils.general import print_colored, log, initialize_llm
 from utils.multi_agent import get_parser_requirements
@@ -26,34 +25,34 @@ def generator_node(state: AgentState) -> AgentState:
     # Manage prompt's input
     generator_input = {
         "requirements": get_parser_requirements(),
-        "specifications": generator_specs if generator_specs is not None else "",
+        "specifications": "",
         "feedback": ""
     }
+    if generator_specs:
+        generator_input.update({
+            "specifications": generator_prompts.get_specifications_template(),
+            "supervisor_specifications": generator_specs
+        })
     if validator_assessment:
         generator_input.update({
-            "feedback": get_feedback_template(),
+            "feedback": generator_prompts.get_feedback_template(),
             "validator_assessment": validator_assessment
         })
 
     # Create the prompt
-    generator_template = get_generator_template()
+    generator_template = generator_prompts.get_generator_template()
     generator_prompt = PromptTemplate.from_template(generator_template)
 
     # Initialize model for generator
     generator_llm = initialize_llm(model_source)
     generator_llm.temperature = 0.5
-    #generator_tools = [CompilationCheckTool()]
-    generator_tools = [
-        Tool(name="compilation_check", func=mister_wolf, description="blah blah blah")
-    ]
+    generator_tools = [ CompilationCheck ]
     
     # Create the ReAct agent instead of OpenAI tools agent
     generator_agent = create_react_agent(generator_llm, generator_tools, generator_prompt)
 
-    if validator_assessment == "Retry":
-        max_i = 15 if iteration_count > 1 else 10
-    else:
-        max_i = 5
+    #max_i = 10 if validator_assessment.startswith("Retry") else 5
+    max_i = 5
     
     generator_executor = AgentExecutor(
         agent=generator_agent,

@@ -31,10 +31,7 @@ Each parser you create must implement the following requirements:
 {requirements}
 </parser_requirements>
 
-<specifications>
-The code you create must follow also the following specifications from the supervisor:
 {specifications}
-</specifications>
 
 <critical_rules>
 CRITICAL: 
@@ -72,6 +69,13 @@ Final Answer: the final code you have generated.
 
 Generate a complete C parser implementation following all the requirements and specifications. Use the compilation_check tool to verify your code.
 {agent_scratchpad}
+"""
+
+def get_specifications_template() -> str:
+    return """<specifications>
+Also, the code you create must follow these specifications from the supervisor:
+{supervisor_specifications}
+</specifications>
 """
 
 def get_feedback_template() -> str:

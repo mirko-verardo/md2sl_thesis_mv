@@ -2,7 +2,7 @@ from datetime import datetime
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from models import AgentState, ExceptionTool
+from models import AgentState
 from agents.validator.validator_prompts import get_validator_template
 from utils import colors
 from utils.general import print_colored, log, extract_c_code, compile_c_code, initialize_llm
@@ -36,7 +36,7 @@ def validator_node(state: AgentState) -> AgentState:
         "agent stopped due to iteration limit or time limit."
     ]
     if clean_c_code.lower() in problems:
-        validator_response = "Retry"
+        validator_response = "Retry with a simpler and shorter version"
         validator_response_color = colors.YELLOW
         is_compiled = False
     else:
@@ -74,10 +74,14 @@ def validator_node(state: AgentState) -> AgentState:
         # Manage prompt's input
         validator_input = {
             "requirements": get_parser_requirements(),
-            "specifications": generator_specs if generator_specs is not None else "",
+            "specifications": "",
             "code": clean_c_code,
             "compilation_status": compilation_status
         }
+        if generator_specs:
+            validator_input.update({
+                "specifications": generator_specs
+            })
         
         # Create the prompt
         validator_template = get_validator_template()
@@ -86,7 +90,7 @@ def validator_node(state: AgentState) -> AgentState:
         # Initialize model for validator
         validator_llm = initialize_llm(model_source)
         validator_llm.temperature = 0.4
-        validator_tools = [ExceptionTool()]
+        validator_tools = []
         
         # Create the ReAct agent instead of OpenAI tools agent
         validator_agent = create_react_agent(validator_llm, validator_tools, validator_prompt)
@@ -116,8 +120,8 @@ def validator_node(state: AgentState) -> AgentState:
     is_satisfactory = is_compiled and get_satisfaction(validator_response) == "SATISFACTORY"
     # Check if code is the final iteration
     is_final_iteration = iteration_count >= max_iterations
-    # ...
-    is_code_generated = validator_response != "Retry"
+    # Check if code has been generated
+    is_code_generated = not validator_response.startswith("Retry")
 
     if is_satisfactory:
         # end

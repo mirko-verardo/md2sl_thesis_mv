@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile
 from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
-from langchain.tools import BaseTool
+from langchain.tools import BaseTool, Tool
 from langchain.callbacks.manager import CallbackManagerForToolRun, AsyncCallbackManagerForToolRun
 from utils.general import print_colored
 
@@ -144,7 +144,7 @@ class AgentState(TypedDict):
     system_metrics: SystemMetrics  # system interaction metrics
 
 # Define tools
-def mister_wolf(code: str) -> str:
+def compilation_check(code: str) -> str:
     # Clean the code by removing markdown delimiters:
     # Remove ```c from the beginning of lines
     code = code.replace("```c", "")
@@ -184,16 +184,15 @@ def mister_wolf(code: str) -> str:
     
     return response
 
-class ExceptionTool(BaseTool):
-    """Tool that just returns the query."""
-    name: str = "_Exception"
-    description: str = "Exception tool"
-
-    def _run(self, query: str, run_manager: CallbackManagerForToolRun | None = None) -> str:
-        return query
-
-    async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
-        return query
+CompilationCheck = Tool(
+    name="compilation_check", 
+    func=compilation_check, 
+    description="""This tool checks if the provided C code compiles correctly without any warnings.
+    Input should be valid C code.
+    The tool will return compilation results, including any errors or warnings.
+    Use this tool to verify that your C parser implementation is syntactically correct
+    and free of warnings before providing it to the user."""
+)
 
 class CompilationCheckTool(BaseTool):
     """Tool that checks if C code compiles correctly without warnings."""
@@ -225,7 +224,7 @@ class CompilationCheckTool(BaseTool):
         if not isinstance(query, str):
             return f"Error: Expected string input, got {type(query).__name__}"
         
-        return mister_wolf(query)
+        return compilation_check(query)
     
     async def _arun(self, query: str, run_manager: AsyncCallbackManagerForToolRun | None = None) -> str:
         """Run the compilation check asynchronously."""

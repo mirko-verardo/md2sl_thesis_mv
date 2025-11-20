@@ -15,8 +15,13 @@
 
 ## Improvements
 
-- bugfix on multiagent message passing
-- aaa
+- general code refactoring
+    - agents prompts isolated from the logic
+    - redundant message passing bugfix on multiagent
+- real time entire conversation history passed at each round (loop in the while true) on multiagent
+    - messages passed is used for it (not read from log)
+    - supervisor memory avoided but last validation assessment kept in agent state (not read from log)
+    - supervisor memory was used to track the last generated parser but it could not be the best (maybe a middle one compiles and the last one not)
 
 ## Prompt
 
@@ -39,7 +44,6 @@
 
 ## Questions
 
-- TODO: add validation_assessment as field in AgentState
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
 - Problem: last iteration can fail and the middle ones instead create a working code
 - **Supervisor** and **Validator** prompts misses these ones for ReAct patter:

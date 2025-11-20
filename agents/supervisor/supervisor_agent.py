@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from models import AgentState, ExceptionTool
+from models import AgentState
 from utils import colors, multi_agent
 from utils.general import log, extract_c_code, initialize_llm
 from agents.supervisor import supervisor_prompts
@@ -29,7 +29,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     # Initialize model for supervisor
     supervisor_llm = initialize_llm(model_source)
     supervisor_llm.temperature = 0.6
-    supervisor_tools = [ExceptionTool()]
+    supervisor_tools = []
     
     # Create the ReAct agent instead of OpenAI tools agent
     supervisor_agent = create_react_agent(supervisor_llm, supervisor_tools, supervisor_prompt)
@@ -41,30 +41,26 @@ def supervisor_node(state: AgentState) -> AgentState:
         handle_parsing_errors=True
     )
 
-    conversation_history = get_buffer_string(messages)
-    prompt_input = {
+    supervisor_input = {
         "input": user_request,
         "conversation_history": get_buffer_string(messages)
     }
 
     if generator_code and validator_assessment:
-        # TODO: da spostare dentro il validator per gestire il limite di iterazioni
         # Extract clean c code
         clean_c_code = extract_c_code(generator_code)
         if clean_c_code is None:
             clean_c_code = generator_code
         
-        prompt = supervisor_prompts.get_supervisor_input_validated()
-        result = supervisor_executor.invoke({
-            "input": user_request,
-            "conversation_history": conversation_history,
-            "adaptive_instructions": prompt,
+        supervisor_input.update({
+            "adaptive_instructions": supervisor_prompts.get_supervisor_input_validated(),
             "c_code": clean_c_code,
             "validator_assessment": validator_assessment,
             "code_satisfaction": multi_agent.get_satisfaction(validator_assessment),
             "compilation_status": multi_agent.get_compilation_status(validator_assessment),
             "code_satisfaction_instructions": multi_agent.get_satisfaction_instructions(validator_assessment)
         })
+        result = supervisor_executor.invoke(supervisor_input)
         supervisor_response = result["output"]
         
         purpose = "providing final parser"
@@ -73,26 +69,20 @@ def supervisor_node(state: AgentState) -> AgentState:
         iteration_count_new = iteration_count
         next_step = "FINISH"
     else:
-        prompt = supervisor_prompts.get_supervisor_input_actions()
-        result = supervisor_executor.invoke({
-            "input": user_request,
-            "conversation_history": conversation_history,
-            "adaptive_instructions": prompt
+        supervisor_input.update({
+            "adaptive_instructions": supervisor_prompts.get_supervisor_input_actions()
         })
+        result = supervisor_executor.invoke(supervisor_input)
         action = result["output"].strip()
         
         log(f, f"Supervisor action choosen: {action}", colors.CYAN, bold=True)
-
-        most_recent_parser = True
         
         if action == "GENERATE_PARSER":
-            prompt = supervisor_prompts.get_supervisor_input_generate_parser()
-            result = supervisor_executor.invoke({
-                "input": user_request,
-                "conversation_history": conversation_history,
-                "adaptive_instructions": prompt,
+            supervisor_input.update({
+                "adaptive_instructions": supervisor_prompts.get_supervisor_input_generate_parser(),
                 "requirements": multi_agent.get_parser_requirements()
             })
+            result = supervisor_executor.invoke(supervisor_input)
             supervisor_response = result["output"]
             
             purpose = "creating detailed specifications"
@@ -100,18 +90,16 @@ def supervisor_node(state: AgentState) -> AgentState:
             generator_code_new = None
             iteration_count_new = 0
             next_step = "Generator"
-        elif action == "CORRECT_ERROR" and most_recent_parser:
+        elif action == "CORRECT_ERROR":
             #most_recent_assessment = most_recent_parser["validator_assessment"]
-            prompt = supervisor_prompts.get_supervisor_input_correct_error()
-            result = supervisor_executor.invoke({
-                "input": user_request,
-                "conversation_history": conversation_history,
-                "adaptive_instructions": prompt,
+            supervisor_input.update({
+                "adaptive_instructions": supervisor_prompts.get_supervisor_input_correct_error(),
                 #"c_code": most_recent_parser["code"],
                 #"validator_assessment": multi_agent.get_assessment(most_recent_assessment),
                 #"code_satisfaction": multi_agent.get_satisfaction(most_recent_assessment),
                 #"compilation_status": multi_agent.get_compilation_status(most_recent_assessment)
             })
+            result = supervisor_executor.invoke(supervisor_input)
             supervisor_response = result["output"]
             
             purpose = "creating updated specifications"
@@ -119,18 +107,16 @@ def supervisor_node(state: AgentState) -> AgentState:
             generator_code_new = None
             iteration_count_new = 0
             next_step = "Generator"
-        elif action == "ASSESS_CODE" and most_recent_parser:
+        elif action == "ASSESS_CODE":
             #most_recent_assessment = most_recent_parser["validator_assessment"]
-            prompt = supervisor_prompts.get_supervisor_input_assess_code()
-            result = supervisor_executor.invoke({
-                "input": user_request,
-                "conversation_history": conversation_history,
-                "adaptive_instructions": prompt,
+            supervisor_input.update({
+                "adaptive_instructions": supervisor_prompts.get_supervisor_input_assess_code(),
                 #"c_code": most_recent_parser["code"],
                 #"validator_assessment": multi_agent.get_assessment(most_recent_assessment),
                 #"code_satisfaction": multi_agent.get_satisfaction(most_recent_assessment),
                 #"compilation_status": multi_agent.get_compilation_status(most_recent_assessment)
             })
+            result = supervisor_executor.invoke(supervisor_input)
             supervisor_response = result["output"]
             
             purpose = "providing code assessment"
@@ -140,13 +126,10 @@ def supervisor_node(state: AgentState) -> AgentState:
             next_step = "FINISH"
         else:
             # GENERAL_CONVERSATION
-            prompt = supervisor_prompts.get_supervisor_input_general_conversation()
-            input = {
-                "input": user_request,
-                "conversation_history": conversation_history,
-                "adaptive_instructions": prompt
-            }
-            result = supervisor_executor.invoke(input)
+            supervisor_input.update({
+                "adaptive_instructions": supervisor_prompts.get_supervisor_input_general_conversation()
+            })
+            result = supervisor_executor.invoke(supervisor_input)
             supervisor_response = result["output"]
             
             purpose = "conversation"
