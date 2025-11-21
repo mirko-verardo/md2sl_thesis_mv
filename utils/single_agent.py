@@ -287,6 +287,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 c_file_name = f"parser_{timestamp}.c"
                 c_file_path = session_dir / c_file_name
+                o_file_path = c_file_path.with_suffix('')
                 
                 # save the C code to a file
                 with open(c_file_path, 'w') as ff:
@@ -296,7 +297,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                 
                 # compile the C code
                 print("Compiling with gcc...")
-                compilation_result = compile_c_code(c_file_path)
+                compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
                 
                 # save compilation results
                 result_file_name = f"compilation_result_{timestamp}.txt"
@@ -310,7 +311,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                         log(ff, "Compilation failed", colors.RED, bold=True)
                     
                     # update command to show we're using -Werror flag
-                    ff.write(f"\nCommand: gcc -Wall -Wextra -Werror {c_file_path} -o {c_file_path.with_suffix('')}\n")
+                    ff.write(f"\nCommand: gcc -Wall -Wextra -Werror {c_file_path} -o {o_file_path}\n")
                     
                     if compilation_result['stdout']:
                         ff.write(f"\nStandard output:\n{compilation_result['stdout']}\n")

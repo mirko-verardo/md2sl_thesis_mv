@@ -1,15 +1,13 @@
-import os
-import re
+import os, re
 from dotenv import load_dotenv
-from pathlib import Path
 from getpass import getpass
 from pydantic import SecretStr
 from subprocess import run
+from tempfile import TemporaryDirectory
 from typing import Any
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_huggingface import HuggingFaceEndpoint
 
 
 
@@ -47,26 +45,7 @@ def get_model_source_from_input() -> str:
 
 def initialize_llm(source: str):
     """Initialize a hosted model with appropriate parameters."""
-    if source == "huggingface":
-        # model_id = 'codellama/CodeLlama-34b-Instruct-hf'
-        # https://evalplus.github.io/leaderboard.html
-        # model_id = 'microsoft/Phi-3-mini-4k-instruct' # 56esimo
-        # model_id = 'meta-llama/Meta-Llama-3-8B-Instruct' # 60eismo
-        model_id = 'bigcode/starcoder2-15b' # 79eismo
-        api_key = set_if_undefined("HUGGING_FACE_API_KEY")
-
-        return HuggingFaceEndpoint(
-            model=model_id,
-            huggingfacehub_api_token = api_key,
-            repo_id=model_id,
-            task="text-generation",
-            temperature=0.5, 
-            repetition_penalty=1.3,
-            do_sample=True,
-            top_p=0.9,
-            max_new_tokens=2048  # increase for longer parser implementations
-        )
-    elif source == "google":
+    if source == "google":
         #model_id = 'gemini-2.5-pro'
         model_id = 'gemini-2.0-flash'
         #model_id = 'gemini-2.5-flash-lite'
@@ -116,11 +95,11 @@ def initialize_llm(source: str):
 def extract_c_code(text: str) -> str | None:
     """Extract C code from the LLM response."""
     # find code between ```c and ``` markers
-    code_blocks = re.findall(r'```c(.*?)```', text, re.DOTALL)
+    code_blocks = re.findall(r'```c\s*(.*?)```', text, re.DOTALL)
     
     # if not found, try without language specifier
     if not code_blocks:
-        code_blocks = re.findall(r'```(.*?)```', text, re.DOTALL)
+        code_blocks = re.findall(r'```\s*(.*?)```+', text, re.DOTALL)
     
     # if still no code blocks found, check if the entire text is C code
     # by looking for common C headers or patterns
@@ -131,23 +110,59 @@ def extract_c_code(text: str) -> str | None:
     # return the first code block if any were found
     return code_blocks[0].strip() if code_blocks else None
 
-def compile_c_code(c_file_path: Path) -> dict[str, Any]:
+def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
     """Compile the C code using gcc and return compilation result, considering warnings as issues."""
-    output_file = c_file_path.with_suffix('')
     
     # run gcc to compile the code with all warnings enabled and treated as errors
+    # using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
     result = run(
-        ['gcc', '-Wall', '-Wextra', '-Werror', str(c_file_path), '-o', str(output_file)],
+        ['gcc', '-Wall', '-Wextra', '-Werror', c_file_path, '-o', out_file_path],
         capture_output=True,
-        text=True)
+        text=True
+    )
+    
+    # compilation success (executable created, no warnings)
+    result_is_success = (result.returncode == 0)
     
     # with -Werror, compilation success means no warnings
     return {
-        'success': result.returncode == 0,  # compilation success (executable created, no warnings)
+        'success': result_is_success,  
         'stdout': result.stdout,
         'stderr': result.stderr,
-        'executable': output_file if result.returncode == 0 else None
+        'executable': out_file_path if result_is_success else None
     }
+
+def compilation_check(code: str) -> str:
+    """Function that checks if C code compiles correctly without warnings."""
+    # Clean the code by removing markdown delimiters:
+    # Remove ```c from the beginning of lines
+    code = code.replace("```c", "")
+    # Remove ``` from anywhere
+    code = code.replace("```", "")
+    # Trim whitespace
+    code = code.strip()
+    
+    # create a temporary directory
+    with TemporaryDirectory() as temp_dir:
+        temp_c_file = os.path.join(temp_dir, "test.c")
+        temp_out_file = os.path.join(temp_dir, "test.out")
+
+        # Write code to file
+        with open(temp_c_file, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        # compile the C code
+        compilation_result = compile_c_code(temp_c_file, temp_out_file)
+        
+        # prepare the response
+        if compilation_result["success"]:
+            response = "Compilation successful! The code compiles without any errors or warnings."
+        else:
+            response = f"Compilation failed with the following errors or warnings:\n{compilation_result["stderr"]}"
+            # add the original code after the error message for easy reference
+            response += f"\n\nOriginal code:\n```c\n{code}\n```"
+    
+    return response
 
 def print_colored(text: str, color_code: str) -> None:
     """Print text with color."""

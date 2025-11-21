@@ -3,7 +3,7 @@ from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState
 from utils import colors, multi_agent
-from utils.general import log, extract_c_code, initialize_llm
+from utils.general import log, initialize_llm
 from agents.supervisor import supervisor_prompts
 
 
@@ -23,6 +23,9 @@ def supervisor_node(state: AgentState) -> AgentState:
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
+    # temp
+    if generator_code and validator_assessment:
+        supervisor_template = supervisor_template.replace("{adaptive_instructions}", supervisor_prompts.get_supervisor_input_validated())
     supervisor_prompt = PromptTemplate.from_template(supervisor_template)
 
     # Initialize model for supervisor
@@ -45,12 +48,23 @@ def supervisor_node(state: AgentState) -> AgentState:
         "conversation_history": get_buffer_string(messages)
     }
 
-    if generator_code and validator_assessment:        
+    if generator_code and validator_assessment:
         supervisor_input.update({
-            "adaptive_instructions": supervisor_prompts.get_supervisor_input_validated(),
             "c_code": generator_code,
             "validator_assessment": validator_assessment
         })
+
+        #prompt_input = supervisor_input.copy()
+        #prompt_input.update({
+        #    "tools": "",
+        #    "tool_names": "",
+        #    "agent_scratchpad": ""
+        #})
+        #final_prompt = supervisor_prompt.format(**prompt_input)
+        #prova_file = state["session_dir"] / "prova.txt"
+        #with open(prova_file, 'w', encoding="utf-8") as kk:
+        #    kk.write(final_prompt)
+
         result = supervisor_executor.invoke(supervisor_input)
         supervisor_response = result["output"]
         
@@ -70,9 +84,11 @@ def supervisor_node(state: AgentState) -> AgentState:
             purpose = "not expected"
             next_step = "FINISH"
         elif action == "GENERATE_PARSER":
+            # temp
+            adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
+            adaptive_instructions = adaptive_instructions.replace("{requirements}", multi_agent.get_parser_requirements())
             supervisor_input.update({
-                "adaptive_instructions": supervisor_prompts.get_supervisor_input_generate_parser(),
-                "requirements": multi_agent.get_parser_requirements()
+                "adaptive_instructions": adaptive_instructions
             })
             result = supervisor_executor.invoke(supervisor_input)
             supervisor_response = result["output"]

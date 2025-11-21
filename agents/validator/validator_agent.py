@@ -31,6 +31,7 @@ def validator_node(state: AgentState) -> AgentState:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         c_file_name = f"parser_{timestamp}.c"
         c_file_path = session_dir / c_file_name
+        o_file_path = c_file_path.with_suffix('')
         
         with open(c_file_path, 'w', encoding="utf-8") as ff:
             ff.write(generator_code)
@@ -39,7 +40,7 @@ def validator_node(state: AgentState) -> AgentState:
         
         # Compile the code
         print_colored("\n--- Testing Compilation ---", "1;33")
-        compilation_result = compile_c_code(c_file_path)
+        compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
         # Check if code has been compiled with success
         is_compiled = compilation_result['success']
         # Get compilation status
@@ -48,21 +49,18 @@ def validator_node(state: AgentState) -> AgentState:
         # Record parser validation in metrics
         system_metrics.record_parser_validation(c_file_name, is_compiled)
 
-        # Manage prompt's input
+        # Create the prompt
+        validator_template = validator_prompts.get_validator_template()
+        validator_template = validator_template.replace("{specifications}", validator_prompts.get_specifications_template() if generator_specs else "")
         validator_input = {
             "requirements": multi_agent.get_parser_requirements(),
-            "specifications": "",
             "code": generator_code,
             "compilation_status": compilation_status
         }
         if generator_specs:
             validator_input.update({
-                "specifications": validator_prompts.get_specifications_template(),
                 "supervisor_specifications": generator_specs
             })
-        
-        # Create the prompt
-        validator_template = validator_prompts.get_validator_template()
         validator_prompt = PromptTemplate.from_template(validator_template)
 
         # Initialize model for validator

@@ -4,7 +4,7 @@ from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, CompilationCheck
 from agents.generator import generator_prompts
 from utils import colors
-from utils.general import print_colored, log, initialize_llm, extract_c_code
+from utils.general import print_colored, log, extract_c_code, initialize_llm
 from utils.multi_agent import get_parser_requirements
 
 
@@ -19,25 +19,21 @@ def generator_node(state: AgentState) -> AgentState:
     log_file = state["log_file"]
     system_metrics = state["system_metrics"]
 
-    # Manage prompt's input
+    # Create the prompt
+    generator_template = generator_prompts.get_generator_template()
+    generator_template = generator_template.replace("{specifications}", generator_prompts.get_specifications_template() if generator_specs else "")
+    generator_template = generator_template.replace("{feedback}", generator_prompts.get_feedback_template() if validator_assessment else "")
     generator_input = {
-        "requirements": get_parser_requirements(),
-        "specifications": "",
-        "feedback": ""
+        "requirements": get_parser_requirements()
     }
     if generator_specs:
         generator_input.update({
-            "specifications": generator_prompts.get_specifications_template(),
             "supervisor_specifications": generator_specs
         })
     if validator_assessment:
         generator_input.update({
-            "feedback": generator_prompts.get_feedback_template(),
             "validator_assessment": validator_assessment
         })
-
-    # Create the prompt
-    generator_template = generator_prompts.get_generator_template()
     generator_prompt = PromptTemplate.from_template(generator_template)
 
     # Initialize model for generator

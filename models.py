@@ -1,15 +1,12 @@
-import os
 from datetime import datetime
 from json import dump
 from operator import add
 from pathlib import Path
-from subprocess import run
-from tempfile import NamedTemporaryFile
 from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
-from utils.general import print_colored
+from utils.general import print_colored, compilation_check
 
 
 
@@ -143,47 +140,6 @@ class AgentState(TypedDict):
     system_metrics: SystemMetrics  # system interaction metrics
 
 # Define tools
-def compilation_check(code: str) -> str:
-    """Function that checks if C code compiles correctly without warnings."""
-    # Clean the code by removing markdown delimiters:
-    # Remove ```c from the beginning of lines
-    code = code.replace("```c", "")
-    # Remove ``` from anywhere
-    code = code.replace("```", "")
-    # Trim whitespace
-    code = code.strip()
-    
-    # create a temporary file with the C code
-    with NamedTemporaryFile(suffix='.c', delete=False) as temp_file:
-        temp_file.write(code.encode('utf-8'))
-        temp_file_path = temp_file.name
-    
-    # compile the C code with all warnings enabled and treating warnings as errors
-    # using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
-    result = run(
-        ['gcc', '-Wall', '-Wextra', '-Werror', temp_file_path, '-o', temp_file_path + '.out'],
-        capture_output=True,
-        text=True
-    )
-    
-    # prepare the response
-    if result.returncode == 0:
-        response = "Compilation successful! The code compiles without any errors or warnings."
-    else:
-        response = f"Compilation failed with the following errors or warnings:\n{result.stderr}"
-        # add the original code after the error message for easy reference
-        response += f"\n\nOriginal code:\n```c\n{code}\n```"
-
-    # clean up temporary files
-    try:
-        os.unlink(temp_file_path)
-        if os.path.exists(temp_file_path + '.out'):
-            os.unlink(temp_file_path + '.out')
-    except Exception as e:
-        pass  # ignore cleanup errors
-    
-    return response
-
 CompilationCheck = Tool(
     name="compilation_check", 
     func=compilation_check, 

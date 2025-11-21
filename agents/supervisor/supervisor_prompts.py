@@ -12,6 +12,10 @@ You have access to these tools: {tools}
 Tool names: {tool_names}
 </available_tools>
 
+<user_request>
+{input}
+</user_request>
+
 <format_instructions>
 Use the following format:
 Question: the input question.
@@ -27,7 +31,6 @@ Final Answer: the final answer to the original question.
 {adaptive_instructions}
 </adaptive_instructions>
 
-Now, the user is asking: {input}
 {agent_scratchpad}
 """
 
