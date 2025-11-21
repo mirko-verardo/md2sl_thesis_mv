@@ -4,7 +4,7 @@ from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, CompilationCheck
 from agents.generator import generator_prompts
 from utils import colors
-from utils.general import print_colored, log, initialize_llm
+from utils.general import print_colored, log, initialize_llm, extract_c_code
 from utils.multi_agent import get_parser_requirements
 
 
@@ -18,9 +18,6 @@ def generator_node(state: AgentState) -> AgentState:
     model_source = state["model_source"]
     log_file = state["log_file"]
     system_metrics = state["system_metrics"]
-    
-    # TODO: da rivedere
-    system_metrics.increment_generator_validator_interaction()
 
     # Manage prompt's input
     generator_input = {
@@ -66,8 +63,14 @@ def generator_node(state: AgentState) -> AgentState:
     
     try:
         generator_result = generator_executor.invoke(generator_input)
-        generator_response = generator_result["output"]
+        generator_response = str(generator_result["output"])
         generator_response_color = colors.MAGENTA
+
+        # Extract clean c code
+        generator_response_c_code = extract_c_code(generator_response)
+        if not generator_response_c_code:
+            print_colored("Warning: Could not extract clean C code, using original code", "1;33")
+            generator_response_c_code = generator_response
         
         if "intermediate_steps" in generator_result:
             compilation_attempts = 0
@@ -94,6 +97,7 @@ def generator_node(state: AgentState) -> AgentState:
     except Exception as e:
         generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
         generator_response_color = colors.RED
+        generator_response_c_code = None
     
     # increment iteration
     iteration_count += 1
@@ -106,7 +110,7 @@ def generator_node(state: AgentState) -> AgentState:
         "messages": [AIMessage(content=generator_response, name="Generator")],
         "user_request": state["user_request"],
         "generator_specs": generator_specs,
-        "generator_code": generator_response,
+        "generator_code": generator_response_c_code,
         "validator_assessment": None,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,

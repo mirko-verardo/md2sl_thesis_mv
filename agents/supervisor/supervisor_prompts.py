@@ -40,13 +40,11 @@ The generated parser code is:
 ```
 
 The validator's assessment: {validator_assessment}
-Code satisfaction: {code_satisfaction}
-Compilation status: {compilation_status}
 
 Please provide a friendly response to the user that:
 1. Acknowledges their request
 2. Presents the generated C parser code
-3. {code_satisfaction_instructions}
+3. IMPORTANTLY, mentions the code satisfaction according to the validator and briefly explains why
 4. Gives a brief explanation of what the parser does and how it works
 5. Explicitly mentions the compilation status
 6. Mentions they can ask for clarification or report any issues they find
@@ -90,9 +88,7 @@ Be specific about what changes need to be made and why.
 #{c_code}
 #```
 #
-#Previous validator assessment: {validator_assessment}
-#Code satisfaction: {code_satisfaction}
-#Compilation status: {compilation_status}
+#Previous validator's assessment: {validator_assessment}
 #"""
 
 def get_supervisor_input_assess_code() -> str:
@@ -104,8 +100,6 @@ def get_supervisor_input_assess_code() -> str:
 #```
 #
 #Validator's assessment: {validator_assessment}
-#Code satisfaction: {code_satisfaction}
-#Compilation status: {compilation_status}
     return """The user is asking about the quality or validation status of previously generated code.
 
 Create a comprehensive response that:

@@ -33,6 +33,13 @@
     - generate a simple parser function for xml files
     - generate a simple parser function in C for pdf files
 
+## Ideas
+
+- let the user choose directly the followings:
+    - file type to generate the parser for (PDF, JSON, HTML, etc...)
+    - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
+    - (both things are let the llm to undestand, which is not ideal)
+
 ## Unit Testing
 
 1. Manual file to parse and check some predefined test cases on it

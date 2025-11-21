@@ -114,9 +114,6 @@ if __name__ == "__main__":
         try:
             # Start a new round
             system_metrics.start_new_round(user_input)
-
-            # Initialize the graph
-            #graph = build_workflow()
             
             # Initial state
             initial_state = {

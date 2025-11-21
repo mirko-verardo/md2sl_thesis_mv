@@ -6,26 +6,18 @@ def get_parser_requirements() -> str:
 5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
 6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)"""
 
-def get_assessment(assessment: str | None) -> str:
-    if assessment is None:
-        return "No assessment available"
-    return assessment
+def had_agent_problems(output: str) -> bool:
+    # Main problems
+    problems = [
+        "agent stopped due to max iterations.",
+        "agent stopped due to iteration limit or time limit."
+    ]
+
+    return output.lower() in problems
 
 def get_satisfaction(assessment: str | None) -> str:
     if assessment is None:
         return "Unknown"
     assessment = assessment.lower()
-    is_satisfactory = "satisfactory" in assessment and "not satisfactory" not in assessment
-    return "SATISFACTORY" if is_satisfactory else "NOT SATISFACTORY"
-
-def get_satisfaction_instructions(assessment: str) -> str:
-    assessment = assessment.lower()
-    is_satisfactory = "satisfactory" in assessment and "not satisfactory" not in assessment
-    return "Mentions that the code is SATISFACTORY" if is_satisfactory else "IMPORTANTLY, mentions that the code is NOT SATISFACTORY according to the validator and briefly explains why"
-
-def get_compilation_status(assessment: str | None) -> str:
-    if assessment is None:
-        return "Unknown"
-    assessment = assessment.lower()
-    is_compiled = "successfully compiled" in assessment and "not successfully compiled" not in assessment
-    return "SUCCESSFULLY COMPILED" if is_compiled else "NOT SUCCESSFULLY COMPILED"
+    condition = "satisfactory" in assessment and "not satisfactory" not in assessment
+    return "SATISFACTORY" if condition else "NOT SATISFACTORY"
