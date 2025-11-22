@@ -1,0 +1,27 @@
+{
+  "id": 963,
+  "caller_cf": "VRRMRK94R14G888E",
+  "request_protocol": 12345,
+  "request_subject": "Prova richiesta di rinnovo con modifiche non sostanziali tramite API",
+  "technical_sheets": [
+    {
+      "type": "DEP",
+      "utilization_state_id": null,
+      "indicators": [
+        {
+          "environmental_parameter": "trattamenti_preliminari",
+          "authorized_value": true
+        },
+        {
+          "environmental_parameter": "gruppo_elettrogeno",
+          "authorized_value": true
+        },
+        {
+          "environmental_parameter": "potenzialita",
+          "authorized_value": 500
+        }
+      ],
+      "territorial_object_id": 328
+    }
+  ]
+}
