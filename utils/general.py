@@ -8,6 +8,7 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
+from utils import colors
 
 
 
@@ -25,30 +26,29 @@ def set_if_undefined(var: str) -> str:
 
 def get_model_source_from_input() -> str:
     """Get the model source name from the user input"""
-    print_colored("\n=== C Parser Generator Setup ===", "1;36")
-    print_colored("Available model sources: 'google', 'openai', 'anthropic'", "1;33")
+    print_colored("\n=== C Parser Generator Setup ===", colors.CYAN, bold=True)
+    print_colored("Available model sources: 'google', 'openai', 'anthropic'", colors.YELLOW, bold=True)
 
     # speed up
-    source = "google"
-    print_colored(f"\nSelected model source: {source}", "1;32")
-    return source
+    return "google"
     
     # get model source
     while True:
         source = input("\nEnter the model source: ").strip().lower()
         
         if source in ['google', 'openai', 'anthropic']:
-            print_colored(f"\nSelected model source: {source}", "1;32")
+            print_colored(f"\nSelected model source: {source}", colors.GREEN, bold=True)
             return source
-        else:
-            print_colored("Invalid source. Please enter 'google', 'openai', or 'anthropic'.", "1;31")
+        
+        print_colored("Invalid source. Please enter 'google', 'openai', or 'anthropic'.", colors.RED, bold=True)
 
 def initialize_llm(source: str):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
+        #model_id = 'gemini-3.0-pro'
         #model_id = 'gemini-2.5-pro'
-        model_id = 'gemini-2.0-flash'
-        #model_id = 'gemini-2.5-flash-lite'
+        model_id = 'gemini-2.5-flash'
+        #model_id = 'gemini-2.0-flash'
         api_key = set_if_undefined("GOOGLE_API_KEY")
 
         return ChatGoogleGenerativeAI(
@@ -120,7 +120,7 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
         capture_output=True,
         text=True
     )
-    
+
     # compilation success (executable created, no warnings)
     result_is_success = (result.returncode == 0)
     
@@ -130,6 +130,42 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
         'stdout': result.stdout,
         'stderr': result.stderr,
         'executable': out_file_path if result_is_success else None
+    }
+
+def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, Any]:
+    """Execute the compiled C program, feeding it the contents of the input file."""
+
+    try:
+        # NB: read bytes, not text (for a general approach that supports all input files)
+        # NB: with rb, no encoding must be specified
+        with open(in_file_path, "rb") as f:
+            input_bytes = f.read()
+    except Exception as e:
+        return {
+            'success': False,
+            'stdout': '',
+            'stderr': f'Failed to read input file: {e}'
+        }
+
+    # Run the executable with the raw-bytes file contents as stdin
+    result = run(
+        [exe_file_path],
+        input=input_bytes,
+        capture_output=True,
+        text=False
+    )
+
+    # Decode stdout/stderr only for human-readable messages
+    def safe_decode(b):
+        try:
+            return b.decode('utf-8')
+        except:
+            return repr(b)
+
+    return {
+        'success': result.returncode == 0,
+        'stdout': safe_decode(result.stdout),
+        'stderr': safe_decode(result.stderr)
     }
 
 def compilation_check(code: str) -> str:
@@ -164,13 +200,13 @@ def compilation_check(code: str) -> str:
     
     return response
 
-def print_colored(text: str, color_code: str) -> None:
+def print_colored(text: str, color_code: str, bold: bool = False) -> None:
     """Print text with color."""
+    if bold:
+        color_code = f"1;{color_code}"
     print(f"\033[{color_code}m{text}\033[0m")
 
 def log(file, text: str, color_code: str | None = None, bold: bool = False) -> None:
-    if color_code and bold:
-        color_code = f"1;{color_code}"
     text = f"\n{text}"
-    print_colored(text, color_code) if color_code else print(text)
+    print_colored(text, color_code, bold) if color_code else print(text)
     file.write(f"{text}\n")

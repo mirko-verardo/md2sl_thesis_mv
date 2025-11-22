@@ -77,6 +77,7 @@ The prompt you create should include:
 4. How error cases should be handled
 5. What component functions will be needed
 6. Memory management strategy
+7. Clear specification that the parser must read the entire input from standard input (stdin) as raw bytes
 
 Create a detailed prompt for the generator.
 """

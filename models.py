@@ -6,6 +6,7 @@ from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
+from utils import colors
 from utils.general import print_colored, compilation_check
 
 
@@ -63,17 +64,17 @@ class SystemMetrics:
                 interaction_key = f"tool_interaction{interaction_number}"
                 success_key = f"successful_compilations{interaction_number}"
                 
-                print_colored(f"Recording tool usage for {self.current_round}, {interaction_key}", "1;33")
+                print_colored(f"Recording tool usage for {self.current_round}, {interaction_key}", colors.YELLOW, bold=True)
                 
                 self.rounds_data[self.current_round][interaction_key] += 1
                 
                 if compilation_success:
                     self.rounds_data[self.current_round][success_key] += 1
                 
-                print_colored(f"New tool usage count: {self.rounds_data[self.current_round][interaction_key]}", "1;33")
-                print_colored(f"Successful compilations: {self.rounds_data[self.current_round][success_key]}", "1;33")
+                print_colored(f"New tool usage count: {self.rounds_data[self.current_round][interaction_key]}", colors.YELLOW, bold=True)
+                print_colored(f"Successful compilations: {self.rounds_data[self.current_round][success_key]}", colors.YELLOW, bold=True)
             else:
-                print_colored(f"Warning: Invalid interaction number {interaction_number}", "1;33")
+                print_colored(f"Warning: Invalid interaction number {interaction_number}", colors.YELLOW, bold=True)
     
     def complete_round(self) -> None:
         """Mark the current round as completed."""
@@ -122,11 +123,12 @@ class SystemMetrics:
         with open(json_file, 'w') as f:
             dump(json_data, f, indent=2)
         
-        print_colored(f"\nMetrics saved to: {json_file}", "1;36")
+        print_colored(f"\nMetrics saved to: {json_file}", colors.CYAN, bold=True)
 
 class AgentState(TypedDict):
     """State schema for the agent graph."""
     messages: Annotated[Sequence[BaseMessage], add]
+    user_action: str
     user_request: str
     generator_specs: str | None
     generator_code: str | None
@@ -136,7 +138,6 @@ class AgentState(TypedDict):
     model_source: str
     next_step: str  # "Supervisor", "Generator", "Validator", or "FINISH"
     session_dir: Path  # path to the session directory
-    log_file: Path  # path to the log file
     system_metrics: SystemMetrics  # system interaction metrics
 
 # Define tools

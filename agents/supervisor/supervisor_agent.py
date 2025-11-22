@@ -3,7 +3,7 @@ from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState
 from utils import colors, multi_agent
-from utils.general import log, initialize_llm
+from utils.general import print_colored, initialize_llm
 from agents.supervisor import supervisor_prompts
 
 
@@ -11,15 +11,12 @@ from agents.supervisor import supervisor_prompts
 def supervisor_node(state: AgentState) -> AgentState:
     """Supervisor agent that converses with the user and manages the parser generation process."""
     messages = state["messages"]
+    user_action = state["user_action"]
     user_request = state["user_request"]
     generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
     validator_assessment = state["validator_assessment"]
     model_source = state["model_source"]
-    log_file = state["log_file"]
-
-    # Logger
-    f = open(log_file, 'a', encoding="utf-8")
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
@@ -40,7 +37,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         agent=supervisor_agent,
         tools=supervisor_tools,
         verbose=True,
-        handle_parsing_errors=True
+        handle_parsing_errors=True,
+        max_iterations=3,
+        early_stopping_method="force"
     )
 
     supervisor_input = {
@@ -71,19 +70,13 @@ def supervisor_node(state: AgentState) -> AgentState:
         purpose = "providing final parser"
         next_step = "FINISH"
     else:
-        supervisor_input.update({
-            "adaptive_instructions": supervisor_prompts.get_supervisor_input_actions()
-        })
-        result = supervisor_executor.invoke(supervisor_input)
-        action = str(result["output"]).strip()
-        
-        log(f, f"Supervisor action choosen: {action}", colors.CYAN, bold=True)
+        #supervisor_input.update({
+        #    "adaptive_instructions": supervisor_prompts.get_supervisor_input_actions()
+        #})
+        #result = supervisor_executor.invoke(supervisor_input)
+        #user_action = str(result["output"]).strip()
 
-        if action.upper() not in [ "GENERATE_PARSER", "CORRECT_ERROR", "ASSESS_CODE", "GENERAL_CONVERSATION" ]:
-            supervisor_response = f"My answer is {action} so probably I can't understand your request :( Retry and good luck :)"
-            purpose = "not expected"
-            next_step = "FINISH"
-        elif action == "GENERATE_PARSER":
+        if user_action == "GENERATE_PARSER":
             # temp
             adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
             adaptive_instructions = adaptive_instructions.replace("{requirements}", multi_agent.get_parser_requirements())
@@ -97,7 +90,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             
             purpose = "creating detailed specifications"
             next_step = "Generator"
-        elif action == "CORRECT_ERROR":
+        elif user_action == "CORRECT_ERROR":
             #most_recent_assessment = most_recent_parser["validator_assessment"]
             supervisor_input.update({
                 "adaptive_instructions": supervisor_prompts.get_supervisor_input_correct_error(),
@@ -111,7 +104,7 @@ def supervisor_node(state: AgentState) -> AgentState:
             
             purpose = "creating updated specifications"
             next_step = "Generator"
-        elif action == "ASSESS_CODE":
+        elif user_action == "ASSESS_CODE":
             #most_recent_assessment = most_recent_parser["validator_assessment"]
             supervisor_input.update({
                 "adaptive_instructions": supervisor_prompts.get_supervisor_input_assess_code(),
@@ -134,12 +127,12 @@ def supervisor_node(state: AgentState) -> AgentState:
             purpose = "conversation"
             next_step = "FINISH"
 
-    log(f, f"Supervisor ({purpose}):", colors.BLUE, bold=True)
-    log(f, supervisor_response)
-    f.close()
+    print_colored(f"Supervisor ({purpose}):", colors.BLUE, bold=True)
+    print(supervisor_response)
     
     return {
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
+        "user_action": user_action,
         "user_request": user_request,
         "generator_specs": generator_specs,
         "generator_code": generator_code,
@@ -148,7 +141,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
         "session_dir": state["session_dir"],
-        "log_file": log_file,
         "next_step": next_step,
         "system_metrics": state["system_metrics"]
     }

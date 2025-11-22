@@ -8,13 +8,15 @@ from agents.supervisor.supervisor_agent import supervisor_node
 from agents.generator.generator_agent import generator_node
 from agents.validator.validator_agent import validator_node
 from models import AgentState, SystemMetrics
+from utils import colors
 from utils.general import get_model_source_from_input, print_colored
+from utils.multi_agent import get_action_from_input
 
 
 
-def create_session_directory(source: str, base_path: str = "output") -> tuple[Path, Path]:
+def create_session_directory(source: str) -> tuple[Path, Path]:
     """Create a session directory with timestamp and return its path."""
-    full_path = f"{base_path}/{source}/multi_agent"
+    full_path = f"output/{source}/multi_agent"
     
     base_dir = Path(full_path)
     base_dir.mkdir(parents=True, exist_ok=True)
@@ -24,11 +26,9 @@ def create_session_directory(source: str, base_path: str = "output") -> tuple[Pa
     session_dir.mkdir(exist_ok=True)
     
     log_file = session_dir / f"conversation_{session_id}.txt"
-    with open(log_file, 'w') as f:
-        f.write(f"=== C Parser Generator Chat - {datetime.now()} ===\n")
     
-    print_colored(f"\nCreated session directory: {session_dir}", "1;36")
-    print_colored(f"Log file: {log_file}", "1;36")
+    print_colored(f"\nCreated session directory: {session_dir}", colors.CYAN, bold=True)
+    print_colored(f"Log file: {log_file}", colors.CYAN, bold=True)
     
     return session_dir, log_file
 
@@ -83,41 +83,46 @@ if __name__ == "__main__":
     # Prompt user to enter the model source directly
     source = get_model_source_from_input()
     
-    print_colored("\n=== C Parser Generator System ===", "1;36")
-    print_colored("You can chat with the Supervisor about C programming or request a parser", "36")
-    print_colored("Enter your message or type 'exit' to quit", "36")
-    print_colored(f"Session files will be saved in the 'output/{source}/multi_agent/' directory", "36")
+    print_colored("\n=== C Parser Generator System ===", colors.CYAN, bold=True)
+    print_colored("You can chat with the Supervisor about C programming or request a parser", colors.CYAN)
+    print_colored("Enter your message or type 'exit' to quit", colors.CYAN)
+    print_colored(f"Session files will be saved in the 'output/{source}/multi_agent/' directory", colors.CYAN)
 
     # Create session
     session_dir, log_file = create_session_directory(source)
     
-    # Initialize messages and metrics
+    # Initialize parameters
     messages = []
     system_metrics = SystemMetrics()
+    start = True
 
     # Initialize the graph
     graph = build_workflow()
     
     # Main interaction loop
     while True:
-        print_colored("\nYou:", "1;32")
+        action = get_action_from_input(start)
+        start = False
+
+        if action == "EXIT":
+            break
+        
+        print_colored("\nYou:", colors.GREEN, bold=True)
         user_input = input()
         
-        # Log user input
-        with open(log_file, 'a', encoding="utf-8") as f:
-            f.write(f"\nUser: {user_input}\n\n")
-        
         if user_input.lower() in ['exit', 'quit', 'bye']:
-            print_colored("\nExiting. Goodbye!", "1;36")
             break
+
+        user_message = f"{action}: {user_input}"
         
         try:
             # Start a new round
-            system_metrics.start_new_round(user_input)
+            system_metrics.start_new_round(user_message)
             
             # Initial state
             initial_state = {
-                "messages": messages + [ HumanMessage(content=user_input) ],
+                "messages": messages + [ HumanMessage(content=user_message) ],
+                "user_action": action,
                 "user_request": user_input,
                 "generator_specs": None,
                 "generator_code": None,
@@ -126,7 +131,6 @@ if __name__ == "__main__":
                 "max_iterations": 3,
                 "model_source": source,
                 "session_dir": session_dir,
-                "log_file": log_file,
                 "next_step": "Supervisor",
                 "system_metrics": system_metrics
             }
@@ -139,17 +143,20 @@ if __name__ == "__main__":
             # Save metrics
             system_metrics.complete_round()
             system_metrics.save_summary(session_dir)
-
-            # Get all messages
-            for m in messages:
-                m.pretty_print()
             
             # Get supervisor response
             #supervisor_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
             #supervisor_response = supervisor_messages[-1].content if supervisor_messages else "no message found"
-            #print_colored("\nSupervisor response:", "1;32")
-            #print(supervisor_response)
+            supervisor_response = messages[-1].content if messages else "no message found"
+            print_colored("\nSupervisor response:", colors.GREEN, bold=True)
+            print(supervisor_response)
         except Exception as e:
-            print_colored(f"\nAn error occurred: {e}", "1;31")
-            print_colored(format_exc(), "1;31")
-            print_colored("Please try again with a different query.", "1;31")
+            print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
+            print_colored(format_exc(), colors.RED, bold=True)
+            print_colored("Please try again with a different query.", colors.RED, bold=True)
+    
+    # Log conversation
+    with open(log_file, "w", encoding="utf-8") as f:
+        for m in messages:
+            #m.pretty_print()
+            f.write(f"{m.pretty_repr()}\n\n")

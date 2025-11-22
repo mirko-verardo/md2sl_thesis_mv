@@ -15,9 +15,45 @@ def had_agent_problems(output: str) -> bool:
 
     return output.lower() in problems
 
-def get_satisfaction(assessment: str | None) -> str:
-    if assessment is None:
-        return "Unknown"
+def get_satisfaction(assessment: str) -> str:
     assessment = assessment.lower()
+    # NB: this condition imply some constraints on validator's prompt to manage its output (bad)
     condition = "satisfactory" in assessment and "not satisfactory" not in assessment
     return "SATISFACTORY" if condition else "NOT SATISFACTORY"
+
+def map_input_to_action(input: int) -> str:
+    if input == 1:
+        return "GENERATE_PARSER"
+    elif input == 2:
+        return "CORRECT_ERROR"
+    elif input == 3:
+        return "ASSESS_CODE"
+    elif input == 4:
+        return "GENERAL_CONVERSATION"
+    elif input == 5:
+        return "EXIT"
+    
+    raise Exception("Cannot map input to action")
+
+def get_action_from_input(start: bool) -> str:
+    """Get the action from the user input"""
+    # speed up
+    if start:
+        return map_input_to_action(1)
+    
+    print("Available actions:\n")
+    actions = range(1, 6)
+    for i in actions:
+        print(f"- {i}: {map_input_to_action(i)}")
+
+    # get the action
+    while True:
+        try:
+            action = int(input("\nEnter the action: "))
+        except Exception as e:
+            action = 0
+        
+        if action in actions:
+            return map_input_to_action(action)
+        
+        print("Invalid action. Please enter one of these: " + (", ".join(actions)))

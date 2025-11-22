@@ -4,7 +4,7 @@ from langchain.agents import AgentExecutor, create_react_agent
 from models import AgentState, CompilationCheck
 from agents.generator import generator_prompts
 from utils import colors
-from utils.general import print_colored, log, extract_c_code, initialize_llm
+from utils.general import print_colored, extract_c_code, initialize_llm
 from utils.multi_agent import get_parser_requirements
 
 
@@ -16,7 +16,6 @@ def generator_node(state: AgentState) -> AgentState:
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     model_source = state["model_source"]
-    log_file = state["log_file"]
     system_metrics = state["system_metrics"]
 
     # Create the prompt
@@ -65,7 +64,7 @@ def generator_node(state: AgentState) -> AgentState:
         # Extract clean c code
         generator_response_c_code = extract_c_code(generator_response)
         if not generator_response_c_code:
-            print_colored("Warning: Could not extract clean C code, using original code", "1;33")
+            print_colored("Warning: Could not extract clean C code, using original code", colors.YELLOW, bold=True)
             generator_response_c_code = generator_response
         
         if "intermediate_steps" in generator_result:
@@ -80,15 +79,15 @@ def generator_node(state: AgentState) -> AgentState:
                     compilation_success = "Compilation successful" in action_output
                     
                     system_metrics.record_tool_usage(compilation_success)
-                    print_colored(f"\nCompilation check tool used (Attempt {compilation_attempts})", "1;32")
+                    print_colored(f"\nCompilation check tool used (Attempt {compilation_attempts})", colors.GREEN, bold=True)
                     
                     if compilation_success:
-                        print_colored("Compilation successful!", "1;32")
+                        print_colored("Compilation successful!", colors.GREEN, bold=True)
                     else:
-                        print_colored("Compilation failed!", "1;31")
+                        print_colored("Compilation failed!", colors.RED, bold=True)
             
             if compilation_attempts == 0:
-                print_colored("\nWarning: Compilation check tool was NOT used!", "1;33")
+                print_colored("\nWarning: Compilation check tool was NOT used!", colors.YELLOW, bold=True)
                 
     except Exception as e:
         generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
@@ -98,12 +97,12 @@ def generator_node(state: AgentState) -> AgentState:
     # increment iteration
     iteration_count += 1
     
-    with open(log_file, 'a', encoding="utf-8") as f:
-        log(f, f"Generator (Iteration {iteration_count}/{max_iterations}):", generator_response_color, bold=True)
-        log(f, generator_response)
+    print_colored(f"Generator (Iteration {iteration_count}/{max_iterations}):", generator_response_color, bold=True)
+    print(generator_response)
     
     return {
         "messages": [AIMessage(content=generator_response, name="Generator")],
+        "user_action": state["user_action"],
         "user_request": state["user_request"],
         "generator_specs": generator_specs,
         "generator_code": generator_response_c_code,
@@ -112,7 +111,6 @@ def generator_node(state: AgentState) -> AgentState:
         "max_iterations": max_iterations,
         "model_source": model_source,
         "session_dir": state["session_dir"],
-        "log_file": log_file,
         "next_step": "Validator",
         "system_metrics": system_metrics
     }

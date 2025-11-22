@@ -195,7 +195,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
         
         # check for exit command
         if user_input.lower() in ['exit', 'quit', 'bye']:
-            print_colored("\nExiting chat. Goodbye!", "1;36") # Bold Cyan
+            print_colored("\nExiting chat. Goodbye!", colors.CYAN, bold=True)
             break
         
         # response from agent
@@ -281,7 +281,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
             
             # if C code was found, compile and test it
             if c_code:
-                print_colored("\n--- Compiling Final C code ---", "1;33")  # Bold Yellow
+                print_colored("\n--- Compiling Final C code ---", colors.YELLOW, bold=True)
                 
                 # create unique filename
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
