@@ -20,9 +20,47 @@ def supervisor_node(state: AgentState) -> AgentState:
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
-    # temp
+    supervisor_input = {
+        "input": user_request,
+        "conversation_history": get_buffer_string(messages)
+    }
     if generator_code and validator_assessment:
-        supervisor_template = supervisor_template.replace("{adaptive_instructions}", supervisor_prompts.get_supervisor_input_validated())
+        adaptive_instructions = supervisor_prompts.get_supervisor_input_validated()
+        supervisor_input.update({
+            "c_code": generator_code,
+            "validator_assessment": validator_assessment
+        })
+        purpose = "providing final parser"
+        next_step = "FINISH"
+    elif user_action == "GENERATE_PARSER":
+        adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
+        supervisor_input.update({
+            "requirements": multi_agent.get_parser_requirements()
+        })
+        purpose = "creating detailed specifications"
+        next_step = "Generator"
+    elif user_action == "CORRECT_ERROR":
+        adaptive_instructions = supervisor_prompts.get_supervisor_input_correct_error()
+        #supervisor_input.update({
+        #    "c_code": last_parser["code"],
+        #    "validator_assessment": last_parser["validator_assessment"]
+        #})
+        purpose = "creating updated specifications"
+        next_step = "Generator"
+    elif user_action == "ASSESS_CODE":
+        adaptive_instructions = supervisor_prompts.get_supervisor_input_assess_code()
+        #supervisor_input.update({
+        #    "c_code": last_parser["code"],
+        #    "validator_assessment": last_parser["validator_assessment"]
+        #})
+        purpose = "providing code assessment"
+        next_step = "FINISH"
+    else:
+        # GENERAL_CONVERSATION
+        adaptive_instructions = supervisor_prompts.get_supervisor_input_general_conversation()
+        purpose = "conversation"
+        next_step = "FINISH"
+    supervisor_template = supervisor_template.replace("{adaptive_instructions}", adaptive_instructions)
     supervisor_prompt = PromptTemplate.from_template(supervisor_template)
 
     # Initialize model for supervisor
@@ -42,90 +80,13 @@ def supervisor_node(state: AgentState) -> AgentState:
         early_stopping_method="force"
     )
 
-    supervisor_input = {
-        "input": user_request,
-        "conversation_history": get_buffer_string(messages)
-    }
+    # TODO: try catch
+    supervisor_result = supervisor_executor.invoke(supervisor_input)
+    supervisor_response = str(supervisor_result["output"])
 
-    if generator_code and validator_assessment:
-        supervisor_input.update({
-            "c_code": generator_code,
-            "validator_assessment": validator_assessment
-        })
-
-        #prompt_input = supervisor_input.copy()
-        #prompt_input.update({
-        #    "tools": "",
-        #    "tool_names": "",
-        #    "agent_scratchpad": ""
-        #})
-        #final_prompt = supervisor_prompt.format(**prompt_input)
-        #prova_file = state["session_dir"] / "prova.txt"
-        #with open(prova_file, 'w', encoding="utf-8") as kk:
-        #    kk.write(final_prompt)
-
-        result = supervisor_executor.invoke(supervisor_input)
-        supervisor_response = result["output"]
-        
-        purpose = "providing final parser"
-        next_step = "FINISH"
-    else:
-        #supervisor_input.update({
-        #    "adaptive_instructions": supervisor_prompts.get_supervisor_input_actions()
-        #})
-        #result = supervisor_executor.invoke(supervisor_input)
-        #user_action = str(result["output"]).strip()
-
-        if user_action == "GENERATE_PARSER":
-            # temp
-            adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
-            adaptive_instructions = adaptive_instructions.replace("{requirements}", multi_agent.get_parser_requirements())
-            supervisor_input.update({
-                "adaptive_instructions": adaptive_instructions
-            })
-            result = supervisor_executor.invoke(supervisor_input)
-            supervisor_response = result["output"]
-            # NB: change the specs for generator
-            generator_specs = supervisor_response
-            
-            purpose = "creating detailed specifications"
-            next_step = "Generator"
-        elif user_action == "CORRECT_ERROR":
-            #most_recent_assessment = most_recent_parser["validator_assessment"]
-            supervisor_input.update({
-                "adaptive_instructions": supervisor_prompts.get_supervisor_input_correct_error(),
-                #"c_code": most_recent_parser["code"],
-                #"validator_assessment": most_recent_assessment if most_recent_assessment else "No assessment available"
-            })
-            result = supervisor_executor.invoke(supervisor_input)
-            supervisor_response = result["output"]
-            # NB: change the specs for generator
-            generator_specs = supervisor_response
-            
-            purpose = "creating updated specifications"
-            next_step = "Generator"
-        elif user_action == "ASSESS_CODE":
-            #most_recent_assessment = most_recent_parser["validator_assessment"]
-            supervisor_input.update({
-                "adaptive_instructions": supervisor_prompts.get_supervisor_input_assess_code(),
-                #"c_code": most_recent_parser["code"],
-                #"validator_assessment": most_recent_assessment if most_recent_assessment else "No assessment available"
-            })
-            result = supervisor_executor.invoke(supervisor_input)
-            supervisor_response = result["output"]
-            
-            purpose = "providing code assessment"
-            next_step = "FINISH"
-        else:
-            # GENERAL_CONVERSATION
-            supervisor_input.update({
-                "adaptive_instructions": supervisor_prompts.get_supervisor_input_general_conversation()
-            })
-            result = supervisor_executor.invoke(supervisor_input)
-            supervisor_response = result["output"]
-            
-            purpose = "conversation"
-            next_step = "FINISH"
+    # NB: change the specs for generator
+    if next_step == "Generator":
+        generator_specs = supervisor_response
 
     print_colored(f"Supervisor ({purpose}):", colors.BLUE, bold=True)
     print(supervisor_response)

@@ -23,12 +23,16 @@ def get_satisfaction(assessment: str) -> str:
 
 def map_input_to_action(input: int) -> str:
     if input == 1:
+        # for creating a new parser
         return "GENERATE_PARSER"
     elif input == 2:
+        # for reporting issues with previously generated code
         return "CORRECT_ERROR"
     elif input == 3:
+        # for asking to evaluate or see previously generated code
         return "ASSESS_CODE"
     elif input == 4:
+        # for general questions or conversations
         return "GENERAL_CONVERSATION"
     elif input == 5:
         return "EXIT"

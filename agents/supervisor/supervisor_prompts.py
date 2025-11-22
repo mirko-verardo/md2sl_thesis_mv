@@ -55,15 +55,6 @@ Please provide a friendly response to the user that:
 Keep your explanation concise and user-friendly.
 """
 
-def get_supervisor_input_actions() -> str:
-    return """Based on the user's request and our conversation history, determine what action I should take.
-Respond with ONLY ONE of these actions (and nothing else):
-1. "GENERATE_PARSER" - if the user wants me to create a new parser
-2. "CORRECT_ERROR" - if the user is reporting issues with previously generated code
-3. "ASSESS_CODE" - if the user wants me to evaluate previously generated code or is asking to see previously generated code
-4. "GENERAL_CONVERSATION" - for general questions or conversations
-"""
-
 def get_supervisor_input_generate_parser() -> str:
     return """Your task is to take the user's request and convert it into a detailed, specific prompt for a C parser function generator.
 
