@@ -1,0 +1,653 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [328700.09, 5161279.64]
+        },
+        "properties": {
+          "OBJECTID": 73921,
+          "NOME": "SF1",
+          "DESCRIZIONE": "Sfioratore SF 1 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6481,
+          "ID_PRATICA": 1,
+          "CUO": 75720,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 1,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [328711.9, 5161263.62]
+        },
+        "properties": {
+          "OBJECTID": 73922,
+          "NOME": "Scarico SF1",
+          "DESCRIZIONE": "Scarico Sfioratore SF1 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5226,
+          "ID_PRATICA": 1,
+          "CUO": 75721,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 1,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 0
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329379.14, 5161484.38]
+        },
+        "properties": {
+          "OBJECTID": 73923,
+          "NOME": "SF2",
+          "DESCRIZIONE": "Sfioratore SF2 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6482,
+          "ID_PRATICA": 1,
+          "CUO": 75722,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 2,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329547.46, 5161604.95]
+        },
+        "properties": {
+          "OBJECTID": 73925,
+          "NOME": "SF3",
+          "DESCRIZIONE": "sfioratore SF3 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6483,
+          "ID_PRATICA": 1,
+          "CUO": 75724,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 3,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329553.18, 5161612.13]
+        },
+        "properties": {
+          "OBJECTID": 73926,
+          "NOME": "Scarico SF3",
+          "DESCRIZIONE": "Scarico Sfioratore SF3 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5227,
+          "ID_PRATICA": 1,
+          "CUO": 75725,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 3,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 0
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329555.66, 5161509.75]
+        },
+        "properties": {
+          "OBJECTID": 73927,
+          "NOME": "Scarico  1",
+          "DESCRIZIONE": "Scarico terminale 1 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8681,
+          "ID_PRATICA": 1,
+          "CUO": 75726,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 1,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 750,
+          "SCA_UNIFICATO": 1,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329577.58, 5161593.98]
+        },
+        "properties": {
+          "OBJECTID": 73928,
+          "NOME": "Scarico 2",
+          "DESCRIZIONE": "Scarico terminale 2 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8682,
+          "ID_PRATICA": 1,
+          "CUO": 75727,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 2,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 350,
+          "SCA_UNIFICATO": 1,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332467.21, 5160495.55]
+        },
+        "properties": {
+          "OBJECTID": 73929,
+          "NOME": "Scarico 6",
+          "DESCRIZIONE": "Scarico terminale 6 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8686,
+          "ID_PRATICA": 1,
+          "CUO": 75728,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 6,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 2,
+          "SCA_AB_EQ_SERVITI": 100,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332458.06, 5160508.48]
+        },
+        "properties": {
+          "OBJECTID": 73930,
+          "NOME": "Scarico SFA",
+          "DESCRIZIONE": "Scarico Sfioratore SFA rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5222,
+          "ID_PRATICA": 1,
+          "CUO": 75729,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 6,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 2
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332472.22, 5160515.87]
+        },
+        "properties": {
+          "OBJECTID": 73931,
+          "NOME": "SFA",
+          "DESCRIZIONE": "Sfioratore SFA rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6486,
+          "ID_PRATICA": 1,
+          "CUO": 75730,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 6,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332449.99, 5160477.57]
+        },
+        "properties": {
+          "OBJECTID": 73932,
+          "NOME": "SFO",
+          "DESCRIZIONE": "Sfioratore SFO rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6488,
+          "ID_PRATICA": 1,
+          "CUO": 75731,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 8,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332463.02, 5160502.23]
+        },
+        "properties": {
+          "OBJECTID": 73933,
+          "NOME": "Scarico SFO",
+          "DESCRIZIONE": "Scarico Sfioratore SFO rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5221,
+          "ID_PRATICA": 1,
+          "CUO": 75732,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 8,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 2
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332501.81, 5160579.21]
+        },
+        "properties": {
+          "OBJECTID": 73963,
+          "NOME": "SFD",
+          "DESCRIZIONE": "Sfioratore SFD rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6487,
+          "ID_PRATICA": 1,
+          "CUO": 75762,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 7,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332499.7, 5160572.38]
+        },
+        "properties": {
+          "OBJECTID": 73964,
+          "NOME": "Scarico SFD",
+          "DESCRIZIONE": "Scarico Sfioratore SFD rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5224,
+          "ID_PRATICA": 1,
+          "CUO": 75763,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 7,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 2
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332533.508690419, 5160630.15295319]
+        },
+        "properties": {
+          "OBJECTID": 73965,
+          "NOME": "Sfioratore Sigiletto",
+          "DESCRIZIONE": "Sfioratore SIGILETTO rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6485,
+          "ID_PRATICA": 1,
+          "CUO": 75764,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 5,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [332547.67, 5160626.65]
+        },
+        "properties": {
+          "OBJECTID": 73966,
+          "NOME": "Scarico Sfioratore Sigiletto",
+          "DESCRIZIONE": "Scarico Sfioratore Sigiletto rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5223,
+          "ID_PRATICA": 1,
+          "CUO": 75765,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 5,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 2
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329990.128008937, 5161157.89728213]
+        },
+        "properties": {
+          "OBJECTID": 73967,
+          "NOME": "Scarico 3",
+          "DESCRIZIONE": "Scarico terminale 3 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8683,
+          "ID_PRATICA": 1,
+          "CUO": 75766,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 3,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 50,
+          "SCA_UNIFICATO": 1,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [330080.47, 5161136.9]
+        },
+        "properties": {
+          "OBJECTID": 73968,
+          "NOME": "Scarico 4",
+          "DESCRIZIONE": "Scarico terminale 4 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8684,
+          "ID_PRATICA": 1,
+          "CUO": 75767,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 4,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 300,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [331492.98, 5160728.7]
+        },
+        "properties": {
+          "OBJECTID": 73969,
+          "NOME": "Scarico 5",
+          "DESCRIZIONE": "Scarico terminale 5 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8685,
+          "ID_PRATICA": 1,
+          "CUO": 75768,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 5,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 50,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [334541.42, 5160839.59]
+        },
+        "properties": {
+          "OBJECTID": 73970,
+          "NOME": "Scarico 7",
+          "DESCRIZIONE": "Scarico terminale 7 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8687,
+          "ID_PRATICA": 1,
+          "CUO": 75769,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 7,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 80,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [334551.86, 5161204.03]
+        },
+        "properties": {
+          "OBJECTID": 73971,
+          "NOME": "SF9",
+          "DESCRIZIONE": "Sfioratore SF9 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Sfioratore",
+          "TIPO": "SFT",
+          "ID_SCHEDA": 6484,
+          "ID_PRATICA": 1,
+          "CUO": 75770,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 4,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 11,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": 0,
+          "SFT_GRIGLIA": 0,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [334543.75, 5161170.78]
+        },
+        "properties": {
+          "OBJECTID": 73972,
+          "NOME": "Scarico SF9",
+          "DESCRIZIONE": "Scarico Sfioratore SF9 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 5225,
+          "ID_PRATICA": 1,
+          "CUO": 75771,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 4,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 0
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [334764.84, 5161035.63]
+        },
+        "properties": {
+          "OBJECTID": 73973,
+          "NOME": "Scarico 8",
+          "DESCRIZIONE": "Scarico terminale 8 rete fognaria Forni Avoltri",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCA",
+          "ID_SCHEDA": 8688,
+          "ID_PRATICA": 1,
+          "CUO": 75772,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 8,
+          "ID_STATO_UTILIZZO": 1,
+          "ID_USO": 31,
+          "SCA_SCARICO_SUOLO": 0,
+          "SCA_AB_EQ_SERVITI": 120,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": null
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [329414, 5161475.39]
+        },
+        "properties": {
+          "OBJECTID": 78221,
+          "NOME": "Scarico SF2",
+          "DESCRIZIONE": "Scarico dello Sfioratore SF 2\r\nNel Rio Geu\r\nGrigliatura allo Scarico: No",
+          "TIPO_OGGETTO": "Punto di immissione acqua",
+          "TIPO": "SCP",
+          "ID_SCHEDA": 6841,
+          "ID_PRATICA": 1,
+          "CUO": 82460,
+          "VERSIONE_CUO": 1,
+          "N_OGGETTO": 2,
+          "ID_STATO_UTILIZZO": 2,
+          "ID_USO": 8,
+          "SCA_SCARICO_SUOLO": null,
+          "SCA_AB_EQ_SERVITI": null,
+          "SCA_UNIFICATO": null,
+          "SFT_TESTA_IMPIANTO": null,
+          "SFT_GRIGLIA": null,
+          "SCP_SCARICO_SUOLO": 0
+        }
+      }
+    ]
+}
