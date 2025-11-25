@@ -21,8 +21,9 @@
     - messages passed is used for it (not read from log)
     - supervisor memory avoided but last validation assessment kept in agent state (not read from log)
     - supervisor memory was used to track the last generated parser but it could not be the best (maybe a middle one compiles and the last one not)
+- Supervisor and Validator doesn't need ReAct approach since they don't have tools to use
 
-## Prompt
+## Prompts
 
 - *difficult*: 
     - generate a parser function for geojson files
@@ -44,7 +45,17 @@
 ## Unit Testing
 
 1. Manual file to parse and check some predefined test cases on it
+    - I've tested the function but what else? Ask for what I can test or print to stdout and stderr
+    - It's proper to ask the user at the beggining what type of file he needs to parse
+        - Preconfigured format: xml, json, pdf, geojson, html, http, ...
+        - Each format has a different testing inputs and strategy/checks
+        - PRO: real testing, CONS: manual test cases (checks definition)
+    - Initial simple strategy:
+        - if execution OK: print a parsed input summary on stdout
+        - if execution FAILS: print errors on stderr
+        - PRO: a lot of files (external repository?) can be used as input (no checks definition), CONS: minimal testing
 2. Generate automatically through an agent file to parse and test cases on it
+    - difficult
 3. Metrics:
     - accuracy: files parsed with test case ok / total files parsed
     - coverage: lines executed / total lines
@@ -54,7 +65,7 @@
 
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
 - Problem: last iteration can fail and the middle ones instead create a working code
-- **Supervisor** and **Validator** prompts misses these ones for ReAct patter:
+- **Supervisor** and **Validator** prompts misses these for ReAct pattern:
     - Action
     - Action Input
     - Observation

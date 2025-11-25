@@ -14,6 +14,7 @@ IMPORTANT:
 
 <available_tools>
 You have access to these tools: {tools}
+Tool names: {tool_names}
 </available_tools>
 
 <example_tool_usage>
@@ -60,14 +61,22 @@ Do not use scanf, fgets, or any text-only input functions for the primary input.
 This is really important because the final C code you generated will be tested giving raw bytes as stdin.
 </input_handling>
 
+<output_handling>
+CODE OUTPUT (IMPORTANT AND MANDATORY):
+Always follow this output rule:
+- If parsing succeeds, print a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
+- If parsing fails, do NOT print anything to stdout; instead, write a descriptive error message to stderr.
+- The summary should be concise and consistent in format, independent of the file type has been parsed.
+</output_handling>
+
 {feedback}
 
 <format_instructions>
 Use the following format:
 Question: the input question.
-Thought: think about what to do.
-Action: the action to take, can be one of {tool_names}.
-Action Input: the input to the tool.
+Thought: I need to check if the code compiles.
+Action: compilation_check
+Action Input: <code_string>
 Observation:
 - if the compilation is successful, proceed to Final Answer without additional compilation checks.
 - if the compilation is not successful, repeat Thought/Action/Action Input/Observation as needed.

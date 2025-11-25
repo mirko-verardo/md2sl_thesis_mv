@@ -7,6 +7,28 @@ You are a helpful C programming expert. You are a supervisor managing the proces
 Since there are limits to how much code the generator can generate, keep the structure of the parser function simple, short and focused on the core functionality.
 </main_directive>
 
+<user_request>
+{input}
+</user_request>
+
+<conversation_history>
+{conversation_history}
+</conversation_history>
+
+<adaptive_instructions>
+{adaptive_instructions}
+</adaptive_instructions>
+"""
+
+def get_supervisor_template_react() -> str:
+    return """<role>
+You are a helpful C programming expert. You are a supervisor managing the process of creating parser functions.
+</role>
+
+<main_directive>
+Since there are limits to how much code the generator can generate, keep the structure of the parser function simple, short and focused on the core functionality.
+</main_directive>
+
 <available_tools>
 You have access to these tools: {tools}
 Tool names: {tool_names}

@@ -2,7 +2,8 @@ from datetime import datetime
 from pathlib import Path
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
-from langchain.agents import AgentExecutor, create_react_agent
+#from langchain.agents import AgentExecutor, create_react_agent
+from langchain.chains import LLMChain
 from models import AgentState
 from agents.validator import validator_prompts
 from utils import colors, multi_agent
@@ -50,7 +51,8 @@ def validator_node(state: AgentState) -> AgentState:
         if is_compiled:
             print_colored("\n--- Testing Parser ---", colors.YELLOW, bold=True)
             base_dir = Path("input")
-            format = "json"
+            #format = "json"
+            format = "geojson"
             test_file_name = "test." + format
             test_file_path = base_dir / format / test_file_name
             test_result = execute_c_code(str(o_file_path), str(test_file_path))
@@ -81,24 +83,31 @@ stderr: """ + test_result["stderr"] + """
         # Initialize model for validator
         validator_llm = initialize_llm(model_source)
         validator_llm.temperature = 0.4
-        validator_tools = []
-        
-        # Create the ReAct agent instead of OpenAI tools agent
-        validator_agent = create_react_agent(validator_llm, validator_tools, validator_prompt)
-        
-        validator_executor = AgentExecutor(
-            agent=validator_agent,
-            tools=validator_tools,
-            verbose=True,
-            handle_parsing_errors=True,
-            max_iterations=3,
-            early_stopping_method="force"
+
+        # Create a normal LLM call (no ReAct needed)
+        validator_executor = LLMChain(
+            llm=validator_llm,
+            prompt=validator_prompt,
+            verbose=True
         )
+
+        # Create the ReAct agent instead of OpenAI tools agent
+        #validator_tools = []
+        #validator_agent = create_react_agent(validator_llm, validator_tools, validator_prompt)
+        #validator_executor = AgentExecutor(
+        #    agent=validator_agent,
+        #    tools=validator_tools,
+        #    verbose=True,
+        #    handle_parsing_errors=True,
+        #    max_iterations=3,
+        #    early_stopping_method="force"
+        #)
         
         # Invoke the agent
         try:
             validator_result = validator_executor.invoke(validator_input)
-            validator_response = str(validator_result["output"])
+            #validator_response = str(validator_result["output"])
+            validator_response = str(validator_result["text"])
             validator_response_color = colors.BLUE
         except Exception as e:
             validator_response = f"Error occurred during code validation: {str(e)}\n\nPlease try again."

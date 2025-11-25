@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain.prompts import PromptTemplate
-from langchain.agents import AgentExecutor, create_react_agent
+#from langchain.agents import AgentExecutor, create_react_agent
+from langchain.chains import LLMChain
 from models import AgentState
 from utils import colors, multi_agent
 from utils.general import print_colored, initialize_llm
@@ -66,23 +67,41 @@ def supervisor_node(state: AgentState) -> AgentState:
     # Initialize model for supervisor
     supervisor_llm = initialize_llm(model_source)
     supervisor_llm.temperature = 0.6
-    supervisor_tools = []
+    
+    # Create a normal LLM call (no ReAct needed)
+    supervisor_executor = LLMChain(
+        llm=supervisor_llm,
+        prompt=supervisor_prompt,
+        verbose=True
+    )
     
     # Create the ReAct agent instead of OpenAI tools agent
-    supervisor_agent = create_react_agent(supervisor_llm, supervisor_tools, supervisor_prompt)
-    
-    supervisor_executor = AgentExecutor(
-        agent=supervisor_agent,
-        tools=supervisor_tools,
-        verbose=True,
-        handle_parsing_errors=True,
-        max_iterations=3,
-        early_stopping_method="force"
-    )
+    #supervisor_tools = []
+    #supervisor_agent = create_react_agent(supervisor_llm, supervisor_tools, supervisor_prompt)
+    #supervisor_executor = AgentExecutor(
+    #    agent=supervisor_agent,
+    #    tools=supervisor_tools,
+    #    verbose=True,
+    #    handle_parsing_errors=True,
+    #    max_iterations=3,
+    #    early_stopping_method="force"
+    #)
+
+    #prompt_input = supervisor_input.copy()
+    #prompt_input.update({
+    #    "tools": "",
+    #    "tool_names": "",
+    #    "agent_scratchpad": ""
+    #})
+    #final_prompt = supervisor_prompt.format(**prompt_input)
+    #prova_file = state["session_dir"] / "prova.txt"
+    #with open(prova_file, "w", encoding="utf-8") as f:
+    #    f.write(final_prompt)
 
     # TODO: try catch
     supervisor_result = supervisor_executor.invoke(supervisor_input)
-    supervisor_response = str(supervisor_result["output"])
+    #supervisor_response = str(supervisor_result["output"])
+    supervisor_response = str(supervisor_result["text"])
 
     # NB: change the specs for generator
     if next_step == "Generator":
