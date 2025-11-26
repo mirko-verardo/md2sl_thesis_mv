@@ -42,6 +42,43 @@ def get_model_source_from_input() -> str:
         
         print_colored("Invalid source. Please enter 'google', 'openai', or 'anthropic'.", colors.RED, bold=True)
 
+def map_input_to_file_format(input: int) -> str:
+    if input == 1:
+        return "CSV"
+    elif input == 2:
+        return "HTML"
+    elif input == 3:
+        return "HTTP"
+    elif input == 4:
+        return "JSON"
+    elif input == 5:
+        return "GEOJSON"
+    elif input == 6:
+        return "PDF"
+    elif input == 7:
+        return "XML"
+    
+    raise Exception("Cannot map input to file format")
+
+def get_file_format_from_input() -> str:
+    """Get the file format from the user input"""    
+    print("Available file formats:\n")
+    actions = range(1, 8)
+    for i in actions:
+        print(f"- {i}: {map_input_to_file_format(i)}")
+
+    # get the action
+    while True:
+        try:
+            action = int(input("\nEnter the action: "))
+        except Exception as e:
+            action = 0
+        
+        if action in actions:
+            return map_input_to_file_format(action)
+        
+        print("Invalid file format. Please enter one of these: " + (", ".join(actions)))
+
 def initialize_llm(source: str):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":

@@ -13,6 +13,7 @@ from utils.general import print_colored, compile_c_code, execute_c_code, initial
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
+    file_format = state["file_format"]
     generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
     iteration_count = state["iteration_count"]
@@ -52,7 +53,8 @@ def validator_node(state: AgentState) -> AgentState:
             print_colored("\n--- Testing Parser ---", colors.YELLOW, bold=True)
             base_dir = Path("input")
             #format = "json"
-            format = "geojson"
+            #format = "geojson"
+            format = file_format.lower()
             test_file_name = "test." + format
             test_file_path = base_dir / format / test_file_name
             test_result = execute_c_code(str(o_file_path), str(test_file_path))
@@ -158,6 +160,7 @@ stderr: """ + test_result["stderr"] + """
         "messages": [AIMessage(content=feedback_message, name="Validator")],
         "user_action": state["user_action"],
         "user_request": state["user_request"],
+        "file_format": file_format,
         "generator_specs": generator_specs,
         "generator_code": generator_code,
         "validator_assessment": feedback_message,

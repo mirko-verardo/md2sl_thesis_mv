@@ -114,6 +114,7 @@ def supervisor_node(state: AgentState) -> AgentState:
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],
         "user_action": user_action,
         "user_request": user_request,
+        "file_format": state["file_format"],
         "generator_specs": generator_specs,
         "generator_code": generator_code,
         "validator_assessment": None,

@@ -3,7 +3,7 @@ from json import dump
 from operator import add
 from pathlib import Path
 from typing_extensions import TypedDict
-from typing import Annotated, Sequence, Any
+from typing import Annotated, Sequence, Any, Literal
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
 from utils import colors
@@ -128,8 +128,9 @@ class SystemMetrics:
 class AgentState(TypedDict):
     """State schema for the agent graph."""
     messages: Annotated[Sequence[BaseMessage], add]
-    user_action: str
+    user_action: Literal["GENERATE_PARSER", "CORRECT_ERROR", "ASSESS_CODE", "GENERAL_CONVERSATION"]
     user_request: str
+    file_format: Literal["CSV", "HTML", "HTTP", "JSON", "GEOJSON", "PDF", "XML"]
     generator_specs: str | None
     generator_code: str | None
     validator_assessment: str | None

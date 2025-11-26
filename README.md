@@ -20,8 +20,15 @@
 - real time entire conversation history passed at each round (loop in the while true) on multiagent
     - messages passed is used for it (not read from log)
     - supervisor memory avoided but last validation assessment kept in agent state (not read from log)
-    - supervisor memory was used to track the last generated parser but it could not be the best (maybe a middle one compiles and the last one not)
+    - supervisor memory was used to track the last generated parser but it could not be the best
+        - maybe a middle one compiles and the last one not
+        - conversation history should be enough, if not the code could easily be updated to track the last working parser
 - Supervisor and Validator doesn't need ReAct approach since they don't have tools to use
+- let the user choose directly the followings:
+    - file format to generate the parser for (PDF, JSON, HTML, etc...)
+        - so test can be easily executed
+    - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
+        - LLM didn't always understand it by itself
 
 ## Prompts
 
@@ -29,18 +36,15 @@
     - generate a parser function for geojson files
     - generate a parser function for geojson files that supports all geometry types
     - generate a parser function for MIME files
-    - generate a parser function for json files
+        - TODO
 - *simple*: 
     - generate a simple parser function for json files
     - generate a simple parser function for xml files
-    - generate a simple parser function in C for pdf files
 
 ## Ideas
 
-- let the user choose directly the followings:
-    - file type to generate the parser for (PDF, JSON, HTML, etc...)
-    - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
-    - (both things are let the llm to undestand, which is not ideal)
+- avoid generating different file format parser in the same conversation
+- create specific test case linked to each input file
 
 ## Unit Testing
 
@@ -72,17 +76,7 @@
 - What is ExceptionTool() needed for in **Supervisor** and **Validator**?
 - Invalid Format: Missing 'Action:' after 'Thought:'
 
-# Sam nothes (old)
+# General considerations
 
-1. `zero_shot agent.py`
-    - provato a modificare il prompt di inizializzazione in modo tale che l'agente risponda sempre e solo con funzioni complete, senza placeholder o con parti di codice che devono ancora essere sviluppate.
-
-2. `few_shot agent.py`
-    - con i 3 esempi di Marco
-    - possiamo ora dare lo stesso identico prompt a entrambi e vedere come varia la risposta.
-    - per entrambi, ogni tanto l'agente risponde chiedendo più specifiche sulla funzione da implementare, che non so fornirgli.
-
-3. `multi_agent.py`
-    - supervisore: chatta con l'utente e capisce quando rivolgersi al generatore, pensando ad un prompt adatto per creare una funzione parser a partire da una richiesta generica dell'utente, e manda il prompt al generatore.
-    - generatore: genera il codice in C e lo manda al validatore.
-    - validatore: legge il codice generato e sulla base dei requisiti e della completezza, valuta se è soddisfacente (terminando il loop) o no (ritornando dal generatore).
+- understand what can be done (or better generated) by the llm and what it's far better to manually control
+- real work: give the agent the right way

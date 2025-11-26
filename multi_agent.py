@@ -9,7 +9,7 @@ from agents.generator.generator_agent import generator_node
 from agents.validator.validator_agent import validator_node
 from models import AgentState, SystemMetrics
 from utils import colors
-from utils.general import get_model_source_from_input, print_colored
+from utils.general import get_model_source_from_input, get_file_format_from_input, print_colored
 from utils.multi_agent import get_action_from_input
 
 
@@ -95,6 +95,7 @@ if __name__ == "__main__":
     messages = []
     system_metrics = SystemMetrics()
     start = True
+    file_format = ""
 
     # Initialize the graph
     graph = build_workflow()
@@ -106,12 +107,13 @@ if __name__ == "__main__":
 
         if action == "EXIT":
             break
-        
-        print_colored("\nYou:", colors.GREEN, bold=True)
-        user_input = input()
-        
-        if user_input.lower() in ['exit', 'quit', 'bye']:
-            break
+        elif action == "GENERATE_PARSER":
+            file_format = get_file_format_from_input()
+            # TODO: optimize this fixed prompt
+            user_input = f"generate a parser function for {file_format} files"
+        else:
+            print_colored("\nYou:", colors.GREEN, bold=True)
+            user_input = input()
 
         user_message = f"{action}: {user_input}"
         
@@ -124,6 +126,7 @@ if __name__ == "__main__":
                 "messages": messages + [ HumanMessage(content=user_message) ],
                 "user_action": action,
                 "user_request": user_input,
+                "file_format": file_format,
                 "generator_specs": None,
                 "generator_code": None,
                 "validator_assessment": None,
