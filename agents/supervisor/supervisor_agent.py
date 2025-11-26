@@ -1,6 +1,5 @@
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain.prompts import PromptTemplate
-#from langchain.agents import AgentExecutor, create_react_agent
 from langchain.chains import LLMChain
 from models import AgentState
 from utils import colors, multi_agent
@@ -74,18 +73,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         prompt=supervisor_prompt,
         verbose=True
     )
-    
-    # Create the ReAct agent instead of OpenAI tools agent
-    #supervisor_tools = []
-    #supervisor_agent = create_react_agent(supervisor_llm, supervisor_tools, supervisor_prompt)
-    #supervisor_executor = AgentExecutor(
-    #    agent=supervisor_agent,
-    #    tools=supervisor_tools,
-    #    verbose=True,
-    #    handle_parsing_errors=True,
-    #    max_iterations=3,
-    #    early_stopping_method="force"
-    #)
 
     #prompt_input = supervisor_input.copy()
     #prompt_input.update({
@@ -100,7 +87,6 @@ def supervisor_node(state: AgentState) -> AgentState:
 
     # TODO: try catch
     supervisor_result = supervisor_executor.invoke(supervisor_input)
-    #supervisor_response = str(supervisor_result["output"])
     supervisor_response = str(supervisor_result["text"])
 
     # NB: change the specs for generator

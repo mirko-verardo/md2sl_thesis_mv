@@ -2,7 +2,6 @@ from datetime import datetime
 from pathlib import Path
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
-#from langchain.agents import AgentExecutor, create_react_agent
 from langchain.chains import LLMChain
 from models import AgentState
 from agents.validator import validator_prompts
@@ -87,23 +86,10 @@ stderr: """ + test_result["stderr"] + """
             prompt=validator_prompt,
             verbose=True
         )
-
-        # Create the ReAct agent instead of OpenAI tools agent
-        #validator_tools = []
-        #validator_agent = create_react_agent(validator_llm, validator_tools, validator_prompt)
-        #validator_executor = AgentExecutor(
-        #    agent=validator_agent,
-        #    tools=validator_tools,
-        #    verbose=True,
-        #    handle_parsing_errors=True,
-        #    max_iterations=3,
-        #    early_stopping_method="force"
-        #)
         
         # Invoke the agent
         try:
             validator_result = validator_executor.invoke(validator_input)
-            #validator_response = str(validator_result["output"])
             validator_response = str(validator_result["text"])
             validator_response_color = colors.BLUE
         except Exception as e:

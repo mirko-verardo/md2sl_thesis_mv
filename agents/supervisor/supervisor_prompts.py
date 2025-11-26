@@ -20,42 +20,6 @@ Since there are limits to how much code the generator can generate, keep the str
 </adaptive_instructions>
 """
 
-def get_supervisor_template_react() -> str:
-    return """<role>
-You are a helpful C programming expert. You are a supervisor managing the process of creating parser functions.
-</role>
-
-<main_directive>
-Since there are limits to how much code the generator can generate, keep the structure of the parser function simple, short and focused on the core functionality.
-</main_directive>
-
-<available_tools>
-You have access to these tools: {tools}
-Tool names: {tool_names}
-</available_tools>
-
-<user_request>
-{input}
-</user_request>
-
-<format_instructions>
-Use the following format:
-Question: the input question.
-Thought: think about what to do.
-Final Answer: the final answer to the original question.
-</format_instructions>
-
-<conversation_history>
-{conversation_history}
-</conversation_history>
-
-<adaptive_instructions>
-{adaptive_instructions}
-</adaptive_instructions>
-
-{agent_scratchpad}
-"""
-
 def get_supervisor_input_validated() -> str:
     return """You are a helpful C programming expert. The user has requested a parser function and we've generated one for him.
 
