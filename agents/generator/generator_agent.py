@@ -1,7 +1,7 @@
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
-from models import AgentState, CompilationCheck
+from models import AgentState, CompilationCheck, ExecutionCheck
 from agents.generator import generator_prompts
 from utils import colors
 from utils.general import print_colored, extract_c_code, initialize_llm
@@ -11,12 +11,16 @@ from utils.multi_agent import get_parser_requirements
 
 def generator_node(state: AgentState) -> AgentState:
     """Generator agent that creates C code."""
+    file_format = state["file_format"]
     generator_specs = state["generator_specs"]
     validator_assessment = state["validator_assessment"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     model_source = state["model_source"]
     system_metrics = state["system_metrics"]
+
+    # Record generator validator interaction numbers
+    system_metrics.increment_generator_validator_interaction()
 
     # Create the prompt
     generator_template = generator_prompts.get_generator_template()
@@ -38,7 +42,7 @@ def generator_node(state: AgentState) -> AgentState:
     # Initialize model for generator
     generator_llm = initialize_llm(model_source)
     generator_llm.temperature = 0.5
-    generator_tools = [ CompilationCheck ]
+    generator_tools = [ CompilationCheck, ExecutionCheck(file_format) ]
     
     # Create the ReAct agent instead of OpenAI tools agent
     generator_agent = create_react_agent(generator_llm, generator_tools, generator_prompt)
@@ -69,6 +73,7 @@ def generator_node(state: AgentState) -> AgentState:
         
         if "intermediate_steps" in generator_result:
             compilation_attempts = 0
+            execution_attempts = 0
             
             for step in generator_result["intermediate_steps"]:
                 action = step[0]
@@ -85,9 +90,23 @@ def generator_node(state: AgentState) -> AgentState:
                         print_colored("Compilation successful!", colors.GREEN, bold=True)
                     else:
                         print_colored("Compilation failed!", colors.RED, bold=True)
+                elif action.tool == "execution_check":
+                    execution_attempts += 1
+                    execution_success = action_output["success"]
+
+                    # TODO
+                    #system_metrics.record_tool_usage(execution_success)
+                    print_colored(f"\nExecution check tool used (Attempt {execution_attempts})", colors.GREEN, bold=True)
+                    
+                    if execution_success:
+                        print_colored("Execution successful!", colors.GREEN, bold=True)
+                    else:
+                        print_colored("Execution failed!", colors.RED, bold=True)
             
             if compilation_attempts == 0:
                 print_colored("\nWarning: Compilation check tool was NOT used!", colors.YELLOW, bold=True)
+            if execution_attempts == 0:
+                print_colored("\nWarning: Execution check tool was NOT used!", colors.YELLOW, bold=True)
                 
     except Exception as e:
         generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
@@ -104,7 +123,7 @@ def generator_node(state: AgentState) -> AgentState:
         "messages": [AIMessage(content=generator_response, name="Generator")],
         "user_action": state["user_action"],
         "user_request": state["user_request"],
-        "file_format": state["file_format"],
+        "file_format": file_format,
         "generator_specs": generator_specs,
         "generator_code": generator_response_c_code,
         "validator_assessment": None,

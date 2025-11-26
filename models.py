@@ -7,7 +7,7 @@ from typing import Annotated, Sequence, Any, Literal
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
 from utils import colors
-from utils.general import print_colored, compilation_check
+from utils.general import print_colored, compilation_check, execution_check
 
 
 
@@ -142,13 +142,24 @@ class AgentState(TypedDict):
     system_metrics: SystemMetrics  # system interaction metrics
 
 # Define tools
+
 CompilationCheck = Tool(
     name="compilation_check", 
     func=compilation_check, 
     description="""This tool checks if the provided C code compiles correctly without any warnings.
     Input should be valid C code.
     The tool will return compilation results, including any errors or warnings.
-    Use this tool to verify that your C parser implementation is syntactically correct
-    and free of warnings before providing it to the user."""
+    Use this tool to verify that your C parser implementation is syntactically correct and free of warnings before providing it to the user."""
 )
+
+def ExecutionCheck(file_format: str) -> Tool:
+    def execution_check_format(c_code: str) -> str:
+        return execution_check(c_code, file_format.lower())
+
+    return Tool(
+        name="execution_check",
+        func=execution_check_format,
+        description="""This tool compiles and executes C code using predefined test cases.
+        Input should be valid C code."""
+    )
     

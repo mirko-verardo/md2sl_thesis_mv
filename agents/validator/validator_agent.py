@@ -22,9 +22,6 @@ def validator_node(state: AgentState) -> AgentState:
     session_dir = state["session_dir"]
     system_metrics = state["system_metrics"]
 
-    # Record generator validator interaction numbers
-    system_metrics.increment_generator_validator_interaction()
-    
     # Check if code has been generated
     is_code_generated = generator_code and not multi_agent.had_agent_problems(generator_code)
 
@@ -52,8 +49,6 @@ def validator_node(state: AgentState) -> AgentState:
         if is_compiled:
             print_colored("\n--- Testing Parser ---", colors.YELLOW, bold=True)
             base_dir = Path("input")
-            #format = "json"
-            #format = "geojson"
             format = file_format.lower()
             test_file_name = "test." + format
             test_file_path = base_dir / format / test_file_name

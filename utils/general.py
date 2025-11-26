@@ -217,8 +217,9 @@ def compilation_check(code: str) -> str:
     
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
-        temp_c_file = os.path.join(temp_dir, "test.c")
-        temp_out_file = os.path.join(temp_dir, "test.out")
+        temp_name_file = "tool_test"
+        temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
+        temp_out_file = os.path.join(temp_dir, f"{temp_name_file}.out")
 
         # Write code to file
         with open(temp_c_file, "w", encoding="utf-8") as f:
@@ -233,9 +234,40 @@ def compilation_check(code: str) -> str:
         else:
             response = f"Compilation failed with the following errors or warnings:\n{compilation_result["stderr"]}"
             # add the original code after the error message for easy reference
-            response += f"\n\nOriginal code:\n```c\n{code}\n```"
+            #response += f"\n\nOriginal code:\n```c\n{code}\n```"
     
     return response
+
+def execution_check(code: str, format: str) -> dict[str, Any]:
+    """Function that checks if C code compiles correctly without warnings."""
+    # Clean the code by removing markdown delimiters:
+    # Remove ```c from the beginning of lines
+    #code = code.replace("```c", "")
+    # Remove ``` from anywhere
+    #code = code.replace("```", "")
+    # Trim whitespace
+    #code = code.strip()
+
+    # create a temporary directory
+    with TemporaryDirectory() as temp_dir:
+        temp_name_file = "tool_test"
+        temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
+        temp_out_file = os.path.join(temp_dir, temp_name_file)
+
+        # Write code to file
+        with open(temp_c_file, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        # compile the C code
+        result = compile_c_code(temp_c_file, temp_out_file)
+        
+        # prepare the result
+        if result["success"]:
+            # execute the C code
+            test_file_path = f"input/{format}/test.{format}"
+            result = execute_c_code(temp_out_file, test_file_path)
+    
+    return result
 
 def print_colored(text: str, color_code: str, bold: bool = False) -> None:
     """Print text with color."""
