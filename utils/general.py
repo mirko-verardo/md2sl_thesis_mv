@@ -205,7 +205,7 @@ def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, Any]:
         'stderr': safe_decode(result.stderr)
     }
 
-def compilation_check(code: str) -> str:
+def compilation_check(code: str) -> dict[str, Any]:
     """Function that checks if C code compiles correctly without warnings."""
     # Clean the code by removing markdown delimiters:
     # Remove ```c from the beginning of lines
@@ -226,27 +226,27 @@ def compilation_check(code: str) -> str:
             f.write(code)
 
         # compile the C code
-        compilation_result = compile_c_code(temp_c_file, temp_out_file)
+        result = compile_c_code(temp_c_file, temp_out_file)
         
         # prepare the response
-        if compilation_result["success"]:
-            response = "Compilation successful! The code compiles without any errors or warnings."
-        else:
-            response = f"Compilation failed with the following errors or warnings:\n{compilation_result["stderr"]}"
-            # add the original code after the error message for easy reference
-            #response += f"\n\nOriginal code:\n```c\n{code}\n```"
+        #if result["success"]:
+        #    response = "Compilation successful! The code compiles without any errors or warnings."
+        #else:
+        #    response = f"Compilation failed with the following errors or warnings:\n{result["stderr"]}"
+        #    # add the original code after the error message for easy reference
+        #    response += f"\n\nOriginal code:\n```c\n{code}\n```"
     
-    return response
+    return result
 
 def execution_check(code: str, format: str) -> dict[str, Any]:
     """Function that checks if C code compiles correctly without warnings."""
     # Clean the code by removing markdown delimiters:
     # Remove ```c from the beginning of lines
-    #code = code.replace("```c", "")
+    code = code.replace("```c", "")
     # Remove ``` from anywhere
-    #code = code.replace("```", "")
+    code = code.replace("```", "")
     # Trim whitespace
-    #code = code.strip()
+    code = code.strip()
 
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:

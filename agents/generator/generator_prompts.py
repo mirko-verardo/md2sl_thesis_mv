@@ -26,7 +26,7 @@ Each parser you create must implement the following requirements:
 {specifications}
 
 <verification_process>
-CODE VERIFICATION PROCESS (ALWAYS MANDATORY):
+CODE VERIFICATION PROCESS (IMPORTANT AND MANDATORY):
 - Write your complete C code implementation.
 - Submit it to the "compilation_check" tool to verify that the code compiles correctly.
 - If there are any errors or warnings, fix them and verify the compilation again. This process may take several iterations.
@@ -72,7 +72,7 @@ Observation:
 Final Answer: the final code you have generated.
 </format_instructions>
 
-Generate a complete C parser implementation following all the guidelines given.
+Generate a complete C parser implementation following all the requirements and specifications given.
 {agent_scratchpad}
 """
 

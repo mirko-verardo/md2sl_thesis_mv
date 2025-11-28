@@ -64,54 +64,46 @@ def generator_node(state: AgentState) -> AgentState:
         generator_result = generator_executor.invoke(generator_input)
         generator_response = str(generator_result["output"])
         generator_response_color = colors.MAGENTA
-
         # Extract clean c code
         generator_response_c_code = extract_c_code(generator_response)
         if not generator_response_c_code:
             print_colored("Warning: Could not extract clean C code, using original code", colors.YELLOW, bold=True)
             generator_response_c_code = generator_response
-        
-        if "intermediate_steps" in generator_result:
-            compilation_attempts = 0
-            execution_attempts = 0
-            
-            for step in generator_result["intermediate_steps"]:
-                action = step[0]
-                action_output = step[1]
-                
-                if action.tool == "compilation_check":
-                    compilation_attempts += 1
-                    compilation_success = "Compilation successful" in action_output
-                    
-                    system_metrics.record_tool_usage(compilation_success)
-                    print_colored(f"\nCompilation check tool used (Attempt {compilation_attempts})", colors.GREEN, bold=True)
-                    
-                    if compilation_success:
-                        print_colored("Compilation successful!", colors.GREEN, bold=True)
-                    else:
-                        print_colored("Compilation failed!", colors.RED, bold=True)
-                elif action.tool == "execution_check":
-                    execution_attempts += 1
-                    execution_success = action_output["success"]
-
-                    # TODO
-                    #system_metrics.record_tool_usage(execution_success)
-                    print_colored(f"\nExecution check tool used (Attempt {execution_attempts})", colors.GREEN, bold=True)
-                    
-                    if execution_success:
-                        print_colored("Execution successful!", colors.GREEN, bold=True)
-                    else:
-                        print_colored("Execution failed!", colors.RED, bold=True)
-            
-            if compilation_attempts == 0:
-                print_colored("\nWarning: Compilation check tool was NOT used!", colors.YELLOW, bold=True)
-            if execution_attempts == 0:
-                print_colored("\nWarning: Execution check tool was NOT used!", colors.YELLOW, bold=True)
-                
     except Exception as e:
         generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
         generator_response_color = colors.RED
         generator_response_c_code = None
+    
+    action_attempts = {}
+    steps = generator_result.get("intermediate_steps", []) if generator_result else []
+    
+    for step in steps:
+        action = step[0]
+        action_output = step[1]
+        
+        action_tool = action.tool
+        if action_tool not in [ "compilation_check", "execution_check" ]:
+            continue
+
+        attempts = action_attempts.get(action_tool, 0) + 1
+        action_attempts.update({ action_tool: attempts })
+        action_success = action_output["success"]
+        
+        system_metrics.record_tool_usage(action_tool, action_success)
+        print_colored(f"\n{action_tool} tool used (attempt {attempts})", colors.GREEN, bold=True)
+        
+        if action_success:
+            print_colored(f"{action_tool} successful!", colors.GREEN, bold=True)
+        else:
+            print_colored(f"{action_tool} failed!", colors.RED, bold=True)
+        
+    compilation_attempts = action_attempts.get("compilation_check", 0)
+    execution_attempts = action_attempts.get("execution_check", 0)
+
+    if compilation_attempts == 0:
+        print_colored("\nWarning: Compilation check tool was NOT used!", colors.YELLOW, bold=True)
+    if execution_attempts == 0:
+        print_colored("\nWarning: Execution check tool was NOT used!", colors.YELLOW, bold=True)
     
     # increment iteration
     iteration_count += 1

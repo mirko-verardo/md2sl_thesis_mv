@@ -30,6 +30,11 @@
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
 
+## TODO
+
+- correct validator prompt so the assessment will be satisfactory not only if code compiles but also if it executes correctly on test
+- test execution can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
+
 ## Prompts
 
 - *difficult*: 

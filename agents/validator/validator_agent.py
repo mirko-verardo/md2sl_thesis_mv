@@ -45,6 +45,7 @@ def validator_node(state: AgentState) -> AgentState:
         compilation_status = "✅ Compilation successful!" if is_compiled else "❌ Compilation failed with the following errors:\n" + compilation_result['stderr']
         
         # Test the code
+        is_tested = False
         if is_compiled:
             print_colored("\n--- Testing Parser ---", colors.YELLOW, bold=True)
             base_dir = Path("input")
@@ -52,7 +53,8 @@ def validator_node(state: AgentState) -> AgentState:
             test_file_name = "test." + format
             test_file_path = base_dir / format / test_file_name
             test_result = execute_c_code(str(o_file_path), str(test_file_path))
-            test_output = """success: """ + ("OK" if test_result["success"] else "ERR") + """
+            is_tested = test_result["success"]
+            test_output = """success: """ + ("OK" if is_tested else "ERR") + """
 stdout: """ + test_result["stdout"] + """
 stderr: """ + test_result["stderr"] + """
 """
@@ -60,7 +62,7 @@ stderr: """ + test_result["stderr"] + """
                 f.write(test_output)
 
         # Record parser validation in metrics
-        system_metrics.record_parser_validation(c_file_name, is_compiled)
+        system_metrics.record_parser_validation(c_file_name, is_compiled, is_tested)
 
         # Create the prompt
         validator_template = validator_prompts.get_validator_template()

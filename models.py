@@ -17,16 +17,16 @@ class SystemMetrics:
         self.rounds = 0  # Complete rounds (user-supervisor-generator-validator)
         self.current_round = None  # Track the current round ID
         self.rounds_data = {}  # Detailed data for each round
-        self.last_parser_file = None  # Name of the last parser file
-        self.last_compilation_status = None  # Compilation status of the last parser
     
-    def record_parser_validation(self, parser_file: str, compilation_success: bool) -> None:
+    def record_parser_validation(self, parser_file: str, compilation_success: bool, execution_success: bool) -> None:
         """Record information about the last validated parser file."""
         if self.current_round:
-            self.last_parser_file = parser_file
-            self.last_compilation_status = compilation_success
+            # Name of the last parser file
             self.rounds_data[self.current_round]["last_parser_file"] = parser_file
+            # Compilation status of the last parser
             self.rounds_data[self.current_round]["compilation_success"] = compilation_success
+            # Execution status of the last parser
+            self.rounds_data[self.current_round]["execution_success"] = execution_success
 
     def start_new_round(self, user_request: str) -> str:
         """Start tracking a new round."""
@@ -36,17 +36,12 @@ class SystemMetrics:
         self.rounds_data[round_id] = {
             "user_request": user_request,
             "generator_validator_interactions": 0,
-            "tool_interaction1": 0,
-            "tool_interaction2": 0, 
-            "tool_interaction3": 0,
-            "successful_compilations1": 0,
-            "successful_compilations2": 0,
-            "successful_compilations3": 0,
             "start_time": datetime.now().isoformat(),
             "end_time": None,
             "completed": False,
             "last_parser_file": None,
-            "compilation_success": None
+            "compilation_success": None,
+            "execution_success": None
         }
         return round_id
         
@@ -55,26 +50,23 @@ class SystemMetrics:
         if self.current_round:
             self.rounds_data[self.current_round]["generator_validator_interactions"] += 1
         
-    def record_tool_usage(self, compilation_success: bool) -> None:
+    def record_tool_usage(self, tool: str, success: bool) -> None:
         """Record tool usage for the current interaction with compilation result."""
         if self.current_round:
             interaction_number = self.rounds_data[self.current_round]["generator_validator_interactions"]
             
-            if 1 <= interaction_number <= 3:
-                interaction_key = f"tool_interaction{interaction_number}"
-                success_key = f"successful_compilations{interaction_number}"
-                
-                print_colored(f"Recording tool usage for {self.current_round}, {interaction_key}", colors.YELLOW, bold=True)
-                
-                self.rounds_data[self.current_round][interaction_key] += 1
-                
-                if compilation_success:
-                    self.rounds_data[self.current_round][success_key] += 1
-                
-                print_colored(f"New tool usage count: {self.rounds_data[self.current_round][interaction_key]}", colors.YELLOW, bold=True)
+            interaction_key = f"{tool}_interactions_{interaction_number}"
+            print_colored(f"Recording tool usage for {self.current_round}, {interaction_key}", colors.YELLOW, bold=True)
+            
+            num = self.rounds_data[self.current_round].get(interaction_key, 0)
+            self.rounds_data[self.current_round].update({ interaction_key: num + 1 })
+            print_colored(f"New tool usage count: {self.rounds_data[self.current_round][interaction_key]}", colors.YELLOW, bold=True)
+            
+            if success:
+                success_key = f"{tool}_successes_{interaction_number}"
+                num = self.rounds_data[self.current_round].get(success_key, 0)
+                self.rounds_data[self.current_round].update({ success_key: num + 1 })
                 print_colored(f"Successful compilations: {self.rounds_data[self.current_round][success_key]}", colors.YELLOW, bold=True)
-            else:
-                print_colored(f"Warning: Invalid interaction number {interaction_number}", colors.YELLOW, bold=True)
     
     def complete_round(self) -> None:
         """Mark the current round as completed."""
@@ -91,21 +83,24 @@ class SystemMetrics:
         
         for round_id, data in self.rounds_data.items():
             compilation_rates = {}
-            for i in range(1, 4):
-                interaction_key = f"tool_interaction{i}"
-                success_key = f"successful_compilations{i}"
-                
-                if interaction_key in data and data[interaction_key] > 0:
-                    rate_str = f"{data.get(success_key, 0)}/{data[interaction_key]}"
-                    compilation_rates[f"compilation_rate_interaction{i}"] = rate_str
+            max = data["generator_validator_interactions"]
+            for i in range(1, max + 1):
+                for tool in ["compilation_check", "execution_check"]:
+                    interaction_key = f"{tool}_interactions_{i}"
+                    interaction_num = data.get(interaction_key, 0)
+                    if interaction_num > 0:
+                        success_key = f"{tool}_successes_{i}"
+                        success_num = data.get(success_key, 0)
+                        rate_str = f"{success_num}/{interaction_num}"
+                        compilation_rates[f"{tool}_rate_{i}"] = rate_str
             
             round_data = {
                 "user_request": data["user_request"],
                 "generator_validator_interactions": data["generator_validator_interactions"],
-                **{f"tool_interaction{i}": data.get(f"tool_interaction{i}", 0) for i in range(1, 4)},
                 **compilation_rates,
-                "last_parser_file": data.get("last_parser_file"),
-                "compilation_success": data.get("compilation_success"),
+                "last_parser_file": data["last_parser_file"],
+                "compilation_success": data["compilation_success"],
+                "execution_success": data["execution_success"],
                 "start_time": data["start_time"],
                 "end_time": data["end_time"],
                 "completed": data["completed"]
