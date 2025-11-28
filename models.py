@@ -6,8 +6,7 @@ from typing_extensions import TypedDict
 from typing import Annotated, Sequence, Any, Literal
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
-from utils import colors
-from utils.general import print_colored, compilation_check, execution_check
+from utils.general import compilation_check, execution_check
 
 
 
@@ -56,17 +55,13 @@ class SystemMetrics:
             interaction_number = self.rounds_data[self.current_round]["generator_validator_interactions"]
             
             interaction_key = f"{tool}_interactions_{interaction_number}"
-            print_colored(f"Recording tool usage for {self.current_round}, {interaction_key}", colors.YELLOW, bold=True)
-            
             num = self.rounds_data[self.current_round].get(interaction_key, 0)
             self.rounds_data[self.current_round].update({ interaction_key: num + 1 })
-            print_colored(f"New tool usage count: {self.rounds_data[self.current_round][interaction_key]}", colors.YELLOW, bold=True)
             
             if success:
                 success_key = f"{tool}_successes_{interaction_number}"
                 num = self.rounds_data[self.current_round].get(success_key, 0)
                 self.rounds_data[self.current_round].update({ success_key: num + 1 })
-                print_colored(f"Successful compilations: {self.rounds_data[self.current_round][success_key]}", colors.YELLOW, bold=True)
     
     def complete_round(self) -> None:
         """Mark the current round as completed."""
@@ -117,8 +112,6 @@ class SystemMetrics:
         json_file = session_dir / "system_metrics.json"
         with open(json_file, 'w') as f:
             dump(json_data, f, indent=2)
-        
-        print_colored(f"\nMetrics saved to: {json_file}", colors.CYAN, bold=True)
 
 class AgentState(TypedDict):
     """State schema for the agent graph."""

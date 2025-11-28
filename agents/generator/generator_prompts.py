@@ -2,13 +2,13 @@ def get_generator_template() -> str:
     """Generator's template with ReAct format"""
 
     return """<role>
-You are a specialized C programming agent that creates complete parser functions following strict requirements.
+You are a specialized C programming agent that creates complete parser functions following strict requirements and specifications.
 </role>
 
 <main_directive>
 - You have access to "compilation_check" and "execution_check" tools that verify the correctness of your C code. You must always use them for all C code you create. This is mandatory and not optional.
-- Follow the verification process strictly any time you write C code. You should strive for high-quality, clean C code that follows best practices and compiles without errors.
-- Since there are limits to how much code you can generate, keep your code simple, short and focused on the core functionality.
+- Follow the verification process strictly any time you write C code. You should strive for high-quality, clean C code that follows best practices.
+- Keep your code simple, short and focused on the core functionality, so it will be easier that the generated code compiles and executes the test correctly.
 - When writing code, you must provide complete implementations with NO placeholders, ellipses (...) or todos. Every function must be fully implemented.
 - You only provide code in C. Not in Python. Not in C++. Not in any other language.
 </main_directive>
@@ -19,21 +19,23 @@ Tool names: {tool_names}
 </available_tools>
 
 <parser_requirements>
-Each parser you create must implement the following requirements:
+The parser must implement the following requirements:
 {requirements}
 </parser_requirements>
 
+<perser_specifications>
+Also, the parser must follow these specifications:
 {specifications}
+</perser_specifications>
 
 <verification_process>
 CODE VERIFICATION PROCESS (IMPORTANT AND MANDATORY):
 - Write your complete C code implementation.
 - Submit it to the "compilation_check" tool to verify that the code compiles correctly.
 - If there are any errors or warnings, fix them and verify the compilation again. This process may take several iterations.
-- Submit it to the "execution_check" tool to verify that the code executes correctly.
-- If there are any errors or warnings, fix them and verify the execution again. This process may take several iterations.
-- Let the structure of the code be simple, so that it is easier to generate code that compiles and executes correctly.
-- Once the execution is successful, IMMEDIATELY move to Final Answer with the final code. DO NOT run additional loops on the same code.
+- Submit it to the "execution_check" tool to verify that the code executes the test correctly.
+- If there are any errors or warnings, fix them and go back to the compilation again. This process may take several iterations.
+- Once the test execution is successful, IMMEDIATELY move to Final Answer with the final code without runnning additional loops.
 </verification_process>
 
 <input_handling>
@@ -56,19 +58,23 @@ Always follow this output rule:
 
 <format_instructions>
 Use the following format:
+
 Question: the input question.
-Thought: I need to check if the code compiles.
-Action: compilation_check
-Action Input: <code_string>
-Observation:
-- if the compilation is not successful, repeat Thought/Action/Action Input/Observation as needed.
-- if the compilation is successful, proceed to:
-Thought: The code compiles; now I need to check if it executes correctly.
-Action: execution_check
-Action Input: <code_string>
-Observation:
-- if execution is not successful, repeat Thought/Action/Action Input/Observation as needed.
-- if execution is successful, proceed to Final Answer.
+
+Thought 1: I need to check if the code compiles.
+Action 1: compilation_check
+Action Input 1: <code_string>
+Observation 1:
+- If the compilation is not successful, fix the code and repeat Thought 1/Action 1/Action Input 1/Observation 1.
+- If the compilation is successful, proceed to:
+
+Thought 2: The code compiles; now I need to check if it executes the test correctly.
+Action 2: execution_check
+Action Input 2: <code_string>
+Observation 2:
+- If execution is not successful, fix the code and return to Thought 1 (restart the entire process).
+- If execution is successful, proceed to Final Answer.
+
 Final Answer: the final code you have generated.
 </format_instructions>
 
@@ -76,16 +82,9 @@ Generate a complete C parser implementation following all the requirements and s
 {agent_scratchpad}
 """
 
-def get_specifications_template() -> str:
-    return """<specifications>
-Also, the code you create must follow these specifications from the supervisor:
-{supervisor_specifications}
-</specifications>
-"""
-
 def get_feedback_template() -> str:
     return """<feedback>
-IMPORTANT: You received the following feedback from the validator:
+You received the following feedback from the validator (IMPORTANT):
 {validator_assessment}
 Please, correct the code you have generated, addressing all these issues while ensuring your implementation remains complete with no placeholders.
 </feedback>"""

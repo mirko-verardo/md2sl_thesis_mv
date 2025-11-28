@@ -33,10 +33,9 @@ The validator's assessment: {validator_assessment}
 Please provide a friendly response to the user that:
 1. Acknowledges their request
 2. Presents the generated C parser code
-3. IMPORTANTLY, mentions the code satisfaction according to the validator and briefly explains why
+3. Mentions the code satisfaction according to the validator and briefly explains why
 4. Gives a brief explanation of what the parser does and how it works
-5. Explicitly mentions the compilation status
-6. Mentions they can ask for clarification or report any issues they find
+5. Mentions they can ask for clarification or report any issues they find
 
 Keep your explanation concise and user-friendly.
 """
@@ -87,9 +86,8 @@ Create a comprehensive response that:
 1. Acknowledges his question
 2. Provides a brief summary of what the parser does (2-3 sentences)
 3. CLEARLY explains the validator's assessment
-4. EXPLICITLY states whether the code compiles successfully or not
-5. EXPLICITLY states whether the code was deemed satisfactory or not
-6. Mentions key strengths or limitations
+4. EXPLICITLY states whether the code was deemed satisfactory or not
+5. Mentions key strengths or limitations
 
 Keep your explanation concise and conversational, focusing on the overall assessment rather than providing the entire code.
 """
@@ -98,5 +96,5 @@ def get_supervisor_input_general_conversation() -> str:
     return """If the user is asking about parsers, you can offer to generate a C parser for him by responding to his specific needs.
 If the user is asking about previous code you've generated, answer his question as best as you can using your conversation history.
 Otherwise, provide a helpful, concise response that addresses his question.
-Respond in a conversational, friendly tone.
+Respond in a conversational and friendly tone.
 """

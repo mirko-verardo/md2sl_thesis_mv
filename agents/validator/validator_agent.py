@@ -40,12 +40,13 @@ def validator_node(state: AgentState) -> AgentState:
         print_colored("\n--- Testing Compilation ---", colors.YELLOW, bold=True)
         compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
         # Check if code has been compiled with success
-        is_compiled = compilation_result['success']
+        is_compiled = compilation_result["success"]
         # Get compilation status
-        compilation_status = "✅ Compilation successful!" if is_compiled else "❌ Compilation failed with the following errors:\n" + compilation_result['stderr']
+        compilation_status = "✅ Compilation successful" if is_compiled else "❌ Compilation failed with the following errors:\n" + compilation_result["stderr"]
         
         # Test the code
         is_tested = False
+        execution_status = "❌ Test execution failed because the generated code doesn't even compile"
         if is_compiled:
             print_colored("\n--- Testing Parser ---", colors.YELLOW, bold=True)
             base_dir = Path("input")
@@ -53,12 +54,16 @@ def validator_node(state: AgentState) -> AgentState:
             test_file_name = "test." + format
             test_file_path = base_dir / format / test_file_name
             test_result = execute_c_code(str(o_file_path), str(test_file_path))
+            # Check if code has been executed with success
             is_tested = test_result["success"]
-            test_output = """success: """ + ("OK" if is_tested else "ERR") + """
+            # Get execution status
+            execution_status = "✅ Test execution successful" if is_tested else "❌ Test execution failed with the following errors:\n" + test_result["stderr"]
+
+            with open(session_dir / "test.txt", "w", encoding="utf-8") as f:
+                test_output = """success: """ + ("OK" if is_tested else "ERR") + """
 stdout: """ + test_result["stdout"] + """
 stderr: """ + test_result["stderr"] + """
 """
-            with open(session_dir / "test.txt", "w", encoding="utf-8") as f:
                 f.write(test_output)
 
         # Record parser validation in metrics
@@ -66,16 +71,14 @@ stderr: """ + test_result["stderr"] + """
 
         # Create the prompt
         validator_template = validator_prompts.get_validator_template()
-        validator_template = validator_template.replace("{specifications}", validator_prompts.get_specifications_template() if generator_specs else "")
         validator_input = {
             "requirements": multi_agent.get_parser_requirements(),
+            # NB: here it can't be None
+            "specifications": generator_specs if generator_specs else "",
             "code": generator_code,
-            "compilation_status": compilation_status
+            "compilation_status": compilation_status,
+            "execution_status": execution_status
         }
-        if generator_specs:
-            validator_input.update({
-                "supervisor_specifications": generator_specs
-            })
         validator_prompt = PromptTemplate.from_template(validator_template)
 
         # Initialize model for validator
@@ -99,43 +102,44 @@ stderr: """ + test_result["stderr"] + """
             validator_response_color = colors.RED
     else:
         is_compiled = False
-        compilation_status = "❌ Compilation failed!"
+        is_tested = False
+        compilation_status = "❌ Compilation failed"
+        execution_status = "❌ Test execution failed"
         validator_response = "Retry with a simpler and shorter version"
         validator_response_color = colors.YELLOW
 
     # Check if code is satisfactory
-    is_satisfactory = is_compiled and multi_agent.get_satisfaction(validator_response) == "SATISFACTORY"
+    is_satisfactory = is_compiled and is_tested and multi_agent.get_satisfaction(validator_response) == "SATISFACTORY"
     # Check if code is the final iteration
     is_final_iteration = iteration_count >= max_iterations
 
     if is_satisfactory:
         # end
         next_node = "Supervisor"
-        feedback_message = "The parser implementation has been validated and meets all requirements.\n"
-        feedback_message += f"Compilation status: {compilation_status}\n"
-        feedback_message += f"Final assessment:\n{validator_response}"
+        feedback_message = "The parser implementation has been validated and meets all requirements and specifications."
     elif is_final_iteration:
         # end
         next_node = "Supervisor"
-        feedback_message = "After iterations limit, this is the best parser implementation available. While it may not be perfect, it could serve as a good starting point.\n"
-        feedback_message += f"Compilation status: {compilation_status}\n"
-        feedback_message += f"Final assessment:\n{validator_response}"
-    elif is_compiled or is_code_generated:
+        feedback_message = "After iterations limit, this is the best parser implementation available. While it may not be perfect, it could serve as a good starting point."
+    elif is_code_generated:
         # continue
         next_node = "Generator"
-        feedback_message = "The parser implementation needs improvements.\n"
-        feedback_message += f"Compilation status: {compilation_status}\n"
-        feedback_message += f"Final assessment:\n{validator_response}"
+        feedback_message = "The parser implementation needs improvements."
     else:
         # continue
         next_node = "Generator"
-        feedback_message = validator_response
+        feedback_message = generator_code
     
-    # Log compilation results
-    compilation_status_color = colors.GREEN if is_compiled else colors.RED
-    print_colored(f"Compilation Test Results (Iteration {iteration_count}/{max_iterations}): {compilation_status}", compilation_status_color, bold=True)
+    feedback_message += f"\nCompilation status: {compilation_status}"
+    feedback_message += f"\nExecution status: {execution_status}"
+    feedback_message += f"\nFinal assessment:\n{validator_response}"
+    
     # Log the validator's assessment
-    print_colored(f"Validator assessment (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
+    print_colored(f"Validator (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
+    color = colors.GREEN if is_compiled else colors.RED
+    print_colored(f"Compilation result: {compilation_status}", color, bold=True)
+    color = colors.GREEN if is_tested else colors.RED
+    print_colored(f"Execution result: {execution_status}", color, bold=True)
     print(validator_response)
     print_colored(f"\nValidator sending FEEDBACK to {next_node}", colors.YELLOW, bold=True)
     

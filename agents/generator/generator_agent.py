@@ -24,15 +24,12 @@ def generator_node(state: AgentState) -> AgentState:
 
     # Create the prompt
     generator_template = generator_prompts.get_generator_template()
-    generator_template = generator_template.replace("{specifications}", generator_prompts.get_specifications_template() if generator_specs else "")
     generator_template = generator_template.replace("{feedback}", generator_prompts.get_feedback_template() if validator_assessment else "")
     generator_input = {
-        "requirements": get_parser_requirements()
+        "requirements": get_parser_requirements(),
+        # NB: here it can't be None
+        "specifications": generator_specs if generator_specs else ""
     }
-    if generator_specs:
-        generator_input.update({
-            "supervisor_specifications": generator_specs
-        })
     if validator_assessment:
         generator_input.update({
             "validator_assessment": validator_assessment

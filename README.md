@@ -23,7 +23,8 @@
     - supervisor memory was used to track the last generated parser but it could not be the best
         - maybe a middle one compiles and the last one not
         - conversation history should be enough, if not the code could easily be updated to track the last working parser
-- Supervisor and Validator doesn't need ReAct approach since they don't have tools to use
+- supervisor and validator doesn't need ReAct approach since they don't have tools to use
+    - so they do a single LLM call
 - let the user choose directly the followings:
     - file format to generate the parser for (PDF, JSON, HTML, etc...)
         - so test can be easily executed
@@ -34,14 +35,18 @@
 
 - correct validator prompt so the assessment will be satisfactory not only if code compiles but also if it executes correctly on test
 - test execution can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
+- specific test for some formats (JSON)
+    - i have to produce specific c code to apply test
+- c code static analysis for vulnerabilities checking (new agent)
+    - python bandit integration tool (code python analysis)
+    - search for ready c tool
+- sage metric paper
 
 ## Prompts
 
 - *difficult*: 
     - generate a parser function for geojson files
     - generate a parser function for geojson files that supports all geometry types
-    - generate a parser function for MIME files
-        - TODO
 - *simple*: 
     - generate a simple parser function for json files
     - generate a simple parser function for xml files
@@ -76,9 +81,6 @@
 - Problem: last iteration can fail and the middle ones instead create a working code
     - middle: compiles, not satisfactory
     - last: doesn't compile
-- **Supervisor** and **Validator** prompts misses Action, Action Input, Observation for ReAct pattern:
-    - Invalid Format: Missing 'Action:' after 'Thought:'
-    - What is ExceptionTool() needed for in **Supervisor** and **Validator**?
 
 # General considerations
 
