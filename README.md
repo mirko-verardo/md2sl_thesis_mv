@@ -74,12 +74,11 @@
 
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
 - Problem: last iteration can fail and the middle ones instead create a working code
-- **Supervisor** and **Validator** prompts misses these for ReAct pattern:
-    - Action
-    - Action Input
-    - Observation
-- What is ExceptionTool() needed for in **Supervisor** and **Validator**?
-- Invalid Format: Missing 'Action:' after 'Thought:'
+    - middle: compiles, not satisfactory
+    - last: doesn't compile
+- **Supervisor** and **Validator** prompts misses Action, Action Input, Observation for ReAct pattern:
+    - Invalid Format: Missing 'Action:' after 'Thought:'
+    - What is ExceptionTool() needed for in **Supervisor** and **Validator**?
 
 # General considerations
 
