@@ -156,7 +156,12 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
     # create a prompt
     prompt = PromptTemplate.from_template(template)
     # create memory
-    memory = ConversationBufferMemory(memory_key="chat_history", output_key="output", return_messages=True)
+    memory = ConversationBufferMemory(
+        memory_key="chat_history", 
+        input_key="input",
+        output_key="output", 
+        return_messages=True
+    )
     # create the ReAct agent
     agent = create_react_agent(llm, tools, prompt)
     
@@ -167,7 +172,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
         verbose=True,
         handle_parsing_errors=True,
         return_intermediate_steps=True,
-        max_iterations=5,
+        max_iterations=10,
         early_stopping_method="force"
     )
     
@@ -230,33 +235,35 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             if steps:
                 log(f, "--- Agent's Reasoning Process ---", colors.MAGENTA, bold=True)
 
-                compilation_attempts = 0
+                #compilation_attempts = 0
                 for step_counter, step in enumerate(steps):
                     action = step[0]
                     action_output = step[1]
                     
-                    if action.tool != "compilation_check":
+                    action_tool = action.tool
+                    if action_tool not in ["compilation_check", "execution_check"]:
                         continue
                         
-                    compilation_attempts += 1
-                    log(f, f"Step {step_counter + 1}: Using Compilation Check Tool (Attempt {compilation_attempts})", colors.BLUE, bold=True)
-                    
+                    #compilation_attempts += 1
+                    #log(f, f"Step {step_counter + 1}: Using Compilation Check Tool (Attempt {compilation_attempts})", colors.BLUE, bold=True)
+                    log(f, f"Step {step_counter + 1}: Using {action_tool} tool", colors.BLUE, bold=True)
+
                     # get the code being checked
                     code_to_check = str(action.tool_input)
                     code_to_check = code_to_check.strip()
                     
                     # extract only top lines for preview
                     code_preview = code_to_check.split("\n")
-                    code_preview = "\n".join(code_preview[:5]) + "\n..." if len(code_preview) > 5 else code_to_check
+                    code_preview = "\n".join(code_preview[:10]) + "\n..." if len(code_preview) > 10 else code_to_check
 
                     log(f, "Checking code (preview):", colors.BLUE)
                     log(f, code_preview)
 
-                    # log compilation results
+                    # log tool results
                     if action_output["success"]:
-                        log(f, "Result: Compilation successful without warnings! ✓", colors.GREEN, bold=True)
+                        log(f, "Result: Tool successful without warnings! ✓", colors.GREEN, bold=True)
                     else:
-                        log(f, "Result: Compilation failed! ✗", colors.RED, bold=True)
+                        log(f, "Result: Tool failed! ✗", colors.RED, bold=True)
                     
                     # get the errors
                     errors = action_output["stderr"]

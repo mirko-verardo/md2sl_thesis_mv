@@ -28,14 +28,15 @@ def set_if_undefined(var: str) -> str:
 
 def get_model_source_from_input(speed_up: bool = True) -> str:
     """Get the model source name from the user input"""
-    sources = ["google", "openai", "anthropic"]
-    sources_str = f"'{"', '".join(sources)}'"
-    print_colored("\n=== C Parser Generator Setup ===", colors.CYAN, bold=True)
-    print_colored(f"Available model sources: {sources_str}", colors.YELLOW, bold=True)
 
     # speed up
     if speed_up:
         return "google"
+    
+    sources = ["google", "openai", "anthropic"]
+    sources_str = f"'{"', '".join(sources)}'"
+    print_colored("\n=== C Parser Generator Setup ===", colors.CYAN, bold=True)
+    print_colored(f"Available model sources: {sources_str}", colors.YELLOW, bold=True)
     
     # get model source
     while True:
