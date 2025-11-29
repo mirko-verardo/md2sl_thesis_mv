@@ -261,9 +261,9 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
 
                     # log tool results
                     if action_output["success"]:
-                        log(f, "Result: Tool successful without warnings! ✓", colors.GREEN, bold=True)
+                        log(f, f"Result: {action_tool} tool successful without warnings! ✓", colors.GREEN, bold=True)
                     else:
-                        log(f, "Result: Tool failed! ✗", colors.RED, bold=True)
+                        log(f, f"Result: {action_tool} tool failed! ✗", colors.RED, bold=True)
                     
                     # get the errors
                     errors = action_output["stderr"]

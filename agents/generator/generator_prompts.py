@@ -32,10 +32,24 @@ This is really important because the final C code you generated will be tested g
 
 <output_handling>
 CODE OUTPUT (IMPORTANT AND MANDATORY):
-Always follow this output rule:
-- If parsing succeeds, print a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
-- If parsing fails, do NOT print anything to stdout; instead, write a descriptive error message to stderr.
-- The summary should be concise and consistent in format, independent of the file type has been parsed.
+
+SUCCESS CASE (PARSING SUCCEEDS):
+- The program MUST NOT print anything to stderr.
+- The program MUST print ONLY a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
+- The summary must be concise and consistent in format, independent of the input type.
+- After printing the summary to stdout, the program MUST terminate IMMEDIATELY with exit code 0.
+
+FAILURE CASE (PARSING FAILS):
+- The program MUST NOT print anything to stdout.
+- The program MUST print a descriptive error message to stderr.
+- After printing the error to stderr, the program MUST terminate IMMEDIATELY with a NON-ZERO exit code.
+
+GLOBAL RULES (APPLIES TO ALL CODE PATHS):
+- ANY condition that produces output on stderr MUST be treated as a fatal parsing error.
+- The program MUST NOT print warnings, informational messages, debug output, or non-fatal notices to stderr.
+- If the program prints anything to stderr, it MUST exit with a non-zero code. No exceptions.
+- Under no circumstances may the program exit with code 0 if ANY output was written to stderr.
+
 </output_handling>
 
 {feedback}

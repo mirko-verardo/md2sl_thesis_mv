@@ -39,14 +39,15 @@
 
 ## TODO
 
-- correct validator prompt so the assessment will be satisfactory not only if code compiles but also if it executes correctly on test
 - test execution can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
+- introduce an ORCHESTRATOR agent (divide et impera)
 - specific test for some formats (JSON)
     - i have to produce specific c code to apply test
 - c code static analysis for vulnerabilities checking (new agent)
     - python bandit integration tool (code python analysis)
     - search for ready c tool
 - sage metric paper
+- better memory management between different loops in multiagent system (using last generator code)
 
 ## Prompts
 
@@ -80,10 +81,12 @@
     - accuracy: files parsed with test case ok / total files parsed
     - coverage: lines executed / total lines
     - execution time
+    - sage score (paper)
 
 ## Questions
 
 - "Agent stopped due to iteration limit or time limit" problem with multiagent
+    - solved without ReAct
 - Problem: last iteration can fail and the middle ones instead create a working code
     - middle: compiles, not satisfactory
     - last: doesn't compile
