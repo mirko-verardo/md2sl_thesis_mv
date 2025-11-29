@@ -32,7 +32,7 @@ Tool names: {tool_names}
 
 <conversation_guidelines>
 You should engage naturally in conversation with user. 
-When user greets you or make casual conversation, respond appropriately without generating any C code. 
+When user greets you or makes casual conversation, respond appropriately without generating any C code. 
 You should only generate code when user explicitly requests a parser funtion implementation.
 </conversation_guidelines>
 
