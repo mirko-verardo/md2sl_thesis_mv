@@ -1,11 +1,3 @@
-def get_parser_requirements() -> str:
-    return """1. Input Handling: The code deals with a pointer to a buffer of bytes or a file descriptor for reading unstructured data.
-2. Internal State: The code maintains an internal state in memory to represent the parsing state that is not returned as output.
-3. Decision-Making: The code takes decisions based on the input and the internal state.
-4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
-5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
-6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)"""
-
 def had_agent_problems(output: str) -> bool:
     # Main problems
     problems = [
@@ -15,11 +7,10 @@ def had_agent_problems(output: str) -> bool:
 
     return output.lower() in problems
 
-def get_satisfaction(assessment: str) -> str:
+def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
     # NB: this condition imply some constraints on validator's prompt to manage its output (bad)
-    condition = "satisfactory" in assessment and "not satisfactory" not in assessment
-    return "SATISFACTORY" if condition else "NOT SATISFACTORY"
+    return ("satisfactory" in assessment) and ("not satisfactory" not in assessment)
 
 def map_input_to_action(input: int) -> str:
     if input == 1:

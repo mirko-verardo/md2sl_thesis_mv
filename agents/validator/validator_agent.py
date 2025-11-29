@@ -1,23 +1,18 @@
 from datetime import datetime
 from pathlib import Path
 from langchain_core.messages import AIMessage
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from models import AgentState
-from agents.validator import validator_prompts
 from utils import colors, multi_agent
-from utils.general import print_colored, compile_c_code, execute_c_code, initialize_llm
+from utils.general import print_colored, compile_c_code, execute_c_code
 
 
 
 def validator_node(state: AgentState) -> AgentState:
     """Validator agent that evaluates parser code."""
     file_format = state["file_format"]
-    generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
-    model_source = state["model_source"]
     session_dir = state["session_dir"]
     system_metrics = state["system_metrics"]
 
@@ -68,59 +63,25 @@ stderr: """ + test_result["stderr"] + """
 
         # Record parser validation in metrics
         system_metrics.record_parser_validation(c_file_name, is_compiled, is_tested)
-
-        # Create the prompt
-        validator_template = validator_prompts.get_validator_template()
-        validator_input = {
-            "requirements": multi_agent.get_parser_requirements(),
-            # NB: here it can't be None
-            "specifications": generator_specs if generator_specs else "",
-            "code": generator_code,
-            "compilation_status": compilation_status,
-            "execution_status": execution_status
-        }
-        validator_prompt = PromptTemplate.from_template(validator_template)
-
-        # Initialize model for validator
-        validator_llm = initialize_llm(model_source)
-        validator_llm.temperature = 0.4
-
-        # Create a normal LLM call (no ReAct needed)
-        validator_executor = LLMChain(
-            llm=validator_llm,
-            prompt=validator_prompt,
-            verbose=True
-        )
-        
-        # Invoke the agent
-        try:
-            validator_result = validator_executor.invoke(validator_input)
-            validator_response = str(validator_result["text"])
-            validator_response_color = colors.BLUE
-        except Exception as e:
-            validator_response = f"Error occurred during code validation: {str(e)}\n\nPlease try again."
-            validator_response_color = colors.RED
     else:
         is_compiled = False
         is_tested = False
         compilation_status = "❌ Compilation failed"
         execution_status = "❌ Test execution failed"
-        validator_response = "Retry with a simpler and shorter version"
-        validator_response_color = colors.YELLOW
 
     # Check if code is satisfactory
-    is_satisfactory = is_compiled and is_tested and multi_agent.get_satisfaction(validator_response) == "SATISFACTORY"
+    is_satisfactory = is_compiled and is_tested
     # Check if code is the final iteration
     is_final_iteration = iteration_count >= max_iterations
 
     if is_satisfactory:
         # end
         next_node = "Supervisor"
-        feedback_message = "The parser implementation has been validated and meets all requirements and specifications."
+        feedback_message = "The parser implementation has been validated and it is SATISFACTORY."
     elif is_final_iteration:
         # end
         next_node = "Supervisor"
-        feedback_message = "After iterations limit, this is the best parser implementation available. While it may not be perfect, it could serve as a good starting point."
+        feedback_message = "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     elif is_code_generated:
         # continue
         next_node = "Generator"
@@ -132,15 +93,11 @@ stderr: """ + test_result["stderr"] + """
     
     feedback_message += f"\nCompilation status: {compilation_status}"
     feedback_message += f"\nExecution status: {execution_status}"
-    feedback_message += f"\nFinal assessment:\n{validator_response}"
     
     # Log the validator's assessment
-    print_colored(f"Validator (Iteration {iteration_count}/{max_iterations}):", validator_response_color, bold=True)
-    color = colors.GREEN if is_compiled else colors.RED
-    print_colored(f"Compilation result: {compilation_status}", color, bold=True)
-    color = colors.GREEN if is_tested else colors.RED
-    print_colored(f"Execution result: {execution_status}", color, bold=True)
-    print(validator_response)
+    print_colored(f"Validator (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
+    print_colored(f"Compilation result: {compilation_status}", colors.GREEN if is_compiled else colors.RED, bold=True)
+    print_colored(f"Execution result: {execution_status}", colors.GREEN if is_tested else colors.RED, bold=True)
     print_colored(f"\nValidator sending FEEDBACK to {next_node}", colors.YELLOW, bold=True)
     
     return {
@@ -148,7 +105,7 @@ stderr: """ + test_result["stderr"] + """
         "user_action": state["user_action"],
         "user_request": state["user_request"],
         "file_format": file_format,
-        "generator_specs": generator_specs,
+        "generator_specs": state["generator_specs"],
         "generator_code": generator_code,
         "validator_assessment": feedback_message,
         "iteration_count": iteration_count,

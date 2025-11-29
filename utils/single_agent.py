@@ -4,42 +4,104 @@ from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
-from models import CompilationCheck
+from models import CompilationCheck, ExecutionCheck
 from utils import colors
-from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored, log
+from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored, log, get_parser_requirements
 
 
 
-def __get_template(few_shot: bool) -> str:
+def __get_template() -> str:
     return """<role>
 You are a C programming assistant specialized in creating parser functions.
 </role>
 
 <main_directive>
-IMPORTANT: 
-- You must always use the compilation_check tool for all the C code you generate. This is not optional.
-- Follow the VERIFICATION PROCESS strictly any time you write C code.
-- The user will ask you to create very general parsers, defining only the data format and without any inputs, outputs or structure details.
+- You must always use the "compilation_check" and "execution_check" tools for verifying the correctness of the C code you generate. This is mandatory and not optional.
+- Follow the verification process strictly any time you write C code.
+- Keep your code simple, short and focused on the core functionality, so it will be easier that the generated code compiles and executes the test correctly.
+- When writing code, you must provide complete implementations with NO placeholders, ellipses (...) or todos. Every function must be fully implemented.
+- You only provide code in C. Not in Python. Not in C++. Not in any other language.
 - You cannot ask the user for details or clarifications about the parser. 
 - Be creative and think about the function input, output and structure by yourself. Then, write the code to realize the function you have imagined.
 </main_directive>
 
+<available_tools>
+You have access to these tools: {tools}
+Tool names: {tool_names}
+</available_tools>
+
 <conversation_guidelines>
-You should engage naturally in conversation with users. When users greet you or make casual conversation, respond appropriately without generating any C code. 
-You should only generate code when users explicitly request a parser funtion implementation.
+You should engage naturally in conversation with user. 
+When user greets you or make casual conversation, respond appropriately without generating any C code. 
+You should only generate code when user explicitly requests a parser funtion implementation.
 </conversation_guidelines>
 
 <parser_requirements>
-When the user does request a parser function, each parser you create must implement all of the following characteristics:
-1. Input Handling: The code deals with a pointer to a buffer of bytes or a file descriptor for reading unstructured data.
-2. Internal State: The code maintains an internal state in memory to represent the parsing state that is not returned as output.
-3. Decision-Making: The code takes decisions based on the input and the internal state.
-4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
-5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
-6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)
+The parser must implement the following requirements:
+{requirements}
 </parser_requirements>
 
-""" + ("" if not few_shot else """<examples>
+{examples}
+
+<verification_process>
+CODE VERIFICATION PROCESS (IMPORTANT AND MANDATORY):
+- Write your complete C code implementation.
+- Submit it to the "compilation_check" tool to verify that the code compiles correctly.
+- If there are any errors or warnings, fix them and verify the compilation again. This process may take several iterations.
+- Submit it to the "execution_check" tool to verify that the code executes the test correctly.
+- If there are any errors or warnings, fix them and go back to the compilation again. This process may take several iterations.
+- Once the test execution is successful, IMMEDIATELY move to Final Answer with the final code without runnning additional loops.
+</verification_process>
+
+<input_handling>
+CODE INPUT (IMPORTANT AND MANDATORY):
+The final C code you generate must read the entire input from standard input (stdin) as raw bytes.
+Use a binary-safe approach such as reading in chunks with fread() into a dynamically resized buffer.
+Do not use scanf, fgets, or any text-only input functions for the primary input. The parser's input must always come from stdin as bytes.
+This is really important because the final C code you generated will be tested giving raw bytes as stdin.
+</input_handling>
+
+<output_handling>
+CODE OUTPUT (IMPORTANT AND MANDATORY):
+Always follow this output rule:
+- If parsing succeeds, print a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
+- If parsing fails, do NOT print anything to stdout; instead, write a descriptive error message to stderr.
+- The summary should be concise and consistent in format, independent of the file type has been parsed.
+</output_handling>
+
+<format_instructions>
+Use the following format:
+
+Question: the input question.
+
+Thought 1: I need to check if the code compiles.
+Action 1: compilation_check
+Action Input 1: <code_string>
+Observation 1:
+- If the compilation is not successful, fix the code and repeat Thought 1/Action 1/Action Input 1/Observation 1.
+- If the compilation is successful, proceed to:
+
+Thought 2: The code compiles; now I need to check if it executes the test correctly.
+Action 2: execution_check
+Action Input 2: <code_string>
+Observation 2:
+- If execution is not successful, fix the code and return to Thought 1 (restart the entire process).
+- If execution is successful, proceed to Final Answer.
+
+Final Answer: the final code you have generated.
+</format_instructions>
+
+<chat_history>
+The previous conversation between you and the user is as follows:
+{chat_history}
+</chat_history>
+
+Now, the user is asking: {input}
+{agent_scratchpad}
+"""
+
+def __get_examples() -> str:
+    return """<examples>
 Here are some examples to clarify what is and isn't acceptable:
 
 UNACCEPTABLE EXAMPLE - This does not satisfy our requirements for a parser function:
@@ -77,73 +139,28 @@ while (*s && isspace((unsigned char)*s)) s++;
 return s;
 }}
 ```
-</examples>
+</examples>"""
 
-""") + """<critical_rules>
-CRITICAL: 
-- When writing code, you must provide complete implementations with NO placeholders, ellipses (...) or todos. Every function must be fully implemented.
-- If the code is not complete, it will not compile and the compilation_check tool will fail.
-- Before generating any code, always reason through your approach step by step.
-</critical_rules>
+def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
+    """Start chat with the agent. Save output files to the specified folder."""
 
-<verification_process>
-CODE VERIFICATION PROCESS (ALWAYS MANDATORY):
-- Write your complete C code implementation.
-- Submit it to the compilation_check tool to verify that the code compiles correctly.
-- If there are any errors or warings, fix them and verify the compilation again. This process may take several iterations.
-- Let the structure of the code be simple, so that it is easier to generate code that compiles correctly.
-- Continue this process until compilation succeeds without any errors.
-- Once the compilation is successful, IMMEDIATELY move to Final Answer with the verified code. DO NOT run additional compilation checks on the same code.
-- If the compilation is successful, answer to the user with the final code.
-NEVER SKIP THE COMPILATION CHECK. If you do not verify that your code compiles cleanly, your response is incomplete and incorrect. The verification is REQUIRED for all C code responses without exception.
-</verification_process>
-
-<available_tools>
-You have access to these tools: {tools}
-Tool names: {tool_names}
-Call the tool using compilation_check(your_code_here). 
-</available_tools>
-
-<format_instructions>
-Use the following format:
-Question: the input question.
-Thought: think about what to do.
-Action: the tool to use: {tool_names}.
-Action Input: the input to the tool.
-Observation:
-- if the compilation is successful, proceed to Final Answer without additional compilation checks.
-- if the compilation is not successful, repeat Thought/Action/Action Input/Observation as needed.
-Final Answer: the final answer to the original question with the final code you have generated.
-</format_instructions>
-
-<chat_history>
-The previous conversation between you and the user is as follows:
-{chat_history}
-</chat_history>
-
-Now, the user is asking: {input}
-{agent_scratchpad}
-"""
-
-def setup_agent(source: str, few_shot=False) -> AgentExecutor:
-    """Set up and return the agent and memory objects specifically for Claude using ReAct pattern."""
     # initialize model
     llm = initialize_llm(source)
     
     # use the CompilationCheck tool
-    tools = [ CompilationCheck ]
+    tools = [ CompilationCheck, ExecutionCheck(file_format) ]
     
     # create the system message 
-    template = __get_template(few_shot)
+    template = __get_template()
 
     # create a prompt
     prompt = PromptTemplate.from_template(template)
     # create memory
-    memory = ConversationBufferMemory(memory_key="chat_history", output_key='output', return_messages=True)
+    memory = ConversationBufferMemory(memory_key="chat_history", output_key="output", return_messages=True)
     # create the ReAct agent
     agent = create_react_agent(llm, tools, prompt)
     
-    return AgentExecutor(
+    agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
         memory=memory,
@@ -151,23 +168,17 @@ def setup_agent(source: str, few_shot=False) -> AgentExecutor:
         handle_parsing_errors=True,
         return_intermediate_steps=True,
         max_iterations=5,
-        early_stopping_method="force",
+        early_stopping_method="force"
     )
-
-def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
-    """Start chat with the agent. Save output files to the specified folder.
     
-    Args:
-        folder_name: Name of the subfolder within output directory
-        agent_executor: The initialized agent executor
-    """
-    # folder_path: Path where the 'output' folder will be created and files saved
+    # folder_path: Path where the output folder will be created and files saved
     folder_path = set_if_undefined("FOLDER_PATH")
     # folder_path to a Path object if it's a string
     base_dir = Path(folder_path)
     
-    # create 'output' directory in the specified folder
-    output_dir = base_dir / 'output' / folder_name
+    # create output directory in the specified folder
+    folder_name = source + "/" + ("few_shot" if few_shot else "zero_shot")
+    output_dir = base_dir / "output" / folder_name
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # chat history for the current session
@@ -179,7 +190,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
     session_dir.mkdir(exist_ok=True)
 
     log_file = session_dir / f"conversation_{conversation_id}.txt"
-    f = open(log_file, 'a', encoding="utf-8")
+    f = open(log_file, "a", encoding="utf-8")
 
     # print welcome message
     log(f, "=== C Parser Generator Chat ===", colors.CYAN, bold=True)
@@ -187,85 +198,74 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
     print(f"Output directory: {session_dir}")
     
     # main chat loop
+    start = True
     while True:
         # get and log user input
-        log(f, "You:", colors.GREEN, bold=True)
-        user_input = input()
+        if start:
+            user_input = f"generate a parser function for {file_format} files"
+            start = False
+        else:
+            log(f, "You:", colors.GREEN, bold=True)
+            user_input = input()        
+            # check for exit command
+            if user_input.lower() in ["exit", "quit", "bye"]:
+                break
         f.write(f"\n{user_input}\n")
-        
-        # check for exit command
-        if user_input.lower() in ['exit', 'quit', 'bye']:
-            print_colored("\nExiting chat. Goodbye!", colors.CYAN, bold=True)
-            break
         
         # response from agent
         print_colored("\nAgent is thinking...", colors.YELLOW)
         
         try:
             # set a timeout for the agent response (in seconds)
-            response = agent_executor.invoke({"input": user_input})
-            agent_output = response.get('output', '')
+            agent_input = {
+                "input": user_input,
+                "requirements": get_parser_requirements(),
+                "examples": __get_examples() if few_shot else ""
+            }
+            agent_response = agent_executor.invoke(agent_input)
+            agent_output = str(agent_response["output"])
 
             # log the intermediate steps
-            if 'intermediate_steps' in response:
+            steps = agent_response.get("intermediate_steps", [])
+            if steps:
                 log(f, "--- Agent's Reasoning Process ---", colors.MAGENTA, bold=True)
 
                 compilation_attempts = 0
-                last_compilation_result = None
-
-                for step_counter, step in enumerate(response['intermediate_steps']):
+                for step_counter, step in enumerate(steps):
                     action = step[0]
                     action_output = step[1]
                     
-                    if action.tool == "compilation_check":
-                        compilation_attempts += 1
-                        last_compilation_result = action_output
-
-                        log(f, f"Step {step_counter + 1}: Using Compilation Check Tool (Attempt {compilation_attempts})", 
-                            colors.BLUE, bold=True)
+                    if action.tool != "compilation_check":
+                        continue
                         
-                        # get the code being checked
-                        if isinstance(action.tool_input, dict) and 'query' in action.tool_input:
-                            code_to_check = action.tool_input['query']
-                        else:
-                            #code_to_check = action.tool_input
-                            code_to_check = str(action.tool_input)
-                        
-                        # split each code lines
-                        code_preview = code_to_check.split("\n")
-                        # extract only first 5 lines for preview
-                        code_preview = "\n".join(code_preview[:5]) + "\n..." if len(code_preview) > 5 else code_to_check
+                    compilation_attempts += 1
+                    log(f, f"Step {step_counter + 1}: Using Compilation Check Tool (Attempt {compilation_attempts})", colors.BLUE, bold=True)
+                    
+                    # get the code being checked
+                    code_to_check = str(action.tool_input)
+                    code_to_check = code_to_check.strip()
+                    
+                    # extract only top lines for preview
+                    code_preview = code_to_check.split("\n")
+                    code_preview = "\n".join(code_preview[:5]) + "\n..." if len(code_preview) > 5 else code_to_check
 
-                        log(f, "Checking code (preview):", colors.BLUE)
-                        log(f, code_preview)
+                    log(f, "Checking code (preview):", colors.BLUE)
+                    log(f, code_preview)
 
-                        # log compilation results
-                        if "Compilation successful" in action_output:
-                            log(f, "Result: Compilation successful without warnings! ✓", colors.GREEN, bold=True)
-                        else:
-                            log(f, "Result: Compilation failed! ✗", colors.RED, bold=True)
-
-                            # extract errors (more robust approach) and truncate if too long
-                            errors = action_output
-                            if "Original code:" in action_output:
-                                errors = action_output.split("Original code:")[0]
-                                # find the last occurrence of ":" before errors and take everything after it
-                                #last_colon_pos = errors.rfind(":")
-                                #if last_colon_pos != -1:
-                                    #errors = errors[last_colon_pos + 1:]
-                            errors = errors.strip()
-                            errors_preview = errors.split("\n")
-                            errors_preview = "\n".join(errors_preview[:10]) + "\n..." if len(errors_preview) > 10 else errors
-                            #print(errors_preview)
-                            log(f, errors_preview)
-                        
-                        # anyway
-                        #f.write(f"\n{action_output}\n")
-
-                # if the last compilation attempt failed, print a warning
-                if last_compilation_result and "Compilation failed" in last_compilation_result:
-                    log(f, "WARNING: Last compilation attempt failed! The agent may provide code that doesn't compile.", 
-                        colors.RED, bold=True)
+                    # log compilation results
+                    if action_output["success"]:
+                        log(f, "Result: Compilation successful without warnings! ✓", colors.GREEN, bold=True)
+                    else:
+                        log(f, "Result: Compilation failed! ✗", colors.RED, bold=True)
+                    
+                    # get the errors
+                    errors = action_output["stderr"]
+                    if errors:
+                        errors = errors.strip()
+                        # extract only top lines for preview
+                        errors_preview = errors.split("\n")
+                        errors_preview = "\n".join(errors_preview[:10]) + "\n..." if len(errors_preview) > 10 else errors
+                        log(f, errors_preview)
 
                 log(f, "--- End of Reasoning Process ---", colors.MAGENTA, bold=True)
             
@@ -290,7 +290,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                 o_file_path = c_file_path.with_suffix('')
                 
                 # save the C code to a file
-                with open(c_file_path, 'w') as ff:
+                with open(c_file_path, "w") as ff:
                     ff.write(c_code)
                 
                 print(f"\nC code saved to: {c_file_path}")
@@ -303,7 +303,7 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                 result_file_name = f"compilation_result_{timestamp}.txt"
                 result_file_path = session_dir / result_file_name
                 
-                with open(result_file_path, 'w') as ff:
+                with open(result_file_path, "w") as ff:
                     # with -Werror, successful compilation means clean code
                     if compilation_result['success']:
                         log(ff, "Compilation successful (no errors or warnings)", colors.GREEN, bold=True)
@@ -311,20 +311,14 @@ def start_chat(folder_name: str, agent_executor: AgentExecutor) -> None:
                         log(ff, "Compilation failed", colors.RED, bold=True)
                     
                     # update command to show we're using -Werror flag
-                    ff.write(f"\nCommand: gcc -Wall -Wextra -Werror {c_file_path} -o {o_file_path}\n")
+                    log(ff, f"Command: gcc -Wall -Wextra -Werror {c_file_path} -o {o_file_path}\n")
                     
                     if compilation_result['stdout']:
-                        ff.write(f"\nStandard output:\n{compilation_result['stdout']}\n")
+                        log(ff, f"Standard output:\n{compilation_result['stdout']}\n")
                     if compilation_result['stderr']:
                         log(ff, f"Standard error:\n{compilation_result['stderr']}")
                     if compilation_result['executable']:
                         log(ff, f"Executable created at: {compilation_result['executable']}")
-                    
-                # log compilation results
-                #f.write(f"\n--- Compilation Results ---\n")
-                #f.write(f"\nCompilation {'successful' if compilation_result['success'] else 'failed'}\n")
-                #if compilation_result['stderr']:
-                #    f.write(f"\nStandard error:\n{compilation_result['stderr']}\n")
                 
                 print(f"\nCompilation details saved to: {result_file_path}")
             

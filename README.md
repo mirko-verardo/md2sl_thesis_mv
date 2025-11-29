@@ -30,6 +30,12 @@
         - so test can be easily executed
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
+- **true story**: ReAct paradigm could not be ideal in a multiagent system
+    - ReAct fits good in a single agent system, where one agent can do multiple things thanks to ReAct
+    - in multiagent systems, the real advantage comes from roles specialization where each agent has its own (unique) job
+        - overlapping roles doesn't make sense
+    - also, the cool thing is the **comparison**: 1 ReAct agent that does N things vs N agents that do 1 thing each
+        - the max iteration can be set the same in both systems
 
 ## TODO
 
@@ -45,11 +51,11 @@
 ## Prompts
 
 - *difficult*: 
-    - generate a parser function for geojson files
-    - generate a parser function for geojson files that supports all geometry types
+    - generate a parser function for PDF files
+    - generate a parser function for GEOJSON files that supports all geometry types
 - *simple*: 
-    - generate a simple parser function for json files
-    - generate a simple parser function for xml files
+    - generate a simple parser function for JSON files
+    - generate a simple parser function for CSV files
 
 ## Ideas
 

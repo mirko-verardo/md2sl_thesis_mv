@@ -2,8 +2,8 @@ from langchain_core.messages import AIMessage, get_buffer_string
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from models import AgentState
-from utils import colors, multi_agent
-from utils.general import print_colored, initialize_llm
+from utils import colors
+from utils.general import print_colored, initialize_llm, get_parser_requirements
 from agents.supervisor import supervisor_prompts
 
 
@@ -35,7 +35,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     elif user_action == "GENERATE_PARSER":
         adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
         supervisor_input.update({
-            "requirements": multi_agent.get_parser_requirements()
+            "requirements": get_parser_requirements()
         })
         purpose = "creating detailed specifications"
         next_step = "Generator"

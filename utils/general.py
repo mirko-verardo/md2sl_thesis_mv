@@ -13,34 +13,39 @@ from utils import colors
 
 
 def set_if_undefined(var: str) -> str:
-    """Set environment variable (API KEY) from .env file."""
+    """Set environment variable from .env file."""
     # load variables from .env file
     load_dotenv()
-    # check if variable exists in environment
-    if not os.environ.get(var):
-        os.environ[var] = getpass(f"Please provide your {var}")
-    
-    # get the API key from environment
-    api_key = os.environ.get(var) or ""
-    return api_key
 
-def get_model_source_from_input() -> str:
+    # check if variable exists in the environment
+    value = os.environ.get(var)
+    if not value:
+        # set the variable if it doesn't exist
+        value = getpass(f"Please provide your {var}")
+        os.environ[var] = value
+    
+    return value
+
+def get_model_source_from_input(speed_up: bool = True) -> str:
     """Get the model source name from the user input"""
+    sources = ["google", "openai", "anthropic"]
+    sources_str = f"'{"', '".join(sources)}'"
     print_colored("\n=== C Parser Generator Setup ===", colors.CYAN, bold=True)
-    print_colored("Available model sources: 'google', 'openai', 'anthropic'", colors.YELLOW, bold=True)
+    print_colored(f"Available model sources: {sources_str}", colors.YELLOW, bold=True)
 
     # speed up
-    return "google"
+    if speed_up:
+        return "google"
     
     # get model source
     while True:
         source = input("\nEnter the model source: ").strip().lower()
         
-        if source in ['google', 'openai', 'anthropic']:
+        if source in sources:
             print_colored(f"\nSelected model source: {source}", colors.GREEN, bold=True)
             return source
         
-        print_colored("Invalid source. Please enter 'google', 'openai', or 'anthropic'.", colors.RED, bold=True)
+        print_colored(f"Invalid source. Please enter one of these: {sources_str}.", colors.RED, bold=True)
 
 def map_input_to_file_format(input: int) -> str:
     if input == 1:
@@ -279,3 +284,11 @@ def log(file, text: str, color_code: str | None = None, bold: bool = False) -> N
     text = f"\n{text}"
     print_colored(text, color_code, bold) if color_code else print(text)
     file.write(f"{text}\n")
+
+def get_parser_requirements() -> str:
+    return """1. Input Handling: The code deals with a pointer to a buffer of bytes or a file descriptor for reading unstructured data.
+2. Internal State: The code maintains an internal state in memory to represent the parsing state that is not returned as output.
+3. Decision-Making: The code takes decisions based on the input and the internal state.
+4. Data Structure Creation: The code builds a data structure representing the accepted input or executes specific actions on it.
+5. Outcome: The code returns either a boolean value or a data structure built from the parsed data indicating the outcome of the recognition.
+6. Composition: The code behavior is defined as a composition of other parsers. (Note: This requirement is only necessary if one of the previous requirements are not met. If ALL the previous 5 requirements are satisfied, this requirement becomes optional.)"""

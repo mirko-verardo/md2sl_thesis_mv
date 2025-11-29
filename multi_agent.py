@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 "generator_code": None,
                 "validator_assessment": None,
                 "iteration_count": 0,
-                "max_iterations": 3,
+                "max_iterations": 5,
                 "model_source": source,
                 "session_dir": session_dir,
                 "next_step": "Supervisor",
