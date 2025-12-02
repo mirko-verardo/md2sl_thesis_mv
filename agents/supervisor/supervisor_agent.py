@@ -13,9 +13,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     messages = state["messages"]
     user_action = state["user_action"]
     user_request = state["user_request"]
-    generator_specs = state["generator_specs"]
     generator_code = state["generator_code"]
-    validator_assessment = state["validator_assessment"]
+    assessor_assessment = state["assessor_assessment"]
     model_source = state["model_source"]
     
     # Create the prompt
@@ -24,11 +23,11 @@ def supervisor_node(state: AgentState) -> AgentState:
         "input": user_request,
         "conversation_history": get_buffer_string(messages)
     }
-    if generator_code and validator_assessment:
+    if generator_code and assessor_assessment:
         adaptive_instructions = supervisor_prompts.get_supervisor_input_validated()
         supervisor_input.update({
-            "c_code": generator_code,
-            "validator_assessment": validator_assessment
+            "code": generator_code,
+            "assessment": assessor_assessment
         })
         purpose = "providing final parser"
         next_step = "FINISH"
@@ -38,20 +37,20 @@ def supervisor_node(state: AgentState) -> AgentState:
             "requirements": get_parser_requirements()
         })
         purpose = "creating detailed specifications"
-        next_step = "Generator"
+        next_step = "Orchestrator"
     elif user_action == "CORRECT_ERROR":
         adaptive_instructions = supervisor_prompts.get_supervisor_input_correct_error()
         #supervisor_input.update({
-        #    "c_code": last_parser["code"],
-        #    "validator_assessment": last_parser["validator_assessment"]
+        #    "code": last_parser["code"],
+        #    "assessment": last_parser["assessment"]
         #})
         purpose = "creating updated specifications"
-        next_step = "Generator"
+        next_step = "Orchestrator"
     elif user_action == "ASSESS_CODE":
         adaptive_instructions = supervisor_prompts.get_supervisor_input_assess_code()
         #supervisor_input.update({
-        #    "c_code": last_parser["code"],
-        #    "validator_assessment": last_parser["validator_assessment"]
+        #    "code": last_parser["code"],
+        #    "assessment": last_parser["assessment"]
         #})
         purpose = "providing code assessment"
         next_step = "FINISH"
@@ -85,13 +84,14 @@ def supervisor_node(state: AgentState) -> AgentState:
     #with open(prova_file, "w", encoding="utf-8") as f:
     #    f.write(final_prompt)
 
-    # TODO: try catch
-    supervisor_result = supervisor_executor.invoke(supervisor_input)
-    supervisor_response = str(supervisor_result["text"])
+    try:
+        supervisor_result = supervisor_executor.invoke(supervisor_input)
+        supervisor_response = str(supervisor_result["text"])
+    except Exception as e:
+        supervisor_response = f"Error occurred during supervisor response: {str(e)}\n\nPlease try again."
 
-    # NB: change the specs for generator
-    if next_step == "Generator":
-        generator_specs = supervisor_response
+    # NB: set the specifications for generator
+    supervisor_specifications = supervisor_response if next_step == "Orchestrator" else None
 
     print_colored(f"Supervisor ({purpose}):", colors.BLUE, bold=True)
     print(supervisor_response)
@@ -101,9 +101,11 @@ def supervisor_node(state: AgentState) -> AgentState:
         "user_action": user_action,
         "user_request": user_request,
         "file_format": state["file_format"],
-        "generator_specs": generator_specs,
-        "generator_code": generator_code,
-        "validator_assessment": None,
+        "supervisor_specifications": supervisor_specifications,
+        "generator_code": None,
+        "validator_compilation": None,
+        "validator_testing": None,
+        "assessor_assessment": None,
         "iteration_count": state["iteration_count"],
         "max_iterations": state["max_iterations"],
         "model_source": model_source,

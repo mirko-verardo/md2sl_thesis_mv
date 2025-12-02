@@ -9,7 +9,7 @@ def had_agent_problems(output: str) -> bool:
 
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
-    # NB: this condition imply some constraints on validator's prompt to manage its output (bad)
+    # NB: this condition imply some constraints on agent's prompt to manage its output (bad)
     return ("satisfactory" in assessment) and ("not satisfactory" not in assessment)
 
 def map_input_to_action(input: int) -> str:

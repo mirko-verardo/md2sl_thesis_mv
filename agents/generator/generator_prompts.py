@@ -47,7 +47,7 @@ FAILURE CASE (PARSING FAILS):
 GLOBAL RULES (APPLIES TO ALL CODE PATHS):
 - ANY condition that produces output on stderr MUST be treated as a fatal parsing error.
 - The program MUST NOT print warnings, informational messages, debug output, or non-fatal notices to stderr.
-- If the program prints anything to stderr, it MUST exit with a non-zero code. No exceptions.
+- If the program prints anything to stderr, it MUST exit with a non-zero code.
 - Under no circumstances may the program exit with code 0 if ANY output was written to stderr.
 
 </output_handling>
@@ -60,10 +60,12 @@ Generate a complete C parser implementation following all the instructions above
 def get_feedback_template() -> str:
     return """<feedback>
 You received the following feedback from the validator (IMPORTANT):
-{validator_assessment}
+{assessment}
 
 Correct the following code you have generated, addressing all the issues above while ensuring your implementation remains complete with no placeholders:
 ```c
 {code}
 ```
+
+This is the assessment about the code above (IMPORTANT):
 </feedback>"""

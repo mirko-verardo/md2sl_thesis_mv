@@ -231,11 +231,11 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             agent_output = str(agent_response["output"])
 
             # log the intermediate steps
+            tool_attempts = {}
             steps = agent_response.get("intermediate_steps", [])
             if steps:
                 log(f, "--- Agent's Reasoning Process ---", colors.MAGENTA, bold=True)
 
-                #compilation_attempts = 0
                 for step_counter, step in enumerate(steps):
                     action = step[0]
                     action_output = step[1]
@@ -244,18 +244,14 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
                     if action_tool not in ["compilation_check", "execution_check"]:
                         continue
                         
-                    #compilation_attempts += 1
-                    #log(f, f"Step {step_counter + 1}: Using Compilation Check Tool (Attempt {compilation_attempts})", colors.BLUE, bold=True)
-                    log(f, f"Step {step_counter + 1}: Using {action_tool} tool", colors.BLUE, bold=True)
+                    attempts = tool_attempts.get(action_tool, 0) + 1
+                    tool_attempts.update({ action_tool: attempts })
+                    log(f, f"Step {step_counter + 1}: Using {action_tool} tool (attempt {attempts})", colors.BLUE, bold=True)
 
-                    # get the code being checked
-                    code_to_check = str(action.tool_input)
-                    code_to_check = code_to_check.strip()
-                    
-                    # extract only top lines for preview
-                    code_preview = code_to_check.split("\n")
-                    code_preview = "\n".join(code_preview[:10]) + "\n..." if len(code_preview) > 10 else code_to_check
-
+                    # code: extract only top lines for preview
+                    code = str(action.tool_input).strip()
+                    code_preview = code.split("\n")
+                    code_preview = "\n".join(code_preview[:10]) + "\n..." if len(code_preview) > 10 else code
                     log(f, "Checking code (preview):", colors.BLUE)
                     log(f, code_preview)
 
@@ -265,16 +261,21 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
                     else:
                         log(f, f"Result: {action_tool} tool failed! ✗", colors.RED, bold=True)
                     
-                    # get the errors
                     errors = action_output["stderr"]
                     if errors:
-                        errors = errors.strip()
-                        # extract only top lines for preview
+                        # errors: extract only top lines for preview
+                        errors = str(errors).strip()
                         errors_preview = errors.split("\n")
                         errors_preview = "\n".join(errors_preview[:10]) + "\n..." if len(errors_preview) > 10 else errors
+                        log(f, "Checking errors (preview):", colors.RED)
                         log(f, errors_preview)
 
                 log(f, "--- End of Reasoning Process ---", colors.MAGENTA, bold=True)
+            
+            if tool_attempts.get("compilation_check", 0) == 0:
+                print_colored("\nWarning: Compilation check tool was NOT used!", colors.YELLOW, bold=True)
+            if tool_attempts.get("execution_check", 0) == 0:
+                print_colored("\nWarning: Execution check tool was NOT used!", colors.YELLOW, bold=True)
             
             # log agent response
             log(f, "Agent:", colors.YELLOW, bold=True)

@@ -137,21 +137,27 @@ def initialize_llm(source: str):
     
 def extract_c_code(text: str) -> str | None:
     """Extract C code from the LLM response."""
+    text = text.strip()
+
     # find code between ```c and ``` markers
     code_blocks = re.findall(r'```c\s*(.*?)```', text, re.DOTALL)
     
     # if not found, try without language specifier
     if not code_blocks:
-        code_blocks = re.findall(r'```\s*(.*?)```+', text, re.DOTALL)
+        code_blocks = re.findall(r'```\s*(.*?)```', text, re.DOTALL)
+
+    # return all blocks joined if any were found
+    if code_blocks:
+        code_blocks = [ str(code_block).strip() for code_block in code_blocks ]
+        code = "\n\n".join(code_blocks)
+        return code
     
-    # if still no code blocks found, check if the entire text is C code
-    # by looking for common C headers or patterns
-    if not code_blocks:
-        if text.strip().startswith('#include') or re.search(r'int\s+main\s*\(', text):
-            return text.strip()
+    # if no code blocks found, check if the entire text is C code by looking for common C headers or patterns
+    if text.startswith('#include') or re.search(r'int\s+main\s*\(', text):
+        return text
     
-    # return the first code block if any were found
-    return code_blocks[0].strip() if code_blocks else None
+    # nothing was found
+    return None
 
 def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
     """Compile the C code using gcc and return compilation result, considering warnings as issues."""
@@ -221,6 +227,8 @@ def compilation_check(code: str) -> dict[str, Any]:
     # Trim whitespace
     code = code.strip()
     
+    # TODO: try extract_c_code
+    
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
         temp_name_file = "tool_test"
@@ -233,15 +241,7 @@ def compilation_check(code: str) -> dict[str, Any]:
 
         # compile the C code
         result = compile_c_code(temp_c_file, temp_out_file)
-        
-        # prepare the response
-        #if result["success"]:
-        #    response = "Compilation successful! The code compiles without any errors or warnings."
-        #else:
-        #    response = f"Compilation failed with the following errors or warnings:\n{result["stderr"]}"
-        #    # add the original code after the error message for easy reference
-        #    response += f"\n\nOriginal code:\n```c\n{code}\n```"
-    
+
     return result
 
 def execution_check(code: str, format: str) -> dict[str, Any]:
@@ -253,6 +253,8 @@ def execution_check(code: str, format: str) -> dict[str, Any]:
     code = code.replace("```", "")
     # Trim whitespace
     code = code.strip()
+
+    # TODO: try extract_c_code
 
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:

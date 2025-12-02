@@ -19,7 +19,7 @@
     - redundant message passing bugfix on multiagent
 - real time entire conversation history passed at each round (loop in the while true) on multiagent
     - messages passed is used for it (not read from log)
-    - supervisor memory avoided but last validation assessment kept in agent state (not read from log)
+    - supervisor memory avoided but last assessment kept in agent state (not read from log)
     - supervisor memory was used to track the last generated parser but it could not be the best
         - maybe a middle one compiles and the last one not
         - conversation history should be enough, if not the code could easily be updated to track the last working parser

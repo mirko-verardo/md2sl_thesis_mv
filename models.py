@@ -49,6 +49,7 @@ class SystemMetrics:
         if self.current_round:
             self.rounds_data[self.current_round]["generator_validator_interactions"] += 1
         
+    # Not used anymore
     def record_tool_usage(self, tool: str, success: bool) -> None:
         """Record tool usage for the current interaction with compilation result."""
         if self.current_round:
@@ -119,15 +120,17 @@ class AgentState(TypedDict):
     user_action: Literal["GENERATE_PARSER", "CORRECT_ERROR", "ASSESS_CODE", "GENERAL_CONVERSATION"]
     user_request: str
     file_format: Literal["CSV", "HTML", "HTTP", "JSON", "GEOJSON", "PDF", "XML"]
-    generator_specs: str | None
+    supervisor_specifications: str | None
     generator_code: str | None
-    validator_assessment: str | None
+    validator_compilation: dict[str, Any] | None
+    validator_testing: dict[str, Any] | None
+    assessor_assessment: str | None
     iteration_count: int
     max_iterations: int
     model_source: str
-    next_step: str  # "Supervisor", "Generator", "Validator", or "FINISH"
-    session_dir: Path  # path to the session directory
-    system_metrics: SystemMetrics  # system interaction metrics
+    next_step: Literal["Supervisor", "Orchestrator", "Generator", "Validator", "Assessor", "FINISH"]
+    session_dir: Path
+    system_metrics: SystemMetrics
 
 # Define tools
 

@@ -21,19 +21,20 @@ Since there are limits to how much code the generator can generate, keep the str
 """
 
 def get_supervisor_input_validated() -> str:
-    return """You are a helpful C programming expert. The user has requested a parser function and we've generated one for him.
+    return """You are a helpful C programming expert. The user has requested a parser function and one has been generated for him.
 
-The generated parser code is:
+The generated parser code:
 ```c
-{c_code}
+{code}
 ```
 
-The validator's assessment: {validator_assessment}
+The generated parser assessment:
+{assessment}
 
 Please provide a friendly response to the user that:
-1. Acknowledges their request
+1. Acknowledges his request
 2. Presents the generated C parser code
-3. Mentions the code satisfaction according to the validator and briefly explains why
+3. Mentions the code satisfaction according to the assessment and briefly explains why
 4. Gives a brief explanation of what the parser does and how it works
 5. Mentions they can ask for clarification or report any issues they find
 
@@ -63,29 +64,31 @@ def get_supervisor_input_correct_error() -> str:
 Check conversation history to find what could be corrected or improved. 
 Be specific about what changes need to be made and why.
 """
-#Previous parser code:
+#The parser code:
 #```c
-#{c_code}
+#{code}
 #```
 #
-#Previous validator's assessment: {validator_assessment}
+#The parser assessment:
+#{assessment}
 #"""
 
 def get_supervisor_input_assess_code() -> str:
-#    return """The user is asking about the quality or validation status of previously generated code.
+#    return """The user is asking about the parser generated.
 #
-#The most recently generated code was:
+#The parser code:
 #```c
-#{c_code}
+#{code}
 #```
 #
-#Validator's assessment: {validator_assessment}
-    return """The user is asking about the quality or validation status of previously generated code.
+#The parser assessment:
+#{assessment}
+    return """The user is asking about the parser generated.
 
 Create a comprehensive response that:
 1. Acknowledges his question
 2. Provides a brief summary of what the parser does (2-3 sentences)
-3. CLEARLY explains the validator's assessment
+3. CLEARLY explains the parser assessment
 4. EXPLICITLY states whether the code was deemed satisfactory or not
 5. Mentions key strengths or limitations
 

@@ -5,8 +5,10 @@ from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langgraph.graph import START, END, StateGraph
 from agents.supervisor.supervisor_agent import supervisor_node
+from agents.orchestrator.orchestrator_agent import orchestrator_node
 from agents.generator.generator_agent import generator_node
 from agents.validator.validator_agent import validator_node
+from agents.assessor.assessor_agent import assessor_node
 from models import AgentState, SystemMetrics
 from utils import colors
 from utils.general import get_model_source_from_input, get_file_format_from_input, print_colored
@@ -32,7 +34,7 @@ def create_session_directory(source: str) -> tuple[Path, Path]:
     
     return session_dir, log_file
 
-def route_next(state: AgentState) -> Literal["Generator", "Validator", "Supervisor", "FINISH"]:
+def route_next(state: AgentState) -> Literal["Supervisor", "Orchestrator", "Generator", "Validator", "Assessor", "FINISH"]:
     """Route to the next node based on the state."""
     return state["next_step"]
 
@@ -42,8 +44,10 @@ def build_workflow():
     
     # Add nodes
     workflow.add_node("Supervisor", supervisor_node)
+    workflow.add_node("Orchestrator", orchestrator_node)
     workflow.add_node("Generator", generator_node)
     workflow.add_node("Validator", validator_node)
+    workflow.add_node("Assessor", assessor_node)
     
     # Set the entry point
     workflow.add_edge(START, "Supervisor")
@@ -53,8 +57,19 @@ def build_workflow():
         "Supervisor",
         route_next,
         {
-            "Generator": "Generator",
+            "Orchestrator": "Orchestrator",
             "FINISH": END
+        }
+    )
+
+    workflow.add_conditional_edges(
+        "Orchestrator", 
+        route_next,
+        {
+            "Supervisor": "Supervisor",
+            "Generator": "Generator",
+            "Validator": "Validator",
+            "Assessor": "Assessor"
         }
     )
     
@@ -62,7 +77,7 @@ def build_workflow():
         "Generator", 
         route_next,
         {
-            "Validator": "Validator"
+            "Orchestrator": "Orchestrator"
         }
     )
     
@@ -70,8 +85,15 @@ def build_workflow():
         "Validator", 
         route_next,
         {
-            "Generator": "Generator",
-            "Supervisor": "Supervisor"
+            "Orchestrator": "Orchestrator"
+        }
+    )
+
+    workflow.add_conditional_edges(
+        "Assessor", 
+        route_next,
+        {
+            "Orchestrator": "Orchestrator"
         }
     )
     
@@ -102,12 +124,12 @@ if __name__ == "__main__":
     
     # Main interaction loop
     while True:
-        action = get_action_from_input(start)
+        user_action = get_action_from_input(start)
         start = False
 
-        if action == "EXIT":
+        if user_action == "EXIT":
             break
-        elif action == "GENERATE_PARSER":
+        elif user_action == "GENERATE_PARSER":
             file_format = get_file_format_from_input()
             # TODO: optimize this fixed prompt
             user_input = f"generate a parser function for {file_format} files"
@@ -115,7 +137,7 @@ if __name__ == "__main__":
             print_colored("\nYou:", colors.GREEN, bold=True)
             user_input = input()
 
-        user_message = f"{action}: {user_input}"
+        user_message = f"{user_action}: {user_input}"
         
         try:
             # Start a new round
@@ -124,12 +146,14 @@ if __name__ == "__main__":
             # Initial state
             initial_state = {
                 "messages": messages + [ HumanMessage(content=user_message) ],
-                "user_action": action,
+                "user_action": user_action,
                 "user_request": user_input,
                 "file_format": file_format,
-                "generator_specs": None,
+                "supervisor_specifications": None,
                 "generator_code": None,
-                "validator_assessment": None,
+                "validator_compilation": None,
+                "validator_testing": None,
+                "assessor_assessment": None,
                 "iteration_count": 0,
                 "max_iterations": 5,
                 "model_source": source,
@@ -147,12 +171,9 @@ if __name__ == "__main__":
             system_metrics.complete_round()
             system_metrics.save_summary(session_dir)
             
-            # Get supervisor response
+            # Get supervisor last response
             #supervisor_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
             #supervisor_response = supervisor_messages[-1].content if supervisor_messages else "no message found"
-            supervisor_response = messages[-1].content if messages else "no message found"
-            print_colored("\nSupervisor response:", colors.GREEN, bold=True)
-            print(supervisor_response)
         except Exception as e:
             print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
             print_colored(format_exc(), colors.RED, bold=True)
