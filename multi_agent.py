@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Literal
 from traceback import format_exc
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from agents.supervisor.supervisor_agent import supervisor_node
 from agents.orchestrator.orchestrator_agent import orchestrator_node
@@ -121,6 +122,7 @@ if __name__ == "__main__":
 
     # Initialize the graph
     graph = build_workflow()
+    config = RunnableConfig(recursion_limit=100)
     
     # Main interaction loop
     while True:
@@ -155,14 +157,14 @@ if __name__ == "__main__":
                 "validator_testing": None,
                 "assessor_assessment": None,
                 "iteration_count": 0,
-                "max_iterations": 5,
+                "max_iterations": 10,
                 "model_source": source,
                 "session_dir": session_dir,
                 "next_step": "Supervisor",
                 "system_metrics": system_metrics
             }
 
-            result = graph.invoke(initial_state)
+            result = graph.invoke(initial_state, config)
 
             messages = result["messages"]
             system_metrics = result["system_metrics"]

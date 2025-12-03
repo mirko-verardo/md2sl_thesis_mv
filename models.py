@@ -17,15 +17,15 @@ class SystemMetrics:
         self.current_round = None  # Track the current round ID
         self.rounds_data = {}  # Detailed data for each round
     
-    def record_parser_validation(self, parser_file: str, compilation_success: bool, execution_success: bool) -> None:
+    def record_parser_validation(self, parser_file: str, compilation_success: bool, testing_success: bool) -> None:
         """Record information about the last validated parser file."""
         if self.current_round:
             # Name of the last parser file
             self.rounds_data[self.current_round]["last_parser_file"] = parser_file
             # Compilation status of the last parser
             self.rounds_data[self.current_round]["compilation_success"] = compilation_success
-            # Execution status of the last parser
-            self.rounds_data[self.current_round]["execution_success"] = execution_success
+            # Testing status of the last parser
+            self.rounds_data[self.current_round]["testing_success"] = testing_success
 
     def start_new_round(self, user_request: str) -> str:
         """Start tracking a new round."""
@@ -40,7 +40,7 @@ class SystemMetrics:
             "completed": False,
             "last_parser_file": None,
             "compilation_success": None,
-            "execution_success": None
+            "testing_success": None
         }
         return round_id
         
@@ -96,7 +96,7 @@ class SystemMetrics:
                 **compilation_rates,
                 "last_parser_file": data["last_parser_file"],
                 "compilation_success": data["compilation_success"],
-                "execution_success": data["execution_success"],
+                "testing_success": data["testing_success"],
                 "start_time": data["start_time"],
                 "end_time": data["end_time"],
                 "completed": data["completed"]
@@ -111,7 +111,7 @@ class SystemMetrics:
         json_data = self.generate_summary()
         
         json_file = session_dir / "system_metrics.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w", encoding="utf-8") as f:
             dump(json_data, f, indent=2)
 
 class AgentState(TypedDict):
@@ -122,8 +122,8 @@ class AgentState(TypedDict):
     file_format: Literal["CSV", "HTML", "HTTP", "JSON", "GEOJSON", "PDF", "XML"]
     supervisor_specifications: str | None
     generator_code: str | None
-    validator_compilation: dict[str, Any] | None
-    validator_testing: dict[str, Any] | None
+    validator_compilation: dict[str, bool | str] | None
+    validator_testing: dict[str, bool | str] | None
     assessor_assessment: str | None
     iteration_count: int
     max_iterations: int
@@ -144,8 +144,8 @@ CompilationCheck = Tool(
 )
 
 def ExecutionCheck(file_format: str) -> Tool:
-    def execution_check_format(c_code: str) -> str:
-        return execution_check(c_code, file_format.lower())
+    def execution_check_format(code: str) -> str:
+        return execution_check(code, file_format.lower())
 
     return Tool(
         name="execution_check",

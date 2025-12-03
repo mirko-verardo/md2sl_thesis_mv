@@ -7,7 +7,6 @@ from utils.general import print_colored
 def orchestrator_node(state: AgentState) -> AgentState:
     """Orchestrator agent that manages the flow."""
     messages = state["messages"]
-    generator_code = state["generator_code"]
     validator_compilation = state["validator_compilation"]
     validator_testing = state["validator_testing"]
     assessor_assessment = state["assessor_assessment"]
@@ -23,9 +22,12 @@ def orchestrator_node(state: AgentState) -> AgentState:
     if prev_node == "Supervisor":
         next_node = "Generator"
     elif prev_node == "Generator":
-        # Check if code has been generated (TODO: not a problem anymore)
-        next_node = "Validator" if (generator_code and not multi_agent.had_agent_problems(generator_code)) else "Generator"
+        next_node = "Validator"
     elif prev_node == "Validator":
+        # NB: here they can't be None
+        if not validator_compilation or not validator_testing:
+            raise Exception("Something goes wrong :(")
+        
         # Check compilation and testing results
         is_compilation_ok = validator_compilation["success"]
         is_testing_ok = validator_testing["success"]
@@ -44,11 +46,15 @@ def orchestrator_node(state: AgentState) -> AgentState:
             assessor_assessment += f"\nCompilation status: {compilation_status}"
             assessor_assessment += f"\nTesting status: {testing_status}"
     elif prev_node == "Assessor":
+        # NB: here it can't be None
+        if not assessor_assessment:
+            raise Exception("Something goes wrong :(")
+        
         # Check if qualitative assessment is positive
         is_satisfactory = multi_agent.is_satisfactory(assessor_assessment)
         next_node = "Supervisor" if is_satisfactory else "Generator"
         # Add compilation and testing status (NB: if here, both must be successful)
-        assessor_assessment = f"Assessment: {assessor_assessment}" if assessor_assessment else ""
+        assessor_assessment = f"Assessment: {assessor_assessment}"
         assessor_assessment = f"Compilation status: ✅ Compilation successful\nTesting status: ✅ Testing successful\n{assessor_assessment}"
     else:
         raise Exception(f"The node {prev_node} doesn't exist!")
@@ -71,7 +77,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "user_request": state["user_request"],
         "file_format": state["file_format"],
         "supervisor_specifications": state["supervisor_specifications"],
-        "generator_code": generator_code,
+        "generator_code": state["generator_code"],
         "validator_compilation": validator_compilation,
         "validator_testing": validator_testing,
         "assessor_assessment": assessor_assessment,

@@ -1,6 +1,5 @@
 from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from models import AgentState
 from agents.assessor import assessor_prompts
 from utils import colors
@@ -29,29 +28,30 @@ def assessor_node(state: AgentState) -> AgentState:
     }
     assessor_prompt = PromptTemplate.from_template(assessor_template)
 
-    # Initialize model for validator
+    # Initialize model for assessor
     assessor_llm = initialize_llm(model_source)
     assessor_llm.temperature = 0.4
 
-    # Create a normal LLM call (no ReAct needed)
-    validator_executor = LLMChain(
-        llm=assessor_llm,
-        prompt=assessor_prompt,
-        verbose=True
-    )
+    # Create a normal LLM chain (no ReAct needed)
+    assessor_executor = assessor_prompt | assessor_llm
+
+    # Print the prompt
+    assessor_prompt_rendered = assessor_prompt.format(**assessor_input)
+    print_colored(f"Assessor PROMPT (Iteration {iteration_count}/{max_iterations}):", colors.GREEN, bold=True)
+    print_colored(assessor_prompt_rendered, colors.GREEN)
     
     # Invoke the agent
     try:
-        assessor_result = validator_executor.invoke(assessor_input)
-        assessor_response = str(assessor_result["text"])
-        assessor_response_color = colors.BLUE
+        assessor_result = assessor_executor.invoke(assessor_input)
+        assessor_response = str(assessor_result.content)
+        assessor_response_color = colors.CYAN
     except Exception as e:
         assessor_response = f"Error occurred during code assessment: {str(e)}\n\nPlease try again."
         assessor_response_color = colors.RED
     
-    # Log the assessment
-    print_colored(f"Assessor (Iteration {iteration_count}/{max_iterations}):", assessor_response_color, bold=True)
-    print(assessor_response)
+    # Print the assessment
+    print_colored(f"Assessor RESPONSE (Iteration {iteration_count}/{max_iterations}):", assessor_response_color, bold=True)
+    print_colored(assessor_response, assessor_response_color)
     
     return {
         "messages": [AIMessage(content=assessor_response, name="Assessor")],

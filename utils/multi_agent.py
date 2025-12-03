@@ -1,3 +1,4 @@
+# TODO: not used, no problems anymore
 def had_agent_problems(output: str) -> bool:
     # Main problems
     problems = [

@@ -6,7 +6,7 @@ from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
 from models import CompilationCheck, ExecutionCheck
 from utils import colors
-from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, print_colored, log, get_parser_requirements
+from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
 
 
 
@@ -63,10 +63,24 @@ This is really important because the final C code you generated will be tested g
 
 <output_handling>
 CODE OUTPUT (IMPORTANT AND MANDATORY):
-Always follow this output rule:
-- If parsing succeeds, print a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
-- If parsing fails, do NOT print anything to stdout; instead, write a descriptive error message to stderr.
-- The summary should be concise and consistent in format, independent of the file type has been parsed.
+
+SUCCESS CASE (PARSING SUCCEEDS):
+- The program MUST NOT print anything to stderr.
+- The program MUST print ONLY a normalized summary of the parsed structure to stdout — NEVER raw input bytes.
+- The summary must be concise and consistent in format, independent of the input type.
+- After printing the summary to stdout, the program MUST terminate IMMEDIATELY with exit code 0.
+
+FAILURE CASE (PARSING FAILS):
+- The program MUST NOT print anything to stdout.
+- The program MUST print a descriptive error message to stderr.
+- After printing the error to stderr, the program MUST terminate IMMEDIATELY with a NON-ZERO exit code.
+
+GLOBAL RULES (APPLIES TO ALL CODE PATHS):
+- ANY condition that produces output on stderr MUST be treated as a fatal parsing error.
+- The program MUST NOT print warnings, informational messages, debug output, or non-fatal notices to stderr.
+- If the program prints anything to stderr, it MUST exit with a non-zero code.
+- Under no circumstances may the program exit with code 0 if ANY output was written to stderr.
+
 </output_handling>
 
 <format_instructions>
@@ -85,8 +99,8 @@ Thought 2: The code compiles; now I need to check if it executes the test correc
 Action 2: execution_check
 Action Input 2: <code_string>
 Observation 2:
-- If execution is not successful, fix the code and return to Thought 1 (restart the entire process).
-- If execution is successful, proceed to Final Answer.
+- If test execution is not successful, fix the code and return to Thought 1 (restart the entire process).
+- If test execution is successful, proceed to Final Answer.
 
 Final Answer: the final code you have generated.
 </format_instructions>
@@ -284,51 +298,72 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             # store in session history
             session_history.append({"user": user_input, "agent": agent_output})
             
-            # extract C code if present
-            c_code = extract_c_code(agent_output)
+            # extract C code
+            code = extract_c_code(agent_output)
             
-            # if C code was found, compile and test it
-            if c_code:
-                print_colored("\n--- Compiling Final C code ---", colors.YELLOW, bold=True)
+            # compile and test it
+            print_colored("\n--- Compiling Final C code ---", colors.YELLOW, bold=True)
+            
+            # create unique filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            c_file_name = f"parser_{timestamp}.c"
+            c_file_path = session_dir / c_file_name
+            o_file_path = c_file_path.with_suffix('')
+            
+            # save the C code to a file
+            with open(c_file_path, "w", encoding="utf-8") as ff:
+                ff.write(code)
+            
+            print(f"\nC code saved to: {c_file_path}")
+            
+            # compile the C code
+            print("Compiling...")
+            compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
+            
+            is_compilation_ok = compilation_result["success"]
+            if is_compilation_ok:
+                format = file_format.lower()
+                test_file_path = f"input/{format}/test.{format}"
+                # testing the C code
+                print("Testing...")
+                testing_result = execute_c_code(str(o_file_path), test_file_path)
+            else:
+                testing_result = {
+                    "success": False,
+                    "stdout": "",
+                    "stderr": "Not even compiled"
+                }
+            
+            # save results
+            result_file_name = f"results_{timestamp}.txt"
+            result_file_path = session_dir / result_file_name
+            
+            with open(result_file_path, "w", encoding="utf-8") as ff:
+                # Compilation
+                if is_compilation_ok:
+                    log(ff, "Compilation successful (no errors or warnings)", colors.GREEN, bold=True)
+                else:
+                    log(ff, "Compilation failed", colors.RED, bold=True)
+                stdout = compilation_result["stdout"]
+                stderr = compilation_result["stderr"]
+                if stdout:
+                    log(ff, f"Standard output:\n{stdout}\n")
+                if stderr:
+                    log(ff, f"Standard error:\n{stderr}")
                 
-                # create unique filename
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                c_file_name = f"parser_{timestamp}.c"
-                c_file_path = session_dir / c_file_name
-                o_file_path = c_file_path.with_suffix('')
-                
-                # save the C code to a file
-                with open(c_file_path, "w") as ff:
-                    ff.write(c_code)
-                
-                print(f"\nC code saved to: {c_file_path}")
-                
-                # compile the C code
-                print("Compiling with gcc...")
-                compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
-                
-                # save compilation results
-                result_file_name = f"compilation_result_{timestamp}.txt"
-                result_file_path = session_dir / result_file_name
-                
-                with open(result_file_path, "w") as ff:
-                    # with -Werror, successful compilation means clean code
-                    if compilation_result['success']:
-                        log(ff, "Compilation successful (no errors or warnings)", colors.GREEN, bold=True)
-                    else:
-                        log(ff, "Compilation failed", colors.RED, bold=True)
-                    
-                    # update command to show we're using -Werror flag
-                    log(ff, f"Command: gcc -Wall -Wextra -Werror {c_file_path} -o {o_file_path}\n")
-                    
-                    if compilation_result['stdout']:
-                        log(ff, f"Standard output:\n{compilation_result['stdout']}\n")
-                    if compilation_result['stderr']:
-                        log(ff, f"Standard error:\n{compilation_result['stderr']}")
-                    if compilation_result['executable']:
-                        log(ff, f"Executable created at: {compilation_result['executable']}")
-                
-                print(f"\nCompilation details saved to: {result_file_path}")
+                # Testing
+                if testing_result["success"]:
+                    log(ff, "Testing successful (no errors or warnings)", colors.GREEN, bold=True)
+                else:
+                    log(ff, "Testing failed", colors.RED, bold=True)
+                stdout = testing_result["stdout"]
+                stderr = testing_result["stderr"]
+                if stdout:
+                    log(ff, f"Standard output:\n{stdout}\n")
+                if stderr:
+                    log(ff, f"Standard error:\n{stderr}")
+            
+            print(f"\nCompilation details saved to: {result_file_path}")
             
         except Exception as e:
             log(f, f"Error: {str(e)}", colors.RED, bold=True)
@@ -340,7 +375,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
 
     # save the entire conversation history
     history_file = session_dir / f"full_history_{conversation_id}.txt"
-    with open(history_file, 'w') as f:
+    with open(history_file, "w", encoding="utf-8") as f:
         f.write(f"=== C Parser Generator Chat History - {datetime.now()} ===\n\n")
         for exchange in session_history:
             f.write(f"You: {exchange['user']}\n\n")

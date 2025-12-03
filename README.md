@@ -39,8 +39,7 @@
 
 ## TODO
 
-- test execution can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
-- introduce an ORCHESTRATOR agent (divide et impera)
+- testing can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
 - specific test for some formats (JSON)
     - i have to produce specific c code to apply test
 - c code static analysis for vulnerabilities checking (new agent)
@@ -48,6 +47,22 @@
     - search for ready c tool
 - sage metric paper
 - better memory management between different loops in multiagent system (using last generator code)
+
+## Static Analysis Tool
+
+## Paper's
+
+- Bandit: NO, only Python
+- SonarQube: NO, C only commercial
+- CodeQL: YES? A lot of languages: heavy?
+
+### Others
+
+- Splint: NO, last version 2007
+- Cpplint: YES, pipx install? Only cpp?
+- Cppcheck: YES
+- Clang: YES
+- CodeChecker: ? (aggregator, heavy?)
 
 ## Prompts
 
@@ -72,8 +87,8 @@
         - Each format has a different testing inputs and strategy/checks
         - PRO: real testing, CONS: manual test cases (checks definition)
     - Initial simple strategy:
-        - if execution OK: print a parsed input summary on stdout
-        - if execution FAILS: print errors on stderr
+        - if testing OK: print a parsed input summary on stdout
+        - if testing FAILS: print errors on stderr
         - PRO: a lot of files (external repository?) can be used as input (no checks definition), CONS: minimal testing
 2. Generate automatically through an agent file to parse and test cases on it
     - difficult

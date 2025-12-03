@@ -4,7 +4,6 @@ from getpass import getpass
 from pydantic import SecretStr
 from subprocess import run
 from tempfile import TemporaryDirectory
-from typing import Any
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -135,7 +134,7 @@ def initialize_llm(source: str):
     
     raise ValueError("Invalid source")
     
-def extract_c_code(text: str) -> str | None:
+def extract_c_code(text: str) -> str:
     """Extract C code from the LLM response."""
     text = text.strip()
 
@@ -152,14 +151,10 @@ def extract_c_code(text: str) -> str | None:
         code = "\n\n".join(code_blocks)
         return code
     
-    # if no code blocks found, check if the entire text is C code by looking for common C headers or patterns
-    if text.startswith('#include') or re.search(r'int\s+main\s*\(', text):
-        return text
-    
-    # nothing was found
-    return None
+    # if no code block is found, then return as is
+    return text
 
-def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
+def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str]:
     """Compile the C code using gcc and return compilation result, considering warnings as issues."""
     
     # run gcc to compile the code with all warnings enabled and treated as errors
@@ -169,19 +164,15 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, Any]:
         capture_output=True,
         text=True
     )
-
-    # compilation success (executable created, no warnings)
-    result_is_success = (result.returncode == 0)
     
-    # with -Werror, compilation success means no warnings
+    # with -Werror, compilation success means executable created and no warnings
     return {
-        'success': result_is_success,  
+        'success': (result.returncode == 0),  
         'stdout': result.stdout,
-        'stderr': result.stderr,
-        'executable': out_file_path if result_is_success else None
+        'stderr': result.stderr
     }
 
-def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, Any]:
+def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
@@ -205,29 +196,23 @@ def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, Any]:
     )
 
     # Decode stdout/stderr only for human-readable messages
-    def safe_decode(b):
+    def safe_decode(b: bytes) -> str:
         try:
-            return b.decode('utf-8')
+            return b.decode("utf-8")
         except:
             return repr(b)
 
     return {
-        'success': result.returncode == 0,
+        'success': (result.returncode == 0),
         'stdout': safe_decode(result.stdout),
         'stderr': safe_decode(result.stderr)
     }
 
-def compilation_check(code: str) -> dict[str, Any]:
+def compilation_check(text: str) -> dict[str, bool | str]:
     """Function that checks if C code compiles correctly without warnings."""
-    # Clean the code by removing markdown delimiters:
-    # Remove ```c from the beginning of lines
-    code = code.replace("```c", "")
-    # Remove ``` from anywhere
-    code = code.replace("```", "")
-    # Trim whitespace
-    code = code.strip()
-    
-    # TODO: try extract_c_code
+    # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
+    #code = text.replace("```c", "").replace("```", "").strip()
+    code = extract_c_code(text)
     
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
@@ -235,7 +220,7 @@ def compilation_check(code: str) -> dict[str, Any]:
         temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
         temp_out_file = os.path.join(temp_dir, f"{temp_name_file}.out")
 
-        # Write code to file
+        # write code to file
         with open(temp_c_file, "w", encoding="utf-8") as f:
             f.write(code)
 
@@ -244,17 +229,11 @@ def compilation_check(code: str) -> dict[str, Any]:
 
     return result
 
-def execution_check(code: str, format: str) -> dict[str, Any]:
-    """Function that checks if C code compiles correctly without warnings."""
-    # Clean the code by removing markdown delimiters:
-    # Remove ```c from the beginning of lines
-    code = code.replace("```c", "")
-    # Remove ``` from anywhere
-    code = code.replace("```", "")
-    # Trim whitespace
-    code = code.strip()
-
-    # TODO: try extract_c_code
+def execution_check(text: str, format: str) -> dict[str, bool | str]:
+    """Function that checks if C code executes correctly without warnings."""
+    # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
+    #code = text.replace("```c", "").replace("```", "").strip()
+    code = extract_c_code(text)
 
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
@@ -262,7 +241,7 @@ def execution_check(code: str, format: str) -> dict[str, Any]:
         temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
         temp_out_file = os.path.join(temp_dir, temp_name_file)
 
-        # Write code to file
+        # write code to file
         with open(temp_c_file, "w", encoding="utf-8") as f:
             f.write(code)
 

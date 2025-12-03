@@ -59,13 +59,11 @@ Generate a complete C parser implementation following all the instructions above
 
 def get_feedback_template() -> str:
     return """<feedback>
-You received the following feedback from the validator (IMPORTANT):
-{assessment}
-
-Correct the following code you have generated, addressing all the issues above while ensuring your implementation remains complete with no placeholders:
+Correct the following code you have generated, addressing all the assessment issues while ensuring your implementation remains complete with no placeholders:
 ```c
 {code}
 ```
 
 This is the assessment about the code above (IMPORTANT):
+{assessment}
 </feedback>"""

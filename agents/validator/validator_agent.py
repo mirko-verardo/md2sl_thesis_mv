@@ -16,6 +16,10 @@ def validator_node(state: AgentState) -> AgentState:
     session_dir = state["session_dir"]
     system_metrics = state["system_metrics"]
 
+    # NB: here it can't be None
+    if not generator_code:
+        raise Exception("Something goes wrong :(")
+
     # Save c code to temporary file for compilation
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     c_file_name = f"parser_{timestamp}.c"
@@ -37,11 +41,9 @@ def validator_node(state: AgentState) -> AgentState:
     if is_compiled:
         # Test the code
         print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
-        base_dir = Path("input")
         format = file_format.lower()
-        test_file_name = "test." + format
-        test_file_path = base_dir / format / test_file_name
-        testing_result = execute_c_code(str(o_file_path), str(test_file_path))
+        test_file_path = f"input/{format}/test.{format}"
+        testing_result = execute_c_code(str(o_file_path), test_file_path)
         # Check if code has been executed with success
         is_tested = testing_result["success"]
         testing_status = "✅ Testing successful" if is_tested else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
@@ -58,7 +60,7 @@ def validator_node(state: AgentState) -> AgentState:
             "stderr": "Not even compiled"
         }
         is_tested = False
-        testing_status = "❌ Test execution failed because the generated code doesn't even compile"
+        testing_status = "❌ Testing failed because the generated code doesn't even compile"
 
     # Record parser validation in metrics
     system_metrics.record_parser_validation(c_file_name, is_compiled, is_tested)
@@ -67,9 +69,12 @@ def validator_node(state: AgentState) -> AgentState:
     print_colored(f"Validator (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
     print_colored(f"Compilation result: {compilation_status}", colors.GREEN if is_compiled else colors.RED, bold=True)
     print_colored(f"Testing result: {testing_status}", colors.GREEN if is_tested else colors.RED, bold=True)
+
+    # for conversation history only
+    validator_response = f"Compilation result: {compilation_status}\nTesting result: {testing_status}"
     
     return {
-        "messages": [AIMessage(content="", name="Validator")],
+        "messages": [AIMessage(content=validator_response, name="Validator")],
         "user_action": state["user_action"],
         "user_request": state["user_request"],
         "file_format": file_format,

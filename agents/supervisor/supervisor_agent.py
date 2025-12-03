@@ -1,6 +1,5 @@
 from langchain_core.messages import AIMessage, get_buffer_string
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from models import AgentState
 from utils import colors
 from utils.general import print_colored, initialize_llm, get_parser_requirements
@@ -66,35 +65,32 @@ def supervisor_node(state: AgentState) -> AgentState:
     supervisor_llm = initialize_llm(model_source)
     supervisor_llm.temperature = 0.6
     
-    # Create a normal LLM call (no ReAct needed)
-    supervisor_executor = LLMChain(
-        llm=supervisor_llm,
-        prompt=supervisor_prompt,
-        verbose=True
-    )
+    # Create a normal LLM chain (no ReAct needed)
+    supervisor_executor = supervisor_prompt | supervisor_llm
 
+    # Print the prompt
     #prompt_input = supervisor_input.copy()
     #prompt_input.update({
     #    "tools": "",
     #    "tool_names": "",
     #    "agent_scratchpad": ""
     #})
-    #final_prompt = supervisor_prompt.format(**prompt_input)
-    #prova_file = state["session_dir"] / "prova.txt"
-    #with open(prova_file, "w", encoding="utf-8") as f:
-    #    f.write(final_prompt)
+    #supervisor_prompt_rendered = supervisor_prompt.format(**prompt_input)
+    supervisor_prompt_rendered = supervisor_prompt.format(**supervisor_input)
+    print_colored(f"Supervisor PROMPT ({purpose}):", colors.GREEN, bold=True)
+    print_colored(supervisor_prompt_rendered, colors.GREEN)
 
     try:
         supervisor_result = supervisor_executor.invoke(supervisor_input)
-        supervisor_response = str(supervisor_result["text"])
+        supervisor_response = str(supervisor_result.content)
     except Exception as e:
         supervisor_response = f"Error occurred during supervisor response: {str(e)}\n\nPlease try again."
 
     # NB: set the specifications for generator
     supervisor_specifications = supervisor_response if next_step == "Orchestrator" else None
 
-    print_colored(f"Supervisor ({purpose}):", colors.BLUE, bold=True)
-    print(supervisor_response)
+    print_colored(f"Supervisor RESPONSE ({purpose}):", colors.BLUE, bold=True)
+    print_colored(supervisor_response, colors.BLUE)
     
     return {
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],

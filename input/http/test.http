@@ -1,95 +1,43 @@
-# ============================================================
-# Environments
-# ============================================================
-@hostname = https://api.example.com
-@dev_hostname = http://localhost:8080
-@token = {{authToken}}
-@userId = 12345
-
-# To switch environments, comment/uncomment a line:
-@baseUrl = {{hostname}}
-# @baseUrl = {{dev_hostname}}
-
-# ============================================================
-# Authentication: Obtain JWT token
-# ============================================================
-### Get auth token (JWT)
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "username": "test_user",
-  "password": "test_password"
-}
-
-# After executing this, capture the returned token manually
-# or use REST Client's variable substitution if supported:
-# @authToken = {{last_response.body.token}}
-
-# ============================================================
-# Users
-# ============================================================
-### Get all users
-GET {{baseUrl}}/users
+### Retrieve all users with optional pagination (GET)
+GET https://api.example.com/v1/users?page=1&limit=20
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### Get one user (parameterized)
-GET {{baseUrl}}/users/{{userId}}
+###
+
+### Retrieve a single user by ID (GET)
+GET https://api.example.com/v1/users/42
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### Create a new user
-POST {{baseUrl}}/users
+###
+
+### Create a new user (POST)
+POST https://api.example.com/v1/users
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "email": "newuser@example.com",
-  "name": "New User",
-  "role": "analyst"
+  "name": "Elena Ruiz",
+  "email": "elena.ruiz@example.com",
+  "role": "editor"
 }
 
-### Update a user
-PUT {{baseUrl}}/users/{{userId}}
+###
+
+### Update an existing user (PUT)
+PUT https://api.example.com/v1/users/42
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "email": "updated@example.com",
-  "name": "Updated User",
-  "role": "senior-analyst"
+  "name": "Elena R. Ruiz",
+  "email": "elena.ruiz@example.com",
+  "role": "admin"
 }
 
-### Delete a user
-DELETE {{baseUrl}}/users/{{userId}}
+###
+
+### Delete a user (DELETE)
+DELETE https://api.example.com/v1/users/42
 Authorization: Bearer {{token}}
-
-# ============================================================
-# Domain Example: Metrics
-# ============================================================
-### Retrieve system metrics
-GET {{baseUrl}}/metrics/system
-Accept: application/json
-Authorization: Bearer {{token}}
-
-### Submit analytics event
-POST {{baseUrl}}/analytics/event
-Content-Type: application/json
-Authorization: Bearer {{token}}
-
-{
-  "eventType": "click",
-  "timestamp": "{{timestamp}}",
-  "metadata": {
-    "element": "cta_button",
-    "page": "dashboard"
-  }
-}
-
-# ============================================================
-# Health Check
-# ============================================================
-### Service health check
-GET {{baseUrl}}/health
-Accept: application/json
