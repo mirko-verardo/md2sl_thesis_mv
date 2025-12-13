@@ -6,11 +6,14 @@
 - **Packages**: `requirements.txt`
 - **Variables**: `.env`
     ```
-    FOLDER_PATH="your-absolute-path"
     GOOGLE_API_KEY="your-key"
     OPENAI_API_KEY="your-key"
     ANTHROPIC_API_KEY="your-key"
     ```
+
+## GCC
+
+- gcc.exe (Rev8, Built by MSYS2 project) 15.2.0
 
 ## Improvements
 
@@ -40,6 +43,9 @@
 ## TODO
 
 - testing can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
+    - solved with more specific prompt
+- better output folder division (for file format)
+- better stderr management with name file avoiding (confounding)
 - specific test for some formats (JSON)
     - i have to produce specific c code to apply test
 - c code static analysis for vulnerabilities checking (new agent)
@@ -47,6 +53,7 @@
     - search for ready c tool
 - sage metric paper
 - better memory management between different loops in multiagent system (using last generator code)
+- better log management
 
 ## Static Analysis Tool
 
@@ -61,7 +68,7 @@
 - Splint: NO, last version 2007
 - Cpplint: YES, pipx install? Only cpp?
 - Cppcheck: YES
-- Clang: YES
+- LLVM Clang: YES
 - CodeChecker: ? (aggregator, heavy?)
 
 ## Prompts

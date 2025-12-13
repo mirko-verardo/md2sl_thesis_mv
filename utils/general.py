@@ -155,12 +155,57 @@ def extract_c_code(text: str) -> str:
     return text
 
 def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str]:
-    """Compile the C code using gcc and return compilation result, considering warnings as issues."""
+    """Compile the C code using gcc with strict optimization, warnings and hardening."""
     
-    # run gcc to compile the code with all warnings enabled and treated as errors
-    # using -Wall and -Wextra flags to enable all warnings and -Werror to treat warnings as errors
+    # TODO: check security flags
+    # https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+
+    gcc_flags = [
+        # OPTIMIZATION
+        "-O2",
+
+        # WARNINGS
+        # common warnings, additional warnings, all warnings as compilation errors
+        "-Wall", "-Wextra", "-Werror",
+        # detects unsafe or incorrect printf-style formatting (both must be specified for GCC vs Clang reason)
+        "-Wformat", "-Wformat=2",
+        # detects implicit type conversions that may change value, including signed/unsigned
+        "-Wconversion", "-Wsign-conversion", 
+        # detects when trampolines are generated (security risk) (privilege escalation?)
+        "-Wtrampolines",
+        # detects missing break in switch
+        "-Wimplicit-fallthrough",
+        # detects Unicode bidirectional characters (Trojan Source attacks)
+        "-Wbidi-chars=any,ucn",
+
+        # FORTIFY
+        # enables glibc bounds checking at runtime
+        "-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=3",
+
+        # HARDENING
+        # enforces correct use of flexible array members
+        "-fstrict-flex-arrays=3",
+        # prevents stack clash attacks
+        "-fstack-clash-protection",
+        # enables run-time checks for stack-based buffer overflows for all functions
+        #"-fstack-protector-all",
+        # enables run-time checks for stack-based buffer overflows using strong heuristic (performance balanced)
+        "-fstack-protector-strong",
+        # enables Control-Flow Enforcement Technology (CET) (problematic if not x86_64 and not Kernel Linux)
+        "-fcf-protection=full",
+        # meta-flag for enabling multiple hardening features
+        #"-fhardened",
+        # prevents data leakage with zero-initializing padding bits
+        "-fzero-init-padding-bits=all",
+
+        # Sanitizers (heavy)
+        #"-fsanitize=address,undefined,leak"
+        # DO NOT combine thread with address/leak
+        #"-fsanitize=address,undefined,leak,thread"
+    ]
+
     result = run(
-        ['gcc', '-Wall', '-Wextra', '-Werror', c_file_path, '-o', out_file_path],
+        ["gcc", *gcc_flags, c_file_path, "-o", out_file_path],
         capture_output=True,
         text=True
     )

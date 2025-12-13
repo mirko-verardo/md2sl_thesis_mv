@@ -31,14 +31,11 @@ def map_input_to_action(input: int) -> str:
     
     raise Exception("Cannot map input to action")
 
-def get_action_from_input(start: bool) -> str:
+def get_action_from_input() -> str:
     """Get the action from the user input"""
-    # speed up
-    if start:
-        return map_input_to_action(1)
     
     print("Available actions:\n")
-    actions = range(1, 6)
+    actions = range(2, 6)
     for i in actions:
         print(f"- {i}: {map_input_to_action(i)}")
 

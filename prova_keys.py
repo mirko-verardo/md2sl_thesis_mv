@@ -3,7 +3,6 @@ from utils.general import initialize_llm
 who = "google"
 #who = "openai"
 #who = "anthropic"
-#who = "huggingface"
 
 llm = initialize_llm(who)
 

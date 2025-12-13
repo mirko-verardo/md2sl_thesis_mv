@@ -190,14 +190,9 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
         early_stopping_method="force"
     )
     
-    # folder_path: Path where the output folder will be created and files saved
-    folder_path = set_if_undefined("FOLDER_PATH")
-    # folder_path to a Path object if it's a string
-    base_dir = Path(folder_path)
-    
     # create output directory in the specified folder
-    folder_name = source + "/" + ("few_shot" if few_shot else "zero_shot")
-    output_dir = base_dir / "output" / folder_name
+    file_format_low = file_format.lower()
+    output_dir = Path(f"output/{source}/{"few_shot" if few_shot else "zero_shot"}/{file_format_low}")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # chat history for the current session
@@ -215,20 +210,13 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
     log(f, "=== C Parser Generator Chat ===", colors.CYAN, bold=True)
     print_colored("Ask for any parser or C function. Type 'exit' to quit.\n", colors.CYAN)
     print(f"Output directory: {session_dir}")
+
+    # Initialize parameters
+    user_input = f"generate a parser function for {file_format} files"
     
     # main chat loop
-    start = True
     while True:
-        # get and log user input
-        if start:
-            user_input = f"generate a parser function for {file_format} files"
-            start = False
-        else:
-            log(f, "You:", colors.GREEN, bold=True)
-            user_input = input()        
-            # check for exit command
-            if user_input.lower() in ["exit", "quit", "bye"]:
-                break
+        # log user input
         f.write(f"\n{user_input}\n")
         
         # response from agent
@@ -322,8 +310,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             
             is_compilation_ok = compilation_result["success"]
             if is_compilation_ok:
-                format = file_format.lower()
-                test_file_path = f"input/{format}/test.{format}"
+                test_file_path = f"input/{file_format_low}/test.{file_format_low}"
                 # testing the C code
                 print("Testing...")
                 testing_result = execute_c_code(str(o_file_path), test_file_path)
@@ -369,6 +356,13 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             log(f, f"Error: {str(e)}", colors.RED, bold=True)
             log(f, "Detailed error:", colors.RED, bold=True)
             log(f, format_exc())
+        
+        # Ask the user
+        log(f, "You:", colors.GREEN, bold=True)
+        user_input = input()        
+        # check for exit command
+        if user_input.lower() in ["exit", "quit", "bye"]:
+            break
 
     # manually close the stream
     f.close()

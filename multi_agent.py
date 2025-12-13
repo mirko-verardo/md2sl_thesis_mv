@@ -17,11 +17,10 @@ from utils.multi_agent import get_action_from_input
 
 
 
-def create_session_directory(source: str) -> tuple[Path, Path]:
+def create_session_directory(path: str) -> tuple[Path, Path]:
     """Create a session directory with timestamp and return its path."""
-    full_path = f"output/{source}/multi_agent"
     
-    base_dir = Path(full_path)
+    base_dir = Path(path)
     base_dir.mkdir(parents=True, exist_ok=True)
     
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -108,37 +107,24 @@ if __name__ == "__main__":
     
     print_colored("\n=== C Parser Generator System ===", colors.CYAN, bold=True)
     print_colored("You can chat with the Supervisor about C programming or request a parser", colors.CYAN)
-    print_colored("Enter your message or type 'exit' to quit", colors.CYAN)
-    print_colored(f"Session files will be saved in the 'output/{source}/multi_agent/' directory", colors.CYAN)
-
-    # Create session
-    session_dir, log_file = create_session_directory(source)
-    
-    # Initialize parameters
-    messages = []
-    system_metrics = SystemMetrics()
-    start = True
-    file_format = ""
 
     # Initialize the graph
     graph = build_workflow()
     config = RunnableConfig(recursion_limit=100)
+
+    # Initialize parameters
+    messages = []
+    system_metrics = SystemMetrics()
+    user_action = "GENERATE_PARSER"
+    file_format = get_file_format_from_input()
+    # TODO: optimize this fixed prompt
+    user_input = f"generate a parser function for {file_format} files"
+
+    # Create session
+    session_dir, log_file = create_session_directory(f"output/{source}/multi_agent/{file_format.lower()}")
     
     # Main interaction loop
     while True:
-        user_action = get_action_from_input(start)
-        start = False
-
-        if user_action == "EXIT":
-            break
-        elif user_action == "GENERATE_PARSER":
-            file_format = get_file_format_from_input()
-            # TODO: optimize this fixed prompt
-            user_input = f"generate a parser function for {file_format} files"
-        else:
-            print_colored("\nYou:", colors.GREEN, bold=True)
-            user_input = input()
-
         user_message = f"{user_action}: {user_input}"
         
         try:
@@ -180,6 +166,14 @@ if __name__ == "__main__":
             print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
             print_colored(format_exc(), colors.RED, bold=True)
             print_colored("Please try again with a different query.", colors.RED, bold=True)
+        
+        # Ask the user again
+        user_action = get_action_from_input()
+        if user_action == "EXIT":
+            break
+        else:
+            print_colored("\nYou:", colors.GREEN, bold=True)
+            user_input = input()
     
     # Log conversation
     with open(log_file, "w", encoding="utf-8") as f:
