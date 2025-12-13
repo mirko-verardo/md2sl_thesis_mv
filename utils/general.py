@@ -91,6 +91,7 @@ def initialize_llm(source: str):
         #model_id = 'gemini-2.5-pro'
         model_id = 'gemini-2.5-flash'
         #model_id = 'gemini-2.0-flash'
+        #model_id = 'gemini-2.5-flash-lite'
         api_key = set_if_undefined("GOOGLE_API_KEY")
 
         return ChatGoogleGenerativeAI(
@@ -160,7 +161,7 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
     # TODO: check security flags
     # https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
 
-    gcc_flags = [
+    compiler_flags = [
         # OPTIMIZATION
         "-O2",
 
@@ -197,6 +198,19 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         #"-fhardened",
         # prevents data leakage with zero-initializing padding bits
         "-fzero-init-padding-bits=all",
+        # builds as position-independent executable
+        #"-fPIE",
+        # forces retention of null pointer checks
+        "-fno-delete-null-pointer-checks",
+        # defines behavior for signed integer and pointer arithmetic overflows
+        "-fno-strict-overflow",
+        # assumes not strict aliasing
+        "-fno-strict-aliasing",
+        # initializes automatic variables that lack explicit initializers
+        "-ftrivial-auto-var-init=zero",
+
+        # static analysis flag
+        "-fanalyzer",
 
         # Sanitizers (heavy)
         #"-fsanitize=address,undefined,leak"
@@ -204,17 +218,37 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         #"-fsanitize=address,undefined,leak,thread"
     ]
 
+    linker_flags = [
+        # restricts dlopen(3) calls to shared objects + marks stack memory as non-executable
+        #"-Wl,-z,nodlopen,-z,noexecstack",
+        # marks relocation table entries resolved at load-time as read-only
+        #"-Wl,-z,relro,-z,now",
+        # allows linker to omit libraries specified on the command line if they are not used
+        #"-Wl,--as-needed,--no-copy-dt-needed-entries",
+        # build as position-independent executable
+        #"-pie"
+    ]
+
     result = run(
-        ["gcc", *gcc_flags, c_file_path, "-o", out_file_path],
+        ["gcc", *compiler_flags, c_file_path, *linker_flags, "-o", out_file_path],
         capture_output=True,
         text=True
     )
+
+    compilation_stdout = result.stdout if result.stdout else ""
+    compilation_stderr = result.stderr if result.stderr else ""
+
+    # avoiding confusion for LLM on file name referred in stderr + better line and column number specification
+    pattern = rf"{re.escape(c_file_path)}:(\d+):(\d+)"
+    compilation_stderr = re.sub(pattern, r"Line \1 Column \2", compilation_stderr)
+    pattern = rf"{re.escape(c_file_path)}: "
+    compilation_stderr = re.sub(pattern, "", compilation_stderr)
     
     # with -Werror, compilation success means executable created and no warnings
     return {
         'success': (result.returncode == 0),  
-        'stdout': result.stdout,
-        'stderr': result.stderr
+        'stdout': compilation_stdout,
+        'stderr': compilation_stderr
     }
 
 def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, bool | str]:
@@ -256,7 +290,6 @@ def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, bool | st
 def compilation_check(text: str) -> dict[str, bool | str]:
     """Function that checks if C code compiles correctly without warnings."""
     # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
-    #code = text.replace("```c", "").replace("```", "").strip()
     code = extract_c_code(text)
     
     # create a temporary directory
@@ -277,7 +310,6 @@ def compilation_check(text: str) -> dict[str, bool | str]:
 def execution_check(text: str, format: str) -> dict[str, bool | str]:
     """Function that checks if C code executes correctly without warnings."""
     # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
-    #code = text.replace("```c", "").replace("```", "").strip()
     code = extract_c_code(text)
 
     # create a temporary directory

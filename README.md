@@ -21,35 +21,37 @@
     - agents prompts isolated from the logic
     - redundant message passing bugfix on multiagent
 - real time entire conversation history passed at each round (loop in the while true) on multiagent
-    - messages passed is used for it (not read from log)
+    - messages passed are used for it (not read from log)
+        - something better can be done, for example passing only last parser/assessment at each loop
     - supervisor memory avoided but last assessment kept in agent state (not read from log)
     - supervisor memory was used to track the last generated parser but it could not be the best
         - maybe a middle one compiles and the last one not
-        - conversation history should be enough, if not the code could easily be updated to track the last working parser
-- supervisor and validator doesn't need ReAct approach since they don't have tools to use
+        - the code could easily be updated to track the last working parser
+- supervisor and assessor doesn't need ReAct approach since they don't have tools to use
     - so they do a single LLM call
+- also generator doesn't need ReAct at all because we are in a multiagent system where each agent does 1 thing
 - let the user choose directly the followings:
     - file format to generate the parser for (PDF, JSON, HTML, etc...)
         - so test can be easily executed
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
-- **true story**: ReAct paradigm could not be ideal in a multiagent system
-    - ReAct fits good in a single agent system, where one agent can do multiple things thanks to ReAct
-    - in multiagent systems, the real advantage comes from roles specialization where each agent has its own (unique) job
-        - overlapping roles doesn't make sense
-    - also, the cool thing is the **comparison**: 1 ReAct agent that does N things vs N agents that do 1 thing each
-        - the max iteration can be set the same in both systems
+- hardening flags on compilation added
+- compiled code testing is added giving a file (in correct format) as input to the exe
+- secondary
+    - output folders divided by file format
+    - user can generate 1 file format parser for each conversation (avoiding confusion)
+    - better stderr management with file name replaced (confounding) and line and column number specified
 
 ## TODO
 
-- testing can be with exit status 0 (ok) but with program that captures and writes exceptions on stderr
+- divide compiler and tester
+- testing can exit with status code equal to 0 (ok) but with program that captures and writes exceptions on stderr
     - solved with more specific prompt
-- better output folder division (for file format)
-- better stderr management with name file avoiding (confounding)
 - specific test for some formats (JSON)
-    - i have to produce specific c code to apply test
+    - I have to produce specific c code to apply test
+    - I have to create specific test case linked to each input file
 - c code static analysis for vulnerabilities checking (new agent)
-    - python bandit integration tool (code python analysis)
+    - integration of tool like Bandit (code python analysis)
     - search for ready c tool
 - sage metric paper
 - better memory management between different loops in multiagent system (using last generator code)
@@ -57,7 +59,7 @@
 
 ## Static Analysis Tool
 
-## Paper's
+### Paper's
 
 - Bandit: NO, only Python
 - SonarQube: NO, C only commercial
@@ -65,6 +67,7 @@
 
 ### Others
 
+- **GCC**
 - Splint: NO, last version 2007
 - Cpplint: YES, pipx install? Only cpp?
 - Cppcheck: YES
@@ -79,11 +82,6 @@
 - *simple*: 
     - generate a simple parser function for JSON files
     - generate a simple parser function for CSV files
-
-## Ideas
-
-- avoid generating different file format parser in the same conversation
-- create specific test case linked to each input file
 
 ## Unit Testing
 
@@ -117,3 +115,9 @@
 
 - understand what can be done (or better generated) by the llm and what it's far better to manually control
 - real work: give the agent the right way
+- ReAct paradigm could not be ideal in a multiagent system
+    - ReAct fits good in a single agent system, where one agent can do multiple things thanks to ReAct
+    - in multiagent systems, the real advantage comes from roles specialization where each agent has its own (unique) job
+        - overlapping roles doesn't make sense
+    - also, the cool thing is the **comparison**: 1 ReAct agent that does N things vs N agents that do 1 thing each
+        - the max iteration can be set the same in both systems

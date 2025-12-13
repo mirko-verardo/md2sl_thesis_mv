@@ -24,26 +24,27 @@ def validator_node(state: AgentState) -> AgentState:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     c_file_name = f"parser_{timestamp}.c"
     c_file_path = session_dir / c_file_name
-    o_file_path = c_file_path.with_suffix('')
+    c_file_path_str = str(c_file_path)
+    o_file_path_str = str(c_file_path.with_suffix(''))
     
     with open(c_file_path, "w", encoding="utf-8") as f:
         f.write(generator_code)
     
-    print_colored(f"\nSaved C code to: {c_file_path} for compilation testing", colors.CYAN, bold=True)
+    print_colored(f"\nSaved C code to: {c_file_path_str} for compilation testing", colors.CYAN, bold=True)
     
     # Compile the code
     print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)
-    compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
+    compilation_result = compile_c_code(c_file_path_str, o_file_path_str)
     # Check if code has been compiled with success
     is_compiled = compilation_result["success"]
-    compilation_status = "✅ Compilation successful" if is_compiled else "❌ Compilation failed with the following errors:\n" + compilation_result["stderr"]
     
     if is_compiled:
+        compilation_status = "✅ Compilation successful"
         # Test the code
         print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
         format = file_format.lower()
         test_file_path = f"input/{format}/test.{format}"
-        testing_result = execute_c_code(str(o_file_path), test_file_path)
+        testing_result = execute_c_code(o_file_path_str, test_file_path)
         # Check if code has been executed with success
         is_tested = testing_result["success"]
         testing_status = "✅ Testing successful" if is_tested else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
@@ -54,6 +55,7 @@ def validator_node(state: AgentState) -> AgentState:
             test_output += f"stderr: {testing_result["stderr"]}"
             f.write(test_output)
     else:
+        compilation_status = f"❌ Compilation failed with the following errors:\n{compilation_result["stderr"]}"
         testing_result = {
             "success": False,
             "stdout": "",
