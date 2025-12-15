@@ -44,7 +44,6 @@
 
 ## TODO
 
-- divide compiler and tester
 - testing can exit with status code equal to 0 (ok) but with program that captures and writes exceptions on stderr
     - solved with more specific prompt
 - specific test for some formats (JSON)

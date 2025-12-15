@@ -3,7 +3,7 @@ from json import dump
 from operator import add
 from pathlib import Path
 from typing_extensions import TypedDict
-from typing import Annotated, Sequence, Any, Literal
+from typing import Annotated, Sequence, Any, Literal, TypeAlias
 from langchain_core.messages import BaseMessage
 from langchain.tools import Tool
 from utils.general import compilation_check, execution_check
@@ -13,17 +13,23 @@ from utils.general import compilation_check, execution_check
 class SystemMetrics:
     """Class for tracking system interactions and metrics."""
     def __init__(self):
-        self.rounds = 0  # Complete rounds (user-supervisor-generator-validator)
+        self.rounds = 0  # Complete rounds
         self.current_round = None  # Track the current round ID
         self.rounds_data = {}  # Detailed data for each round
     
-    def record_parser_validation(self, parser_file: str, compilation_success: bool, testing_success: bool) -> None:
-        """Record information about the last validated parser file."""
+    def record_parser_compilation(self, parser_file: str, compilation_success: bool) -> None:
+        """Record information about the last compilated parser file."""
         if self.current_round:
             # Name of the last parser file
             self.rounds_data[self.current_round]["last_parser_file"] = parser_file
             # Compilation status of the last parser
             self.rounds_data[self.current_round]["compilation_success"] = compilation_success
+    
+    def record_parser_testing(self, parser_file: str, testing_success: bool) -> None:
+        """Record information about the last tested parser file."""
+        if self.current_round:
+            # Name of the last parser file
+            self.rounds_data[self.current_round]["last_parser_file"] = parser_file
             # Testing status of the last parser
             self.rounds_data[self.current_round]["testing_success"] = testing_success
 
@@ -34,7 +40,7 @@ class SystemMetrics:
         self.current_round = round_id
         self.rounds_data[round_id] = {
             "user_request": user_request,
-            "generator_validator_interactions": 0,
+            "generator_interactions": 0,
             "start_time": datetime.now().isoformat(),
             "end_time": None,
             "completed": False,
@@ -44,16 +50,16 @@ class SystemMetrics:
         }
         return round_id
         
-    def increment_generator_validator_interaction(self) -> None:
-        """Increment the count of generator-validator interactions for current round."""
+    def increment_generator_interaction(self) -> None:
+        """Increment the count of generator interactions for current round."""
         if self.current_round:
-            self.rounds_data[self.current_round]["generator_validator_interactions"] += 1
+            self.rounds_data[self.current_round]["generator_interactions"] += 1
         
     # Not used anymore
     def record_tool_usage(self, tool: str, success: bool) -> None:
         """Record tool usage for the current interaction with compilation result."""
         if self.current_round:
-            interaction_number = self.rounds_data[self.current_round]["generator_validator_interactions"]
+            interaction_number = self.rounds_data[self.current_round]["generator_interactions"]
             
             interaction_key = f"{tool}_interactions_{interaction_number}"
             num = self.rounds_data[self.current_round].get(interaction_key, 0)
@@ -79,7 +85,7 @@ class SystemMetrics:
         
         for round_id, data in self.rounds_data.items():
             compilation_rates = {}
-            max = data["generator_validator_interactions"]
+            max = data["generator_interactions"]
             for i in range(1, max + 1):
                 for tool in ["compilation_check", "execution_check"]:
                     interaction_key = f"{tool}_interactions_{i}"
@@ -92,7 +98,7 @@ class SystemMetrics:
             
             round_data = {
                 "user_request": data["user_request"],
-                "generator_validator_interactions": data["generator_validator_interactions"],
+                "generator_interactions": data["generator_interactions"],
                 **compilation_rates,
                 "last_parser_file": data["last_parser_file"],
                 "compilation_success": data["compilation_success"],
@@ -114,6 +120,8 @@ class SystemMetrics:
         with open(json_file, "w", encoding="utf-8") as f:
             dump(json_data, f, indent=2)
 
+AgentType: TypeAlias = Literal["Supervisor", "Orchestrator", "Generator", "Compiler", "Tester", "Assessor", "FINISH"]
+
 class AgentState(TypedDict):
     """State schema for the agent graph."""
     messages: Annotated[Sequence[BaseMessage], add]
@@ -122,13 +130,13 @@ class AgentState(TypedDict):
     file_format: Literal["CSV", "HTML", "HTTP", "JSON", "GEOJSON", "PDF", "XML"]
     supervisor_specifications: str | None
     generator_code: str | None
-    validator_compilation: dict[str, bool | str] | None
-    validator_testing: dict[str, bool | str] | None
-    assessor_assessment: str | None
+    compiler_result: dict[str, bool | str] | None
+    tester_result: dict[str, bool | str] | None
+    code_assessment: str | None
     iteration_count: int
     max_iterations: int
     model_source: str
-    next_step: Literal["Supervisor", "Orchestrator", "Generator", "Validator", "Assessor", "FINISH"]
+    next_step: AgentType
     session_dir: Path
     system_metrics: SystemMetrics
 

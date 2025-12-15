@@ -7,9 +7,9 @@ from utils.general import print_colored
 def orchestrator_node(state: AgentState) -> AgentState:
     """Orchestrator agent that manages the flow."""
     messages = state["messages"]
-    validator_compilation = state["validator_compilation"]
-    validator_testing = state["validator_testing"]
-    assessor_assessment = state["assessor_assessment"]
+    compiler_result = state["compiler_result"]
+    tester_result = state["tester_result"]
+    code_assessment = state["code_assessment"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     system_metrics = state["system_metrics"]
@@ -22,52 +22,57 @@ def orchestrator_node(state: AgentState) -> AgentState:
     if prev_node == "Supervisor":
         next_node = "Generator"
     elif prev_node == "Generator":
-        next_node = "Validator"
-    elif prev_node == "Validator":
-        # NB: here they can't be None
-        if not validator_compilation or not validator_testing:
+        next_node = "Compiler"
+    elif prev_node == "Compiler":
+        # NB: here it can't be None
+        if not compiler_result:
             raise Exception("Something goes wrong :(")
         
-        # Check compilation and testing results
-        is_compilation_ok = validator_compilation["success"]
-        is_testing_ok = validator_testing["success"]
+        # Check compilation results
+        if compiler_result["success"]:
+            # go on with testing
+            next_node = "Tester"
+        else:
+            # go back with error correction
+            next_node = "Generator"
+            code_assessment = "The parser implementation needs improvements."
+            code_assessment += f"\n❌ COMPILATION failed with the following errors:\n{compiler_result["stderr"]}"
+    elif prev_node == "Tester":
+        # NB: here it can't be None
+        if not tester_result:
+            raise Exception("Something goes wrong :(")
         
-        if is_compilation_ok and is_testing_ok:
-            # go on with a qualitative assessment
+        # Check testing results
+        if tester_result["success"]:
+            # go on with qualitative assessment
             next_node = "Assessor"
         else:
-            # go back with error corrction
+            # go back with error correction
             next_node = "Generator"
-
-            compilation_status = "✅ Compilation successful" if is_compilation_ok else "❌ Compilation failed with the following errors:\n" + validator_compilation["stderr"]
-            testing_status = "✅ Testing successful" if is_testing_ok else "❌ Testing failed with the following errors:\n" + validator_testing["stderr"]
-            
-            assessor_assessment = "The parser implementation needs improvements."
-            assessor_assessment += f"\nCompilation status: {compilation_status}"
-            assessor_assessment += f"\nTesting status: {testing_status}"
+            code_assessment = "The parser implementation needs improvements."
+            code_assessment += f"\n✅ COMPILATION successful"
+            code_assessment += f"\n❌ TESTING failed with the following errors:\n{tester_result["stderr"]}"
     elif prev_node == "Assessor":
         # NB: here it can't be None
-        if not assessor_assessment:
+        if not code_assessment:
             raise Exception("Something goes wrong :(")
         
-        # Check if qualitative assessment is positive
-        is_satisfactory = multi_agent.is_satisfactory(assessor_assessment)
-        next_node = "Supervisor" if is_satisfactory else "Generator"
+        # Check if qualitative assessment is positive (bad condition)
+        next_node = "Supervisor" if multi_agent.is_satisfactory(code_assessment) else "Generator"
         # Add compilation and testing status (NB: if here, both must be successful)
-        assessor_assessment = f"Assessment: {assessor_assessment}"
-        assessor_assessment = f"Compilation status: ✅ Compilation successful\nTesting status: ✅ Testing successful\n{assessor_assessment}"
+        code_assessment = f"✅ COMPILATION successful\n✅ TESTING successful\nAssessment: {code_assessment}"
     else:
         raise Exception(f"The node {prev_node} doesn't exist!")
     
     if next_node == "Generator":
         # Increment interaction count
         iteration_count += 1
-        system_metrics.increment_generator_validator_interaction()
+        system_metrics.increment_generator_interaction()
     
     if iteration_count > max_iterations:
         next_node = "Supervisor"
-        assessor_assessment = f"{assessor_assessment}\n\n" if assessor_assessment else ""
-        assessor_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
+        code_assessment = f"{code_assessment}\n\n" if code_assessment else ""
+        code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
     print_colored(f"\nOrchestrator sending flow to {next_node}", colors.YELLOW, bold=True)
     
@@ -78,9 +83,9 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "file_format": state["file_format"],
         "supervisor_specifications": state["supervisor_specifications"],
         "generator_code": state["generator_code"],
-        "validator_compilation": validator_compilation,
-        "validator_testing": validator_testing,
-        "assessor_assessment": assessor_assessment,
+        "compiler_result": compiler_result,
+        "tester_result": tester_result,
+        "code_assessment": code_assessment,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": state["model_source"],

@@ -11,7 +11,7 @@ def generator_node(state: AgentState) -> AgentState:
     """Generator agent that creates C code."""
     supervisor_specifications = state["supervisor_specifications"]
     generator_code = state["generator_code"]
-    assessor_assessment = state["assessor_assessment"]
+    code_assessment = state["code_assessment"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     model_source = state["model_source"]
@@ -26,11 +26,11 @@ def generator_node(state: AgentState) -> AgentState:
         "requirements": get_parser_requirements(),
         "specifications": supervisor_specifications
     }
-    if generator_code and assessor_assessment:
+    if generator_code and code_assessment:
         feedback_template = generator_prompts.get_feedback_template()
         generator_input.update({
             "code": generator_code,
-            "assessment": assessor_assessment
+            "assessment": code_assessment
         })
     else:
         feedback_template = ""
@@ -70,9 +70,9 @@ def generator_node(state: AgentState) -> AgentState:
         "file_format": state["file_format"],
         "supervisor_specifications": supervisor_specifications,
         "generator_code": generator_response_code,
-        "validator_compilation": None,
-        "validator_testing": None,
-        "assessor_assessment": None,
+        "compiler_result": None,
+        "tester_result": None,
+        "code_assessment": None,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": model_source,

@@ -1,6 +1,5 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
 from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -8,9 +7,10 @@ from langgraph.graph import START, END, StateGraph
 from agents.supervisor.supervisor_agent import supervisor_node
 from agents.orchestrator.orchestrator_agent import orchestrator_node
 from agents.generator.generator_agent import generator_node
-from agents.validator.validator_agent import validator_node
+from agents.compiler.compiler_agent import compiler_node
+from agents.tester.tester_agent import tester_node
 from agents.assessor.assessor_agent import assessor_node
-from models import AgentState, SystemMetrics
+from models import AgentType, AgentState, SystemMetrics
 from utils import colors
 from utils.general import get_model_source_from_input, get_file_format_from_input, print_colored
 from utils.multi_agent import get_action_from_input
@@ -34,7 +34,7 @@ def create_session_directory(path: str) -> tuple[Path, Path]:
     
     return session_dir, log_file
 
-def route_next(state: AgentState) -> Literal["Supervisor", "Orchestrator", "Generator", "Validator", "Assessor", "FINISH"]:
+def route_next(state: AgentState) -> AgentType:
     """Route to the next node based on the state."""
     return state["next_step"]
 
@@ -46,7 +46,8 @@ def build_workflow():
     workflow.add_node("Supervisor", supervisor_node)
     workflow.add_node("Orchestrator", orchestrator_node)
     workflow.add_node("Generator", generator_node)
-    workflow.add_node("Validator", validator_node)
+    workflow.add_node("Compiler", compiler_node)
+    workflow.add_node("Tester", tester_node)
     workflow.add_node("Assessor", assessor_node)
     
     # Set the entry point
@@ -68,7 +69,8 @@ def build_workflow():
         {
             "Supervisor": "Supervisor",
             "Generator": "Generator",
-            "Validator": "Validator",
+            "Compiler": "Compiler",
+            "Tester": "Tester",
             "Assessor": "Assessor"
         }
     )
@@ -82,7 +84,15 @@ def build_workflow():
     )
     
     workflow.add_conditional_edges(
-        "Validator", 
+        "Compiler", 
+        route_next,
+        {
+            "Orchestrator": "Orchestrator"
+        }
+    )
+
+    workflow.add_conditional_edges(
+        "Tester", 
         route_next,
         {
             "Orchestrator": "Orchestrator"
@@ -139,9 +149,9 @@ if __name__ == "__main__":
                 "file_format": file_format,
                 "supervisor_specifications": None,
                 "generator_code": None,
-                "validator_compilation": None,
-                "validator_testing": None,
-                "assessor_assessment": None,
+                "compiler_result": None,
+                "tester_result": None,
+                "code_assessment": None,
                 "iteration_count": 0,
                 "max_iterations": 10,
                 "model_source": source,

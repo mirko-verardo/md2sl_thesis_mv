@@ -13,7 +13,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     user_action = state["user_action"]
     user_request = state["user_request"]
     generator_code = state["generator_code"]
-    assessor_assessment = state["assessor_assessment"]
+    code_assessment = state["code_assessment"]
     model_source = state["model_source"]
     
     # Create the prompt
@@ -22,11 +22,11 @@ def supervisor_node(state: AgentState) -> AgentState:
         "input": user_request,
         "conversation_history": get_buffer_string(messages)
     }
-    if generator_code and assessor_assessment:
+    if generator_code and code_assessment:
         adaptive_instructions = supervisor_prompts.get_supervisor_input_validated()
         supervisor_input.update({
             "code": generator_code,
-            "assessment": assessor_assessment
+            "assessment": code_assessment
         })
         purpose = "providing final parser"
         next_step = "FINISH"
@@ -99,9 +99,9 @@ def supervisor_node(state: AgentState) -> AgentState:
         "file_format": state["file_format"],
         "supervisor_specifications": supervisor_specifications,
         "generator_code": None,
-        "validator_compilation": None,
-        "validator_testing": None,
-        "assessor_assessment": None,
+        "compiler_result": None,
+        "tester_result": None,
+        "code_assessment": None,
         "iteration_count": state["iteration_count"],
         "max_iterations": state["max_iterations"],
         "model_source": model_source,

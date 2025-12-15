@@ -1,0 +1,84 @@
+#from datetime import datetime
+from langchain_core.messages import AIMessage
+from models import AgentState
+from utils import colors
+from utils.general import print_colored, execute_c_code
+
+
+
+def tester_node(state: AgentState) -> AgentState:
+    """Tester agent that tests parser code."""
+    file_format = state["file_format"]
+    generator_code = state["generator_code"]
+    iteration_count = state["iteration_count"]
+    max_iterations = state["max_iterations"]
+    session_dir = state["session_dir"]
+    system_metrics = state["system_metrics"]
+
+    # NB: here it can't be None
+    if not generator_code:
+        raise Exception("Something goes wrong :(")
+
+    # Save c code to temporary file for compilation
+    #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    c_file_name = f"parser_{iteration_count}.c"
+    c_file_path = session_dir / c_file_name
+    #c_file_path_str = str(c_file_path)
+    o_file_path_str = str(c_file_path.with_suffix(''))
+    
+    #with open(c_file_path, "w", encoding="utf-8") as f:
+    #    f.write(generator_code)
+    
+    #print_colored(f"\nSaved C code to: {c_file_path_str} for testing", colors.CYAN, bold=True)
+    
+    # Compile the code
+    #print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)
+    #compilation_result = compile_c_code(c_file_path_str, o_file_path_str)
+    # Check if code has been compiled with success
+    #is_compiled = compilation_result["success"]
+    
+    #if is_compiled:
+        
+    # Test the code
+    print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
+    format = file_format.lower()
+    test_file_path = f"input/{format}/test.{format}"
+    testing_result = execute_c_code(o_file_path_str, test_file_path)
+    
+    # Check if code has been executed with success
+    is_tested = testing_result["success"]
+    testing_status = "✅ Testing successful" if is_tested else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
+
+    with open(session_dir / f"parser_{iteration_count}.txt", "w", encoding="utf-8") as f:
+        test_output = f"success: {"OK" if is_tested else "ERR"}\n"
+        test_output += f"stdout: {testing_result["stdout"]}\n"
+        test_output += f"stderr: {testing_result["stderr"]}"
+        f.write(test_output)
+
+    # Record parser testing in metrics
+    system_metrics.record_parser_testing(c_file_name, is_tested)
+    
+    # Log the results
+    print_colored(f"Tester (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
+    print_colored(f"Testing result: {testing_status}", colors.GREEN if is_tested else colors.RED, bold=True)
+
+    # for conversation history only
+    tester_response = f"Testing result: {testing_status}"
+    
+    return {
+        "messages": [AIMessage(content=tester_response, name="Tester")],
+        "user_action": state["user_action"],
+        "user_request": state["user_request"],
+        "file_format": file_format,
+        "supervisor_specifications": state["supervisor_specifications"],
+        "generator_code": generator_code,
+        "compiler_result": None,
+        "tester_result": testing_result,
+        "code_assessment": None,
+        "iteration_count": iteration_count,
+        "max_iterations": max_iterations,
+        "model_source": state["model_source"],
+        "session_dir": session_dir,
+        "next_step": "Orchestrator",
+        "system_metrics": system_metrics
+    }
