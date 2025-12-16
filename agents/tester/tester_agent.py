@@ -9,15 +9,10 @@ from utils.general import print_colored, execute_c_code
 def tester_node(state: AgentState) -> AgentState:
     """Tester agent that tests parser code."""
     file_format = state["file_format"]
-    generator_code = state["generator_code"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
     system_metrics = state["system_metrics"]
-
-    # NB: here it can't be None
-    if not generator_code:
-        raise Exception("Something goes wrong :(")
 
     # Get files for testing
     file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
@@ -55,7 +50,7 @@ def tester_node(state: AgentState) -> AgentState:
         "user_request": state["user_request"],
         "file_format": file_format,
         "supervisor_specifications": state["supervisor_specifications"],
-        "generator_code": generator_code,
+        "generator_code": state["generator_code"],
         "compiler_result": None,
         "tester_result": testing_result,
         "code_assessment": None,
