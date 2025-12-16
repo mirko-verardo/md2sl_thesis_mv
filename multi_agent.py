@@ -125,10 +125,11 @@ if __name__ == "__main__":
     # Initialize parameters
     messages = []
     system_metrics = SystemMetrics()
+    last_parser = None
     user_action = "GENERATE_PARSER"
     file_format = get_file_format_from_input()
     # TODO: optimize this fixed prompt
-    user_input = f"generate a parser function for {file_format} files"
+    user_input = f"Generate a parser function for {file_format} files."
 
     # Create session
     session_dir, log_file = create_session_directory(f"output/{source}/multi_agent/{file_format.lower()}")
@@ -143,7 +144,7 @@ if __name__ == "__main__":
             
             # Initial state
             initial_state = {
-                "messages": messages + [ HumanMessage(content=user_message) ],
+                "messages": [ HumanMessage(content=user_message) ],
                 "user_action": user_action,
                 "user_request": user_input,
                 "file_format": file_format,
@@ -157,21 +158,22 @@ if __name__ == "__main__":
                 "model_source": source,
                 "session_dir": session_dir,
                 "next_step": "Supervisor",
-                "system_metrics": system_metrics
+                "system_metrics": system_metrics,
+                "last_parser": last_parser
             }
 
             result = graph.invoke(initial_state, config)
 
-            messages = result["messages"]
-            system_metrics = result["system_metrics"]
+            # Save conversation
+            messages += result["messages"]
 
             # Save metrics
+            system_metrics = result["system_metrics"]
             system_metrics.complete_round()
             system_metrics.save_summary(session_dir)
             
-            # Get supervisor last response
-            #supervisor_messages = [msg for msg in messages if hasattr(msg, 'name') and msg.name == "Supervisor"]
-            #supervisor_response = supervisor_messages[-1].content if supervisor_messages else "no message found"
+            # Get last parser
+            last_parser = result["last_parser"]
         except Exception as e:
             print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
             print_colored(format_exc(), colors.RED, bold=True)
@@ -181,6 +183,9 @@ if __name__ == "__main__":
         user_action = get_action_from_input()
         if user_action == "EXIT":
             break
+        elif user_action == "CORRECT_ERROR":
+            # TODO: optimize this fixed prompt
+            user_input = f"Correct the problems on the generated parser."
         else:
             print_colored("\nYou:", colors.GREEN, bold=True)
             user_input = input()

@@ -20,13 +20,7 @@
 - general code refactoring
     - agents prompts isolated from the logic
     - redundant message passing bugfix on multiagent
-- real time entire conversation history passed at each round (loop in the while true) on multiagent
-    - messages passed are used for it (not read from log)
-        - something better can be done, for example passing only last parser/assessment at each loop
-    - supervisor memory avoided but last assessment kept in agent state (not read from log)
-    - supervisor memory was used to track the last generated parser but it could not be the best
-        - maybe a middle one compiles and the last one not
-        - the code could easily be updated to track the last working parser
+- supervisor memory avoided but last code assessment kept in agent state (not read from log)
 - supervisor and assessor doesn't need ReAct approach since they don't have tools to use
     - so they do a single LLM call
 - also generator doesn't need ReAct at all because we are in a multiagent system where each agent does 1 thing
@@ -35,12 +29,13 @@
         - so test can be easily executed
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
+- orchestrator, compiler and tester nodes introduced
 - hardening flags on compilation added
-- compiled code testing is added giving a file (in correct format) as input to the exe
 - secondary
     - output folders divided by file format
     - user can generate 1 file format parser for each conversation (avoiding confusion)
     - better stderr management with file name replaced (confounding) and line and column number specified
+    - better context management between different loops in multiagent system (keeping in memory last parser generated) and avoiding passing entire conversation history (confounding)
 
 ## TODO
 
@@ -53,7 +48,6 @@
     - integration of tool like Bandit (code python analysis)
     - search for ready c tool
 - sage metric paper
-- better memory management between different loops in multiagent system (using last generator code)
 - better log management
 
 ## Static Analysis Tool
@@ -110,7 +104,7 @@
     - middle: compiles, not satisfactory
     - last: doesn't compile
 
-# General considerations
+## General considerations
 
 - understand what can be done (or better generated) by the llm and what it's far better to manually control
 - real work: give the agent the right way

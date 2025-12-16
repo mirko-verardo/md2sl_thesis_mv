@@ -11,18 +11,13 @@ Since there are limits to how much code the generator can generate, keep the str
 {input}
 </user_request>
 
-<conversation_history>
-{conversation_history}
-</conversation_history>
-
-<adaptive_instructions>
 {adaptive_instructions}
-</adaptive_instructions>
 """
 
 def get_supervisor_input_validated() -> str:
-    return """You are a helpful C programming expert. The user has requested a parser function and one has been generated for him.
+    return """The user has requested a parser function and one has been generated for him.
 
+<parser_generated>
 The generated parser code:
 ```c
 {code}
@@ -30,6 +25,7 @@ The generated parser code:
 
 The generated parser assessment:
 {assessment}
+</parser_generated>
 
 Please provide a friendly response to the user that:
 1. Acknowledges his request
@@ -44,8 +40,10 @@ Keep your explanation concise and user-friendly.
 def get_supervisor_input_generate_parser() -> str:
     return """Your task is to take the user's request and convert it into a detailed, specific prompt for a C parser function generator.
 
+<parser_requirements>
 The parser function must follow these requirements:
 {requirements}
+</parser_requirements>
 
 The prompt you create should include:
 1. Clear identification of what kind of parser is being requested
@@ -60,30 +58,34 @@ Create a detailed prompt for the generator.
 """
 
 def get_supervisor_input_correct_error() -> str:
-    return """Create detailed specifications for updating the parser to address its issues.
-Check conversation history to find what could be corrected or improved. 
+    return """The user is asking about the parser generated.
+
+<parser_generated>
+The generated parser code:
+```c
+{code}
+```
+
+The generated parser assessment:
+{assessment}
+</parser_generated>
+
+Create detailed specifications for updating the parser to address its issues and bugfix it.
 Be specific about what changes need to be made and why.
 """
-#The parser code:
-#```c
-#{code}
-#```
-#
-#The parser assessment:
-#{assessment}
-#"""
 
 def get_supervisor_input_assess_code() -> str:
-#    return """The user is asking about the parser generated.
-#
-#The parser code:
-#```c
-#{code}
-#```
-#
-#The parser assessment:
-#{assessment}
     return """The user is asking about the parser generated.
+
+<parser_generated>
+The generated parser code:
+```c
+{code}
+```
+
+The generated parser assessment:
+{assessment}
+</parser_generated>
 
 Create a comprehensive response that:
 1. Acknowledges his question
@@ -97,7 +99,6 @@ Keep your explanation concise and conversational, focusing on the overall assess
 
 def get_supervisor_input_general_conversation() -> str:
     return """If the user is asking about parsers, you can offer to generate a C parser for him by responding to his specific needs.
-If the user is asking about previous code you've generated, answer his question as best as you can using your conversation history.
 Otherwise, provide a helpful, concise response that addresses his question.
 Respond in a conversational and friendly tone.
 """

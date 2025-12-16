@@ -1,4 +1,3 @@
-#from datetime import datetime
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
@@ -19,25 +18,10 @@ def tester_node(state: AgentState) -> AgentState:
     if not generator_code:
         raise Exception("Something goes wrong :(")
 
-    # Save c code to temporary file for compilation
-    #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Get temporary C file for testing
     c_file_name = f"parser_{iteration_count}.c"
     c_file_path = session_dir / c_file_name
-    #c_file_path_str = str(c_file_path)
     o_file_path_str = str(c_file_path.with_suffix(''))
-    
-    #with open(c_file_path, "w", encoding="utf-8") as f:
-    #    f.write(generator_code)
-    
-    #print_colored(f"\nSaved C code to: {c_file_path_str} for testing", colors.CYAN, bold=True)
-    
-    # Compile the code
-    #print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)
-    #compilation_result = compile_c_code(c_file_path_str, o_file_path_str)
-    # Check if code has been compiled with success
-    #is_compiled = compilation_result["success"]
-    
-    #if is_compiled:
         
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
@@ -80,5 +64,6 @@ def tester_node(state: AgentState) -> AgentState:
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": "Orchestrator",
-        "system_metrics": system_metrics
+        "system_metrics": system_metrics,
+        "last_parser": None
     }

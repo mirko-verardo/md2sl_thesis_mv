@@ -27,13 +27,13 @@ def generator_node(state: AgentState) -> AgentState:
         "specifications": supervisor_specifications
     }
     if generator_code and code_assessment:
-        feedback_template = generator_prompts.get_feedback_template()
+        feedback_template = generator_prompts.get_fixing_template()
         generator_input.update({
             "code": generator_code,
             "assessment": code_assessment
         })
     else:
-        feedback_template = ""
+        feedback_template = generator_prompts.get_starting_template()
     generator_template = generator_template.replace("{feedback}", feedback_template)
     generator_prompt = PromptTemplate.from_template(generator_template)
 
@@ -78,5 +78,6 @@ def generator_node(state: AgentState) -> AgentState:
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": "Orchestrator",
-        "system_metrics": state["system_metrics"]
+        "system_metrics": state["system_metrics"],
+        "last_parser": None
     }

@@ -68,5 +68,6 @@ def assessor_node(state: AgentState) -> AgentState:
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": "Orchestrator",
-        "system_metrics": state["system_metrics"]
+        "system_metrics": state["system_metrics"],
+        "last_parser": None
     }

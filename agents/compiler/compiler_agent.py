@@ -1,4 +1,3 @@
-#from datetime import datetime
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
@@ -20,7 +19,6 @@ def compiler_node(state: AgentState) -> AgentState:
         raise Exception("Something goes wrong :(")
 
     # Save c code to temporary file for compilation
-    #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     c_file_name = f"parser_{iteration_count}.c"
     c_file_path = session_dir / c_file_name
     c_file_path_str = str(c_file_path)
@@ -64,5 +62,6 @@ def compiler_node(state: AgentState) -> AgentState:
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": "Orchestrator",
-        "system_metrics": system_metrics
+        "system_metrics": system_metrics,
+        "last_parser": None
     }

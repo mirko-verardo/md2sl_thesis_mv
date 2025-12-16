@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, get_buffer_string
+from langchain_core.messages import AIMessage
 from langchain.prompts import PromptTemplate
 from models import AgentState
 from utils import colors
@@ -9,18 +9,17 @@ from agents.supervisor import supervisor_prompts
 
 def supervisor_node(state: AgentState) -> AgentState:
     """Supervisor agent that converses with the user and manages the parser generation process."""
-    messages = state["messages"]
     user_action = state["user_action"]
     user_request = state["user_request"]
     generator_code = state["generator_code"]
     code_assessment = state["code_assessment"]
     model_source = state["model_source"]
+    last_parser = state["last_parser"]
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
     supervisor_input = {
-        "input": user_request,
-        "conversation_history": get_buffer_string(messages)
+        "input": user_request
     }
     if generator_code and code_assessment:
         adaptive_instructions = supervisor_prompts.get_supervisor_input_validated()
@@ -38,19 +37,27 @@ def supervisor_node(state: AgentState) -> AgentState:
         purpose = "creating detailed specifications"
         next_step = "Orchestrator"
     elif user_action == "CORRECT_ERROR":
+        # NB: here it can't be None
+        if not last_parser:
+            raise Exception("Something goes wrong :(")
+        
         adaptive_instructions = supervisor_prompts.get_supervisor_input_correct_error()
-        #supervisor_input.update({
-        #    "code": last_parser["code"],
-        #    "assessment": last_parser["assessment"]
-        #})
+        supervisor_input.update({
+            "code": last_parser["code"],
+            "assessment": last_parser["assessment"]
+        })
         purpose = "creating updated specifications"
         next_step = "Orchestrator"
     elif user_action == "ASSESS_CODE":
+        # NB: here it can't be None
+        if not last_parser:
+            raise Exception("Something goes wrong :(")
+        
         adaptive_instructions = supervisor_prompts.get_supervisor_input_assess_code()
-        #supervisor_input.update({
-        #    "code": last_parser["code"],
-        #    "assessment": last_parser["assessment"]
-        #})
+        supervisor_input.update({
+            "code": last_parser["code"],
+            "assessment": last_parser["assessment"]
+        })
         purpose = "providing code assessment"
         next_step = "FINISH"
     else:
@@ -107,5 +114,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": next_step,
-        "system_metrics": state["system_metrics"]
+        "system_metrics": state["system_metrics"],
+        "last_parser": last_parser
     }

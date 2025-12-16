@@ -49,21 +49,24 @@ GLOBAL RULES (APPLIES TO ALL CODE PATHS):
 - The program MUST NOT print warnings, informational messages, debug output, or non-fatal notices to stderr.
 - If the program prints anything to stderr, it MUST exit with a non-zero code.
 - Under no circumstances may the program exit with code 0 if ANY output was written to stderr.
-
 </output_handling>
 
 {feedback}
-
-Generate a complete C parser implementation following all the instructions above.
 """
 
-def get_feedback_template() -> str:
-    return """<feedback>
-Correct the following code you have generated, addressing all the assessment issues while ensuring your implementation remains complete with no placeholders:
+def get_starting_template() -> str:
+    return "Generate a complete C parser implementation following all the instructions above."
+
+def get_fixing_template() -> str:
+    return """<code_generated>
+This is the code you have already generated (IMPORTANT):
 ```c
 {code}
 ```
 
 This is the assessment about the code above (IMPORTANT):
 {assessment}
-</feedback>"""
+</code_generated>
+
+Correct the code generated, addressing all the assessment issues and following all the previous instructions.
+"""

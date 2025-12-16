@@ -7,12 +7,14 @@ from utils.general import print_colored
 def orchestrator_node(state: AgentState) -> AgentState:
     """Orchestrator agent that manages the flow."""
     messages = state["messages"]
+    generator_code = state["generator_code"]
     compiler_result = state["compiler_result"]
     tester_result = state["tester_result"]
     code_assessment = state["code_assessment"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     system_metrics = state["system_metrics"]
+    last_parser = state["last_parser"]
 
     # NB: here they can't be None
     if not messages:
@@ -21,6 +23,9 @@ def orchestrator_node(state: AgentState) -> AgentState:
     prev_node = messages[-1].name
     if prev_node == "Supervisor":
         next_node = "Generator"
+        if last_parser:
+            generator_code = last_parser["code"]
+            code_assessment = last_parser["assessment"]
     elif prev_node == "Generator":
         next_node = "Compiler"
     elif prev_node == "Compiler":
@@ -58,7 +63,12 @@ def orchestrator_node(state: AgentState) -> AgentState:
             raise Exception("Something goes wrong :(")
         
         # Check if qualitative assessment is positive (bad condition)
-        next_node = "Supervisor" if multi_agent.is_satisfactory(code_assessment) else "Generator"
+        if multi_agent.is_satisfactory(code_assessment):
+            next_node = "Supervisor"
+            system_metrics.satisfy_round()
+        else:
+            next_node = "Generator"
+        
         # Add compilation and testing status (NB: if here, both must be successful)
         code_assessment = f"✅ COMPILATION successful\n✅ TESTING successful\nAssessment: {code_assessment}"
     else:
@@ -70,10 +80,17 @@ def orchestrator_node(state: AgentState) -> AgentState:
         system_metrics.increment_generator_interaction()
     
     if iteration_count > max_iterations:
+        # Exit and go back to the user if the iteration limit has been reached
         next_node = "Supervisor"
-        code_assessment = f"{code_assessment}\n\n" if code_assessment else ""
+        code_assessment = f"{code_assessment}\n" if code_assessment else ""
         code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
+    # NB: always updated
+    last_parser = {
+        "code": generator_code,
+        "assessment": code_assessment
+    } if next_node == "Supervisor" else None
+
     print_colored(f"\nOrchestrator sending flow to {next_node}", colors.YELLOW, bold=True)
     
     return {
@@ -82,7 +99,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "user_request": state["user_request"],
         "file_format": state["file_format"],
         "supervisor_specifications": state["supervisor_specifications"],
-        "generator_code": state["generator_code"],
+        "generator_code": generator_code,
         "compiler_result": compiler_result,
         "tester_result": tester_result,
         "code_assessment": code_assessment,
@@ -91,5 +108,6 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "model_source": state["model_source"],
         "session_dir": state["session_dir"],
         "next_step": next_node,
-        "system_metrics": system_metrics
+        "system_metrics": system_metrics,
+        "last_parser": last_parser
     }

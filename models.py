@@ -44,6 +44,7 @@ class SystemMetrics:
             "start_time": datetime.now().isoformat(),
             "end_time": None,
             "completed": False,
+            "satisfied": False,
             "last_parser_file": None,
             "compilation_success": None,
             "testing_success": None
@@ -54,30 +55,25 @@ class SystemMetrics:
         """Increment the count of generator interactions for current round."""
         if self.current_round:
             self.rounds_data[self.current_round]["generator_interactions"] += 1
-        
-    # Not used anymore
-    def record_tool_usage(self, tool: str, success: bool) -> None:
-        """Record tool usage for the current interaction with compilation result."""
-        if self.current_round:
-            interaction_number = self.rounds_data[self.current_round]["generator_interactions"]
-            
-            interaction_key = f"{tool}_interactions_{interaction_number}"
-            num = self.rounds_data[self.current_round].get(interaction_key, 0)
-            self.rounds_data[self.current_round].update({ interaction_key: num + 1 })
-            
-            if success:
-                success_key = f"{tool}_successes_{interaction_number}"
-                num = self.rounds_data[self.current_round].get(success_key, 0)
-                self.rounds_data[self.current_round].update({ success_key: num + 1 })
     
     def complete_round(self) -> None:
         """Mark the current round as completed."""
         if self.current_round:
             self.rounds_data[self.current_round]["end_time"] = datetime.now().isoformat()
             self.rounds_data[self.current_round]["completed"] = True
+    
+    def satisfy_round(self) -> None:
+        """Mark the current round as completed."""
+        if self.current_round:
+            self.rounds_data[self.current_round]["satisfied"] = True
             
     def generate_summary(self) -> dict[str, Any]:
         """Generate only JSON summary data without text output."""
+        return {
+            "total_rounds": self.rounds,
+            "rounds_data": self.rounds_data
+        }
+
         json_data = {
             "total_rounds": self.rounds,
             "rounds_data": {}
@@ -139,6 +135,7 @@ class AgentState(TypedDict):
     next_step: AgentType
     session_dir: Path
     system_metrics: SystemMetrics
+    last_parser: dict[str, str] | None
 
 # Define tools
 

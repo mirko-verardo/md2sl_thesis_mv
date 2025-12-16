@@ -1,12 +1,3 @@
-# TODO: not used, no problems anymore
-def had_agent_problems(output: str) -> bool:
-    # Main problems
-    problems = [
-        "agent stopped due to max iterations.",
-        "agent stopped due to iteration limit or time limit."
-    ]
-
-    return output.lower() in problems
 
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
