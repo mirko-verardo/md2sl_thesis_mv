@@ -17,6 +17,9 @@ class SystemMetrics:
         self.current_round = None  # Track the current round ID
         self.rounds_data = {}  # Detailed data for each round
     
+    def get_round_number(self) -> int:
+        return self.rounds
+
     def record_parser_compilation(self, parser_file: str, compilation_success: bool) -> None:
         """Record information about the last compilated parser file."""
         if self.current_round:
@@ -25,11 +28,9 @@ class SystemMetrics:
             # Compilation status of the last parser
             self.rounds_data[self.current_round]["compilation_success"] = compilation_success
     
-    def record_parser_testing(self, parser_file: str, testing_success: bool) -> None:
+    def record_parser_testing(self, testing_success: bool) -> None:
         """Record information about the last tested parser file."""
         if self.current_round:
-            # Name of the last parser file
-            self.rounds_data[self.current_round]["last_parser_file"] = parser_file
             # Testing status of the last parser
             self.rounds_data[self.current_round]["testing_success"] = testing_success
 
@@ -73,40 +74,6 @@ class SystemMetrics:
             "total_rounds": self.rounds,
             "rounds_data": self.rounds_data
         }
-
-        json_data = {
-            "total_rounds": self.rounds,
-            "rounds_data": {}
-        }
-        
-        for round_id, data in self.rounds_data.items():
-            compilation_rates = {}
-            max = data["generator_interactions"]
-            for i in range(1, max + 1):
-                for tool in ["compilation_check", "execution_check"]:
-                    interaction_key = f"{tool}_interactions_{i}"
-                    interaction_num = data.get(interaction_key, 0)
-                    if interaction_num > 0:
-                        success_key = f"{tool}_successes_{i}"
-                        success_num = data.get(success_key, 0)
-                        rate_str = f"{success_num}/{interaction_num}"
-                        compilation_rates[f"{tool}_rate_{i}"] = rate_str
-            
-            round_data = {
-                "user_request": data["user_request"],
-                "generator_interactions": data["generator_interactions"],
-                **compilation_rates,
-                "last_parser_file": data["last_parser_file"],
-                "compilation_success": data["compilation_success"],
-                "testing_success": data["testing_success"],
-                "start_time": data["start_time"],
-                "end_time": data["end_time"],
-                "completed": data["completed"]
-            }
-            
-            json_data["rounds_data"][round_id] = round_data
-        
-        return json_data
 
     def save_summary(self, session_dir: Path) -> None:
         """Save only the JSON metrics summary to a file."""

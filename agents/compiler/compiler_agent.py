@@ -1,5 +1,6 @@
 from langchain_core.messages import AIMessage
 from models import AgentState
+from multi_agent import get_file_name
 from utils import colors
 from utils.general import print_colored, compile_c_code
 
@@ -18,11 +19,12 @@ def compiler_node(state: AgentState) -> AgentState:
     if not generator_code:
         raise Exception("Something goes wrong :(")
 
-    # Save c code to temporary file for compilation
-    c_file_name = f"parser_{iteration_count}.c"
+    # Save C code to file for compilation
+    file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
+    c_file_name = f"{file_name}.c"
     c_file_path = session_dir / c_file_name
     c_file_path_str = str(c_file_path)
-    o_file_path_str = str(c_file_path.with_suffix(''))
+    o_file_path_str = str(session_dir / file_name)
     
     with open(c_file_path, "w", encoding="utf-8") as f:
         f.write(generator_code)

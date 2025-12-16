@@ -74,16 +74,16 @@ def orchestrator_node(state: AgentState) -> AgentState:
     else:
         raise Exception(f"The node {prev_node} doesn't exist!")
     
+    # Check if the iteration limit has been reached
+    if iteration_count == max_iterations:
+        next_node = "Supervisor"
+        code_assessment = f"{code_assessment}\n" if code_assessment else ""
+        code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
+    
     if next_node == "Generator":
         # Increment interaction count
         iteration_count += 1
         system_metrics.increment_generator_interaction()
-    
-    if iteration_count > max_iterations:
-        # Exit and go back to the user if the iteration limit has been reached
-        next_node = "Supervisor"
-        code_assessment = f"{code_assessment}\n" if code_assessment else ""
-        code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
     # NB: always updated
     last_parser = {

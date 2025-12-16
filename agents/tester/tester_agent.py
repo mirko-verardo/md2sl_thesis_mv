@@ -1,5 +1,6 @@
 from langchain_core.messages import AIMessage
 from models import AgentState
+from multi_agent import get_file_name
 from utils import colors
 from utils.general import print_colored, execute_c_code
 
@@ -18,33 +19,32 @@ def tester_node(state: AgentState) -> AgentState:
     if not generator_code:
         raise Exception("Something goes wrong :(")
 
-    # Get temporary C file for testing
-    c_file_name = f"parser_{iteration_count}.c"
-    c_file_path = session_dir / c_file_name
-    o_file_path_str = str(c_file_path.with_suffix(''))
+    # Get files for testing
+    file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
+    o_file_path_str = str(session_dir / file_name)
+    format = file_format.lower()
+    test_file_path = f"input/{format}/test.{format}"
         
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
-    format = file_format.lower()
-    test_file_path = f"input/{format}/test.{format}"
     testing_result = execute_c_code(o_file_path_str, test_file_path)
     
-    # Check if code has been executed with success
-    is_tested = testing_result["success"]
-    testing_status = "✅ Testing successful" if is_tested else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
+    # Check if code has been tested with success
+    is_tested_ok = testing_result["success"]
+    testing_status = "✅ Testing successful" if is_tested_ok else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
 
-    with open(session_dir / f"parser_{iteration_count}.txt", "w", encoding="utf-8") as f:
-        test_output = f"success: {"OK" if is_tested else "ERR"}\n"
+    with open(session_dir / f"{file_name}.txt", "w", encoding="utf-8") as f:
+        test_output = f"success: {"OK" if is_tested_ok else "ERR"}\n"
         test_output += f"stdout: {testing_result["stdout"]}\n"
         test_output += f"stderr: {testing_result["stderr"]}"
         f.write(test_output)
 
     # Record parser testing in metrics
-    system_metrics.record_parser_testing(c_file_name, is_tested)
+    system_metrics.record_parser_testing(is_tested_ok)
     
     # Log the results
     print_colored(f"Tester (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
-    print_colored(f"Testing result: {testing_status}", colors.GREEN if is_tested else colors.RED, bold=True)
+    print_colored(f"Testing result: {testing_status}", colors.GREEN if is_tested_ok else colors.RED, bold=True)
 
     # for conversation history only
     tester_response = f"Testing result: {testing_status}"
