@@ -34,9 +34,6 @@ def create_session_directory(path: str) -> tuple[Path, Path]:
     
     return session_dir, log_file
 
-def get_file_name(round_number: int, iteration_number: int) -> str:
-    return f"parser_{round_number}_{iteration_number}"
-
 def route_next(state: AgentState) -> AgentType:
     """Route to the next node based on the state."""
     return state["next_step"]

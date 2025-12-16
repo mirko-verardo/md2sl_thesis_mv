@@ -1,3 +1,5 @@
+def get_file_name(round_number: int, iteration_number: int) -> str:
+    return f"parser_{round_number}_{iteration_number}"
 
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()

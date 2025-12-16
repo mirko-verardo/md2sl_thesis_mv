@@ -199,7 +199,7 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         # prevents data leakage with zero-initializing padding bits
         "-fzero-init-padding-bits=all",
         # builds as position-independent executable
-        #"-fPIE",
+        "-fPIE",
         # forces retention of null pointer checks
         "-fno-delete-null-pointer-checks",
         # defines behavior for signed integer and pointer arithmetic overflows
