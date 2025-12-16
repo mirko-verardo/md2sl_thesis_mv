@@ -1,6 +1,7 @@
 from models import AgentState
-from utils import colors, multi_agent
+from utils import colors
 from utils.general import print_colored
+from utils.multi_agent import is_satisfactory
 
 
 
@@ -63,7 +64,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
             raise Exception("Something goes wrong :(")
         
         # Check if qualitative assessment is positive (bad condition)
-        if multi_agent.is_satisfactory(code_assessment):
+        if is_satisfactory(code_assessment):
             next_node = "Supervisor"
             system_metrics.satisfy_round()
         else:
