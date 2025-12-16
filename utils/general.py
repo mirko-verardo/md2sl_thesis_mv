@@ -162,6 +162,10 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
     # https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
 
     compiler_flags = [
+        # C STANDARD
+        # set 2024 current C standard
+        "-std=gnu23",
+
         # OPTIMIZATION
         "-O2",
 
@@ -198,7 +202,7 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         #"-fhardened",
         # prevents data leakage with zero-initializing padding bits
         "-fzero-init-padding-bits=all",
-        # builds as position-independent executable
+        # builds a position-independent executable
         "-fPIE",
         # forces retention of null pointer checks
         "-fno-delete-null-pointer-checks",
@@ -209,8 +213,9 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         # initializes automatic variables that lack explicit initializers
         "-ftrivial-auto-var-init=zero",
 
-        # static analysis flag
+        # static analysis flags
         "-fanalyzer",
+        "-fanalyzer-transitivity",
 
         # Sanitizers (heavy)
         #"-fsanitize=address,undefined,leak"
@@ -219,14 +224,16 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
     ]
 
     linker_flags = [
-        # restricts dlopen(3) calls to shared objects + marks stack memory as non-executable
+        # restricts dlopen(3) calls to shared objects + marks stack memory as non-executable (-z not supported on Windows)
         #"-Wl,-z,nodlopen,-z,noexecstack",
-        # marks relocation table entries resolved at load-time as read-only
+        # marks relocation table entries resolved at load-time as read-only (-z not supported on Windows)
         #"-Wl,-z,relro,-z,now",
         # allows linker to omit libraries specified on the command line if they are not used
-        #"-Wl,--as-needed,--no-copy-dt-needed-entries",
-        # build as position-independent executable
-        #"-pie"
+        "-Wl,--as-needed",
+        # stop linker from resolving symbols in produced binary to transitive dependencies
+        "-Wl,--no-copy-dt-needed-entries",
+        # build a position-independent binary
+        "-pie"
     ]
 
     result = run(

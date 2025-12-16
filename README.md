@@ -30,7 +30,8 @@
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
 - orchestrator, compiler and tester nodes introduced
-- hardening flags on compilation added
+- compiler-assisted static analysis and diagnostics (light)
+    - vulnerability assessment but only at build-time
 - secondary
     - output folders divided by file format
     - user can generate 1 file format parser for each conversation (avoiding confusion)
@@ -39,15 +40,19 @@
 
 ## TODO
 
-- testing can exit with status code equal to 0 (ok) but with program that captures and writes exceptions on stderr
-    - solved with more specific prompt
 - specific test for some formats (JSON)
     - I have to produce specific c code to apply test
     - I have to create specific test case linked to each input file
-- c code static analysis for vulnerabilities checking (new agent)
-    - integration of tool like Bandit (code python analysis)
-    - search for ready c tool
-- sage metric paper
+- dynamic analysis for vulnerability assessment
+    - integrate sanitizers with tester (hopefully)
+    - vulnerability assessment at run-time
+    - fuzzing
+- static analysis (completed)
+    - new agent
+    - integration of CodeQL tool
+    - vulnerability assessment at build-time with advanced analysis (abstract syntax trees, control-flow graphs, ...)
+    - less important for parsing than dynamic analysis
+- sage metric (paper)
 - better log management
 
 ## Static Analysis Tool
