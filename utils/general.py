@@ -155,23 +155,63 @@ def extract_c_code(text: str) -> str:
     # if no code block is found, then return as is
     return text
 
-def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str]:
+def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
     """Compile the C code using gcc with strict optimization, warnings and hardening."""
     
     # TODO: check security flags
     # https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+
+    runtime_flags = [
+        "-O1",
+        "-g",
+        # Sanitizers (heavy): address -> ASan, undefined (behaviour) -> UBSan, leak -> LSan, thread -> TSan
+        "-fsanitize=address,undefined",
+        # leak can be appliead on top of ASan with detect_leaks=1 in ASAN_OPTIONS
+        #"-fsanitize=address,undefined,leak",
+        # DO NOT combine thread with address/leak
+        #"-fsanitize=address,undefined,leak,thread",
+        "-fno-omit-frame-pointer",
+        "-fno-optimize-sibling-calls",
+        "-fno-common",
+        "ASAN_OPTIONS=detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
+    ]
+
+    buildtime_flags = [
+        # OPTIMIZATION
+        "-O2",
+
+        # WARNINGS
+        # all warnings as compilation errors
+        "-Werror",
+
+        # FORTIFY
+        # enables glibc bounds checking at runtime
+        "-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=3",
+
+        # HARDENING
+        # enables run-time checks for stack-based buffer overflows for all functions
+        #"-fstack-protector-all",
+        # enables run-time checks for stack-based buffer overflows using strong heuristic (performance balanced)
+        "-fstack-protector-strong",
+        # enables Control-Flow Enforcement Technology (CET) (problematic if not x86_64 and not Kernel Linux)
+        "-fcf-protection=full",
+        # prevents data leakage with zero-initializing padding bits
+        "-fzero-init-padding-bits=all",
+        # initializes automatic variables that lack explicit initializers
+        "-ftrivial-auto-var-init=zero",
+        # static analysis flags
+        "-fanalyzer",
+        "-fanalyzer-transitivity"
+    ]
 
     compiler_flags = [
         # C STANDARD
         # set 2024 current C standard
         "-std=gnu23",
 
-        # OPTIMIZATION
-        "-O2",
-
         # WARNINGS
-        # common warnings, additional warnings, all warnings as compilation errors
-        "-Wall", "-Wextra", "-Werror",
+        # common warnings, additional warnings
+        "-Wall", "-Wextra", 
         # detects unsafe or incorrect printf-style formatting (both must be specified for GCC vs Clang reason)
         "-Wformat", "-Wformat=2",
         # detects implicit type conversions that may change value, including signed/unsigned
@@ -183,25 +223,11 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         # detects Unicode bidirectional characters (Trojan Source attacks)
         "-Wbidi-chars=any,ucn",
 
-        # FORTIFY
-        # enables glibc bounds checking at runtime
-        "-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=3",
-
         # HARDENING
         # enforces correct use of flexible array members
         "-fstrict-flex-arrays=3",
         # prevents stack clash attacks
         "-fstack-clash-protection",
-        # enables run-time checks for stack-based buffer overflows for all functions
-        #"-fstack-protector-all",
-        # enables run-time checks for stack-based buffer overflows using strong heuristic (performance balanced)
-        "-fstack-protector-strong",
-        # enables Control-Flow Enforcement Technology (CET) (problematic if not x86_64 and not Kernel Linux)
-        "-fcf-protection=full",
-        # meta-flag for enabling multiple hardening features
-        #"-fhardened",
-        # prevents data leakage with zero-initializing padding bits
-        "-fzero-init-padding-bits=all",
         # builds a position-independent executable
         "-fPIE",
         # forces retention of null pointer checks
@@ -209,19 +235,8 @@ def compile_c_code(c_file_path: str, out_file_path: str) -> dict[str, bool | str
         # defines behavior for signed integer and pointer arithmetic overflows
         "-fno-strict-overflow",
         # assumes not strict aliasing
-        "-fno-strict-aliasing",
-        # initializes automatic variables that lack explicit initializers
-        "-ftrivial-auto-var-init=zero",
-
-        # static analysis flags
-        "-fanalyzer",
-        "-fanalyzer-transitivity",
-
-        # Sanitizers (heavy)
-        #"-fsanitize=address,undefined,leak"
-        # DO NOT combine thread with address/leak
-        #"-fsanitize=address,undefined,leak,thread"
-    ]
+        "-fno-strict-aliasing"
+    ] + (runtime_flags if runtime else buildtime_flags)
 
     linker_flags = [
         # restricts dlopen(3) calls to shared objects + marks stack memory as non-executable (-z not supported on Windows)

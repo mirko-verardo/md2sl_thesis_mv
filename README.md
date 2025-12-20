@@ -30,7 +30,7 @@
     - the first part of the interaction: GENERATE_PARSER, CORRECT_ERROR, ASSESS_CODE, GENERAL_CONVERSATION
         - LLM didn't always understand it by itself
 - orchestrator, compiler and tester nodes introduced
-- compiler-assisted static analysis and diagnostics (light)
+- compiler-assisted diagnostics and static analysis (light)
     - vulnerability assessment but only at build-time
 - secondary
     - output folders divided by file format
@@ -61,7 +61,7 @@
 
 - Bandit: NO, only Python
 - SonarQube: NO, C only commercial
-- CodeQL: YES? A lot of languages: heavy?
+- CodeQL: YES (a lot of languages: heavy?)
 
 ### Others
 
@@ -71,15 +71,6 @@
 - Cppcheck: YES
 - LLVM Clang: YES
 - CodeChecker: ? (aggregator, heavy?)
-
-## Prompts
-
-- *difficult*: 
-    - generate a parser function for PDF files
-    - generate a parser function for GEOJSON files that supports all geometry types
-- *simple*: 
-    - generate a simple parser function for JSON files
-    - generate a simple parser function for CSV files
 
 ## Unit Testing
 
