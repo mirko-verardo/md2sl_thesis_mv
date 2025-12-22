@@ -6,7 +6,7 @@ from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
 from models import CompilationCheck, ExecutionCheck
 from utils import colors
-from utils.general import set_if_undefined, initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
+from utils.general import initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
 
 
 

@@ -11,6 +11,20 @@ from utils import colors
 
 
 
+def __get_out_file_path(out_file_path: str, runtime: bool) -> str:
+    return f"{out_file_path}_{"rt" if runtime else "bt"}"
+
+def __check_if_wsl(wsl: str) -> bool:
+    return (wsl.lower() != "none")
+
+def __to_wsl_path(wsl: str, file_path: str) -> str:
+    # Use wslpath to convert automatically
+    result = run(["wsl", "-d", wsl, "wslpath", re.escape(file_path)], capture_output=True, text=True, encoding="utf-8")
+    return result.stdout.strip()
+
+def __get_wsl_cmd(wsl: str) -> list[str]:
+    return ["wsl", "-d", wsl]
+
 def set_if_undefined(var: str) -> str:
     """Set environment variable from .env file."""
     # load variables from .env file
@@ -157,9 +171,6 @@ def extract_c_code(text: str) -> str:
 
 def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
     """Compile the C code using gcc with strict optimization, warnings and hardening."""
-    
-    # TODO: check security flags
-    # https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
 
     runtime_flags = [
         "-O1",
@@ -172,8 +183,7 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         #"-fsanitize=address,undefined,leak,thread",
         "-fno-omit-frame-pointer",
         "-fno-optimize-sibling-calls",
-        "-fno-common",
-        "ASAN_OPTIONS=detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1:check_initialization_order=1:strict_init_order=1"
+        "-fno-common"
     ]
 
     buildtime_flags = [
@@ -194,9 +204,10 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         # enables run-time checks for stack-based buffer overflows using strong heuristic (performance balanced)
         "-fstack-protector-strong",
         # enables Control-Flow Enforcement Technology (CET) (problematic if not x86_64 and not Kernel Linux)
+        "-fcf-protection=none", # must be added before desired value (not required since GCC 14.0.0)
         "-fcf-protection=full",
-        # prevents data leakage with zero-initializing padding bits
-        "-fzero-init-padding-bits=all",
+        # prevents data leakage with zero-initializing padding bits (since GCC 15.0.0)
+        #"-fzero-init-padding-bits=all",
         # initializes automatic variables that lack explicit initializers
         "-ftrivial-auto-var-init=zero",
         # static analysis flags
@@ -205,10 +216,6 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
     ]
 
     compiler_flags = [
-        # C STANDARD
-        # set 2024 current C standard
-        "-std=gnu23",
-
         # WARNINGS
         # common warnings, additional warnings
         "-Wall", "-Wextra", 
@@ -251,10 +258,19 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         "-pie"
     ]
 
+    out_file_path = __get_out_file_path(out_file_path, runtime)
+    command = []
+    wsl = set_if_undefined("WSL")
+    if __check_if_wsl(wsl):
+        c_file_path = __to_wsl_path(wsl, c_file_path)
+        out_file_path = __to_wsl_path(wsl, out_file_path)
+        command = __get_wsl_cmd(wsl)
+
     result = run(
-        ["gcc", *compiler_flags, c_file_path, *linker_flags, "-o", out_file_path],
+        command + ["gcc", *compiler_flags, c_file_path, *linker_flags, "-o", out_file_path],
         capture_output=True,
-        text=True
+        text=True,
+        encoding="utf-8"
     )
 
     compilation_stdout = result.stdout if result.stdout else ""
@@ -273,7 +289,7 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         'stderr': compilation_stderr
     }
 
-def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, bool | str]:
+def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
@@ -288,9 +304,27 @@ def execute_c_code(exe_file_path: str, in_file_path: str) -> dict[str, bool | st
             'stderr': f'Failed to read input file: {e}'
         }
 
-    # Run the executable with the raw-bytes file contents as stdin
+    # Execution command building
+    out_file_path = __get_out_file_path(out_file_path, runtime)
+    command = []
+    wsl = set_if_undefined("WSL")
+    if __check_if_wsl(wsl):
+        out_file_path = __to_wsl_path(wsl, out_file_path)
+        command = __get_wsl_cmd(wsl)
+    if runtime:
+        asan_options = [
+            "detect_leaks=1",
+            "strict_string_checks=1",
+            "detect_stack_use_after_return=1",
+            "check_initialization_order=1",
+            "strict_init_order=1"
+        ]
+        command += ["env", f"ASAN_OPTIONS={":".join(asan_options)}"]
+    
+    # Run the executable with the raw-bytes file contents as stdin and with asan options (maybe)
+    # NB: no need for encoding because text is equal to False
     result = run(
-        [exe_file_path],
+        command + [out_file_path],
         input=input_bytes,
         capture_output=True,
         text=False

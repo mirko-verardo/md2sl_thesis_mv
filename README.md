@@ -6,16 +6,33 @@
 - **Packages**: `requirements.txt`
 - **Variables**: `.env`
     ```
+    WSL="your-wsl-if-used"
     GOOGLE_API_KEY="your-key"
     OPENAI_API_KEY="your-key"
     ANTHROPIC_API_KEY="your-key"
     ```
+    **NB**: if you don't need WSL because you are already running on Linux OS, don't leave empty that variable but set it equal to "none".
 
-## GCC
+## GCC (not used anymore)
 
 - gcc.exe (Rev8, Built by MSYS2 project) 15.2.0
+    - Installed with MSYS2
 
-## Improvements
+## WSL
+
+- Ubuntu 24.04.3 LTS
+```
+wsl --install -d Ubuntu
+```
+
+### GCC
+
+- gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0
+```
+wsl -d Ubuntu sudo apt install -y build-essential gcc g++
+```
+
+## DONE
 
 - general code refactoring
     - agents prompts isolated from the logic
@@ -32,27 +49,39 @@
 - orchestrator, compiler and tester nodes introduced
 - compiler-assisted diagnostics and static analysis (light)
     - vulnerability assessment but only at build-time
-- secondary
-    - output folders divided by file format
-    - user can generate 1 file format parser for each conversation (avoiding confusion)
-    - better stderr management with file name replaced (confounding) and line and column number specified
-    - better context management between different loops in multiagent system (keeping in memory last parser generated) and avoiding passing entire conversation history (confounding)
+- dynamic analysis
+    - vulnerability assessment at run-time
+    - new profile with sanitizers: created by compiler, launched by tester
+
+### Minors
+
+- output folders divided by file format
+- user can generate 1 file format parser for each conversation (avoiding confusion)
+- better stderr management with file name replaced (confounding) and line and column number specified
+- better context management between different loops in multiagent system (keeping in memory last parser generated) and avoiding passing entire conversation history (confounding)
 
 ## TODO
+
+- dynamic analysis
+    - fuzzing
+- choose metrics
+    - accuracy: 
+        - files parsed without errors / total files parsed
+        - parser created without errors / total parser created
+    - coverage: lines executed / total lines
+    - execution time
+    - sage score (paper)
+
+### Optional
 
 - specific test for some formats (JSON)
     - I have to produce specific c code to apply test
     - I have to create specific test case linked to each input file
-- dynamic analysis for vulnerability assessment
-    - integrate sanitizers with tester (hopefully)
-    - vulnerability assessment at run-time
-    - fuzzing
 - static analysis (completed)
     - new agent
     - integration of CodeQL tool
     - vulnerability assessment at build-time with advanced analysis (abstract syntax trees, control-flow graphs, ...)
     - less important for parsing than dynamic analysis
-- sage metric (paper)
 - better log management
 
 ## Static Analysis Tool
@@ -60,8 +89,8 @@
 ### Paper's
 
 - Bandit: NO, only Python
-- SonarQube: NO, C only commercial
-- CodeQL: YES (a lot of languages: heavy?)
+- SonarQube: NO, C but only commercial
+- CodeQL: YES (a lot of languages, heavy?)
 
 ### Others
 
@@ -86,11 +115,6 @@
         - PRO: a lot of files (external repository?) can be used as input (no checks definition), CONS: minimal testing
 2. Generate automatically through an agent file to parse and test cases on it
     - difficult
-3. Metrics:
-    - accuracy: files parsed with test case ok / total files parsed
-    - coverage: lines executed / total lines
-    - execution time
-    - sage score (paper)
 
 ## Questions
 

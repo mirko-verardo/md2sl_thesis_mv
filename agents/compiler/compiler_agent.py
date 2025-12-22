@@ -37,6 +37,13 @@ def compiler_node(state: AgentState) -> AgentState:
     
     # Check if code has been compiled with success
     is_compiled = compilation_result["success"]
+    compilation_flags = "buildtime"
+    if is_compiled:
+        # Recompile the code for the tester (runtime flags)
+        compilation_result = compile_c_code(c_file_path_str, o_file_path_str, runtime=True)
+        is_compiled = compilation_result["success"]
+        compilation_flags = "runtime"
+    
     compilation_status = "✅ Compilation successful" if is_compiled else f"❌ Compilation failed with the following errors:\n{compilation_result["stderr"]}"
 
     # Record parser compilation in metrics
@@ -44,10 +51,11 @@ def compiler_node(state: AgentState) -> AgentState:
     
     # Log the results
     print_colored(f"Compiler (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
+    print_colored(f"Compilation flags: {compilation_flags}", colors.BLUE, bold=True)
     print_colored(f"Compilation result: {compilation_status}", colors.GREEN if is_compiled else colors.RED, bold=True)
 
     # for conversation history only
-    compiler_response = f"Compilation result: {compilation_status}"
+    compiler_response = f"Compilation result ({compilation_flags}): {compilation_status}"
     
     return {
         "messages": [AIMessage(content=compiler_response, name="Compiler")],
