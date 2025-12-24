@@ -27,6 +27,9 @@ def __get_wsl_cmd(wsl: str) -> list[str]:
 
 def __get_stderr_beautified(stderr: str, c_path: str, o_path: str | None = None) -> str:
     """Avoiding confusion for LLM on file name referred in stderr with better line and column number specification."""
+    if not stderr:
+        return stderr
+    
     c_path_esc = re.escape(c_path)
 
     # NB: order matters!
@@ -357,9 +360,6 @@ def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False)
     execution_stdout = safe_decode(result.stdout)
     execution_stderr = safe_decode(result.stderr)
     execution_stderr = __get_stderr_beautified(execution_stderr, c_file_path, out_file_path)
-
-    #execution_stdout = result.stdout if result.stdout else ""
-    #execution_stderr = __get_stderr_beautified(result.stderr, c_file_path, out_file_path) if result.stderr else ""
 
     return {
         'success': (result.returncode == 0),

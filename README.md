@@ -93,7 +93,11 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
         - mean parser generation TIME
         - mean parser generation ATTEMPTS (react loop for Single, graph iterations for Multi)
         - compilation rate
+            - record first compiled
         - testing rate (training set)
+            - record first tested ok
+        - validation rate
+            - record first validated ok (if exists, it is the last one)
         - testing rate (test set)
         - cyclomatic complexity
         - code coverage
