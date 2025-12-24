@@ -1,8 +1,10 @@
+from lizard import analyze_file
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
 from utils.general import print_colored, compile_c_code
 from utils.multi_agent import get_file_name
+from time import sleep
 
 
 
@@ -30,6 +32,12 @@ def compiler_node(state: AgentState) -> AgentState:
         f.write(generator_code)
     
     print_colored(f"\nSaved C code to: {c_file_path_str} for compilation", colors.CYAN, bold=True)
+
+    # Metric the code
+    i = analyze_file(c_file_path_str)
+    print(i.__dict__)
+    print(i.function_list[0].__dict__)
+    sleep(10)
     
     # Compile the code
     print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)

@@ -25,6 +25,27 @@ def __to_wsl_path(wsl: str, file_path: str) -> str:
 def __get_wsl_cmd(wsl: str) -> list[str]:
     return ["wsl", "-d", wsl]
 
+def __get_stderr_beautified(stderr: str, c_path: str, o_path: str | None = None) -> str:
+    """Avoiding confusion for LLM on file name referred in stderr with better line and column number specification."""
+    c_path_esc = re.escape(c_path)
+
+    # NB: order matters!
+
+    pattern = rf"{c_path_esc}:(\d+):(\d+)"
+    stderr = re.sub(pattern, r"Line \1 Column \2", stderr)
+
+    pattern = rf"{c_path_esc}:(\d+)"
+    stderr = re.sub(pattern, r"Line \1", stderr)
+
+    pattern = f"{c_path_esc}: "
+    stderr = re.sub(pattern, "", stderr)
+
+    if o_path:
+        pattern = re.escape(o_path)
+        stderr = re.sub(pattern, "exe", stderr)
+
+    return stderr
+
 def set_if_undefined(var: str) -> str:
     """Set environment variable from .env file."""
     # load variables from .env file
@@ -274,13 +295,7 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
     )
 
     compilation_stdout = result.stdout if result.stdout else ""
-    compilation_stderr = result.stderr if result.stderr else ""
-
-    # avoiding confusion for LLM on file name referred in stderr + better line and column number specification
-    pattern = rf"{re.escape(c_file_path)}:(\d+):(\d+)"
-    compilation_stderr = re.sub(pattern, r"Line \1 Column \2", compilation_stderr)
-    pattern = rf"{re.escape(c_file_path)}: "
-    compilation_stderr = re.sub(pattern, "", compilation_stderr)
+    compilation_stderr = __get_stderr_beautified(result.stderr, c_file_path) if result.stderr else ""
     
     # with -Werror, compilation success means executable created and no warnings
     return {
@@ -305,10 +320,12 @@ def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False)
         }
 
     # Execution command building
+    c_file_path = f"{out_file_path}.c"
     out_file_path = __get_out_file_path(out_file_path, runtime)
     command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
+        c_file_path = __to_wsl_path(wsl, c_file_path)
         out_file_path = __to_wsl_path(wsl, out_file_path)
         command = __get_wsl_cmd(wsl)
     if runtime:
@@ -336,11 +353,18 @@ def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False)
             return b.decode("utf-8")
         except:
             return repr(b)
+    
+    execution_stdout = safe_decode(result.stdout)
+    execution_stderr = safe_decode(result.stderr)
+    execution_stderr = __get_stderr_beautified(execution_stderr, c_file_path, out_file_path)
+
+    #execution_stdout = result.stdout if result.stdout else ""
+    #execution_stderr = __get_stderr_beautified(result.stderr, c_file_path, out_file_path) if result.stderr else ""
 
     return {
         'success': (result.returncode == 0),
-        'stdout': safe_decode(result.stdout),
-        'stderr': safe_decode(result.stderr)
+        'stdout': execution_stdout,
+        'stderr': execution_stderr
     }
 
 def compilation_check(text: str) -> dict[str, bool | str]:

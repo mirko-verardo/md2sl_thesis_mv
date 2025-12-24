@@ -62,6 +62,7 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
 
 ## TODO
 
+- timeout for llm and testing
 - dynamic analysis
     - fuzzing
 - choose metrics
@@ -72,7 +73,7 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
     - execution time
     - sage score (paper)
 
-### Optional
+### Minors
 
 - specific test for some formats (JSON)
     - I have to produce specific c code to apply test
@@ -83,6 +84,19 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
     - vulnerability assessment at build-time with advanced analysis (abstract syntax trees, control-flow graphs, ...)
     - less important for parsing than dynamic analysis
 - better log management
+
+## Experimental Benchmarking
+
+- Single ReAct agent vs Multi agent
+    - for all file formats
+    - metrics:
+        - mean parser generation TIME
+        - mean parser generation ATTEMPTS (react loop for Single, graph iterations for Multi)
+        - compilation rate
+        - testing rate (training set)
+        - testing rate (test set)
+        - cyclomatic complexity
+        - code coverage
 
 ## Static Analysis Tool
 
