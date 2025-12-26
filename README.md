@@ -87,13 +87,22 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
 
 ## Experimental Benchmarking
 
-- Single ReAct agent vs Multi agent
-    - for all file formats
+- CSV
+    - n, type, llm, file_format, start_time, first_(compilation|testing|validation)_time, first_(compilation|testing|validation)_round, best_parser_folder
+    - 1-10, single/multi, gemini/gpt/claude, csv/html/..., aaaa-mm-gg hh:mm:ss, aaaa-mm-gg hh:mm:ss|null, 1-10|null, folder|null
+    - testing_rate, cyclomatic_complexity, code_coverage
+    - 0->1, ..., ...
+- x10 (x100?)
+    - Single ReAct agent vs Multi agent (2)
+    - for all file formats (6)
+    - for all LLM (3)
     - metrics:
         - mean parser generation TIME
-        - mean parser generation ATTEMPTS (react loop for Single, graph iterations for Multi)
+            - inside 1 round
+        - mean parser generation ATTEMPTS (ReAct loops for Single, Graph iterations for Multi)
+            - inside 1 round, from 1 to max_iterations
         - compilation rate
-            - record first compiled
+            - record first compiled ok
         - testing rate (training set)
             - record first tested ok
         - validation rate

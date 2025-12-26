@@ -29,8 +29,7 @@ def assessor_node(state: AgentState) -> AgentState:
     assessor_prompt = PromptTemplate.from_template(assessor_template)
 
     # Initialize model for assessor
-    assessor_llm = initialize_llm(model_source)
-    assessor_llm.temperature = 0.4
+    assessor_llm = initialize_llm(model_source, 0.4)
 
     # Create a normal LLM chain (no ReAct needed)
     assessor_executor = assessor_prompt | assessor_llm

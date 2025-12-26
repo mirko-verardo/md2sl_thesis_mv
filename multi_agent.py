@@ -21,11 +21,9 @@ def create_session_directory(path: str) -> tuple[Path, Path]:
     """Create a session directory with timestamp and return its path."""
     
     base_dir = Path(path)
-    base_dir.mkdir(parents=True, exist_ok=True)
-    
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     session_dir = base_dir / f"session_{session_id}"
-    session_dir.mkdir(exist_ok=True)
+    session_dir.mkdir(parents=True, exist_ok=True)
     
     log_file = session_dir / f"conversation_{session_id}.txt"
     

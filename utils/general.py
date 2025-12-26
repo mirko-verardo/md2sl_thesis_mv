@@ -122,7 +122,7 @@ def get_file_format_from_input() -> str:
         
         print("Invalid file format. Please enter one of these: " + (", ".join(actions)))
 
-def initialize_llm(source: str):
+def initialize_llm(source: str, temp: float = 0.5):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
         #model_id = 'gemini-3.0-pro'
@@ -133,26 +133,24 @@ def initialize_llm(source: str):
         api_key = set_if_undefined("GOOGLE_API_KEY")
 
         return ChatGoogleGenerativeAI(
-            model=model_id,
-            temperature=0.5, # 0.2 # Slight temperature increase to improve reasoning
-            max_tokens=None,
-            google_api_key = api_key,
-            timeout=None,
-            max_retries=5,
-            #top_p=0.95,  # Higher top_p for more creative reasoning
-            #top_k=40,  # Reasonable top_k value
-            # other params...
+            model = model_id,
+            temperature = temp,
+            max_tokens = None,
+            timeout = None,
+            max_retries = 5,
+            api_key = SecretStr(api_key)
         )
     elif source == "openai":
         model_id = 'gpt-4o-mini'
         api_key = set_if_undefined("OPENAI_API_KEY")
 
         return ChatOpenAI(
-            model=model_id,
-            temperature=0.5,
-            timeout=None,
-            max_retries=5,
-            api_key=SecretStr(api_key)
+            model = model_id,
+            temperature = temp,
+            max_tokens = None,
+            timeout = None,
+            max_retries = 5,
+            api_key = SecretStr(api_key)
         )
     elif source == "anthropic":
         #model_id = 'claude-3-5-sonnet-20240620'
@@ -160,15 +158,16 @@ def initialize_llm(source: str):
         api_key = set_if_undefined("ANTHROPIC_API_KEY")
 
         return ChatAnthropic(
-            model_name=model_id,
-            #model=model_id,
-            stop=None,
-            temperature=0.5,
-            max_tokens_to_sample=6144,
-            #max_tokens=6144,
-            timeout=None,
-            max_retries=5,
-            api_key=SecretStr(api_key)
+            #model_name = model_id,
+            model = model_id,
+            #stop = None,
+            temperature = temp,
+            #max_tokens_to_sample = 6144,
+            #max_tokens = 6144,
+            max_tokens = None,
+            timeout = None,
+            max_retries = 5,
+            api_key = SecretStr(api_key)
         )
     
     raise ValueError("Invalid source")
@@ -307,7 +306,7 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         'stderr': compilation_stderr
     }
 
-def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
+def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
@@ -323,7 +322,6 @@ def execute_c_code(out_file_path: str, in_file_path: str, runtime: bool = False)
         }
 
     # Execution command building
-    c_file_path = f"{out_file_path}.c"
     out_file_path = __get_out_file_path(out_file_path, runtime)
     command = []
     wsl = set_if_undefined("WSL")
@@ -409,7 +407,7 @@ def execution_check(text: str, format: str) -> dict[str, bool | str]:
         if result["success"]:
             # execute the C code
             test_file_path = f"input/{format}/test.{format}"
-            result = execute_c_code(temp_out_file, test_file_path)
+            result = execute_c_code(temp_c_file, temp_out_file, test_file_path)
     
     return result
 

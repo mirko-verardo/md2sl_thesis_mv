@@ -24,10 +24,12 @@ def compiler_node(state: AgentState) -> AgentState:
     # Save C code to file for compilation
     file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
     c_file_name = f"{file_name}.c"
-    c_file_path = session_dir / c_file_name
+    parser_dir = session_dir / file_name
+    c_file_path = parser_dir / c_file_name
     c_file_path_str = str(c_file_path)
-    o_file_path_str = str(session_dir / file_name)
+    o_file_path_str = str(parser_dir / file_name)
     
+    parser_dir.mkdir()
     with open(c_file_path, "w", encoding="utf-8") as f:
         f.write(generator_code)
     

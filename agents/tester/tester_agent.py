@@ -16,19 +16,22 @@ def tester_node(state: AgentState) -> AgentState:
 
     # Get files for testing
     file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
-    o_file_path_str = str(session_dir / file_name)
+    c_file_name = f"{file_name}.c"
+    parser_dir = session_dir / file_name
+    c_file_path_str = str(parser_dir / c_file_name)
+    o_file_path_str = str(parser_dir / file_name)
     format = file_format.lower()
     test_file_path = f"input/{format}/test.{format}"
     
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
-    testing_result = execute_c_code(o_file_path_str, test_file_path, runtime=True)
+    testing_result = execute_c_code(c_file_path_str, o_file_path_str, test_file_path, runtime=True)
     
     # Check if code has been tested with success
     is_tested_ok = testing_result["success"]
     testing_status = "✅ Testing successful" if is_tested_ok else "❌ Testing failed with the following errors:\n" + testing_result["stderr"]
 
-    with open(session_dir / f"{file_name}.txt", "w", encoding="utf-8") as f:
+    with open(parser_dir / "output.txt", "w", encoding="utf-8") as f:
         test_output = f"success: {"OK" if is_tested_ok else "ERR"}\n"
         test_output += f"stdout: {testing_result["stdout"]}\n"
         test_output += f"stderr: {testing_result["stderr"]}"

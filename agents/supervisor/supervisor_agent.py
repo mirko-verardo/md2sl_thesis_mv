@@ -69,8 +69,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     supervisor_prompt = PromptTemplate.from_template(supervisor_template)
 
     # Initialize model for supervisor
-    supervisor_llm = initialize_llm(model_source)
-    supervisor_llm.temperature = 0.6
+    supervisor_llm = initialize_llm(model_source, 0.6)
     
     # Create a normal LLM chain (no ReAct needed)
     supervisor_executor = supervisor_prompt | supervisor_llm

@@ -39,7 +39,6 @@ def generator_node(state: AgentState) -> AgentState:
 
     # Initialize model for generator
     generator_llm = initialize_llm(model_source)
-    generator_llm.temperature = 0.5
 
     # Create a normal LLM chain (no ReAct needed)
     generator_executor = generator_prompt | generator_llm

@@ -83,6 +83,48 @@ class SystemMetrics:
         with open(json_file, "w", encoding="utf-8") as f:
             dump(json_data, f, indent=2)
 
+class BenchmarkMetrics:
+    """Class for benchmark metrics recording."""
+    def __init__(self, n: int, type: str, file_format: str):
+        self.checkpoints = []
+        self.data = {
+            "n": n,
+            "type": type,
+            "file_format": file_format,
+            "start_time": datetime.now().isoformat(),
+            "compilation_time": None,
+            "compilation_round": None,
+            "testing_time": None,
+            "testing_round": None,
+            "validation_time": None,
+            "validation_round": None,
+            "best_parser_folder": None,
+            "testing_rate": None,
+            "cyclomatic_complexity": None,
+            "code_coverage": None
+        }
+    
+    def __record_parser_checkpoint(self, checkpoint: str, round: int, parser_folder: str) -> None:
+        """Record checkpoint about the parser."""
+        if checkpoint in self.checkpoints:
+            return
+        self.checkpoints.append(checkpoint)
+        self.data[f"{checkpoint}_time"] = datetime.now().isoformat()
+        self.data[f"{checkpoint}_round"] = round
+        self.data["best_parser_folder"] = parser_folder
+
+    def record_parser_compilation(self, round: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("compilation", round, parser_folder)
+    
+    def record_testing_compilation(self, round: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("testing", round, parser_folder)
+    
+    def record_validation_compilation(self, round: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("validation", round, parser_folder)
+    
+    def get_benchmark(self) -> dict[str, Any]:
+        return self.data
+
 AgentType: TypeAlias = Literal["Supervisor", "Orchestrator", "Generator", "Compiler", "Tester", "Assessor", "FINISH"]
 
 class AgentState(TypedDict):

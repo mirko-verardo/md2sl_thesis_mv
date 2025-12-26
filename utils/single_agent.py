@@ -313,7 +313,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
                 test_file_path = f"input/{file_format_low}/test.{file_format_low}"
                 # testing the C code
                 print("Testing...")
-                testing_result = execute_c_code(str(o_file_path), test_file_path)
+                testing_result = execute_c_code(str(c_file_path), str(o_file_path), test_file_path)
             else:
                 testing_result = {
                     "success": False,
