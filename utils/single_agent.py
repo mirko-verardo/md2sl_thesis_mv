@@ -277,12 +277,15 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             code = extract_c_code(agent_output)
             
             # compile and test it
-            print_colored("\n--- Compiling Final C code ---", colors.YELLOW, bold=True)
-            
-            # compile the C code
-            print("Compiling...")
+            print_colored("\n--- Compiling and Testing Final C code ---", colors.YELLOW, bold=True)
+
+            # get the parser dir
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             parser_dir = session_dir / f"parser_{timestamp}"
+            parser_dir.mkdir()
+
+            # compile the C code
+            print("Compiling...")
             compilation_result = compile_c_code(parser_dir, code)
             
             is_compilation_ok = compilation_result["success"]

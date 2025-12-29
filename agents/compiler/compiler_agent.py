@@ -24,10 +24,13 @@ def compiler_node(state: AgentState) -> AgentState:
     #i = analyze_file(c_file_path_str)
     #print(i.__dict__)
     #print(i.function_list[0].__dict__)
+
+    # Create the parser dir
+    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
+    parser_dir.mkdir()
     
     # Compile the code
     print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)
-    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
     compilation_result = compile_c_code(parser_dir, generator_code)
     
     # Check if code has been compiled with success

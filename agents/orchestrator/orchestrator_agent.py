@@ -24,7 +24,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         raise Exception("Something goes wrong :(")
     
     # Get current parser directory
-    parser_dir_str = str(get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count))
+    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
     
     prev_node = messages[-1].name
     if prev_node == "Supervisor":
@@ -41,11 +41,11 @@ def orchestrator_node(state: AgentState) -> AgentState:
         
         # Check compilation results
         compiler_result_success = compiler_result["success"]
-        system_metrics.record_parser_compilation(parser_dir_str, compiler_result_success)
+        system_metrics.record_parser_compilation(parser_dir, compiler_result_success)
         if compiler_result_success:
             # go on with testing
             next_node = "Tester"
-            benchmark_metrics.record_parser_compilation(iteration_count, parser_dir_str)
+            benchmark_metrics.record_parser_compilation(iteration_count, parser_dir)
         else:
             # go back with error correction
             next_node = "Generator"
@@ -62,7 +62,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         if tester_result_success:
             # go on with qualitative assessment
             next_node = "Assessor"
-            benchmark_metrics.record_parser_testing(iteration_count, parser_dir_str)
+            benchmark_metrics.record_parser_testing(iteration_count, parser_dir)
         else:
             # go back with error correction
             next_node = "Generator"
@@ -78,7 +78,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         if is_satisfactory(code_assessment):
             next_node = "Supervisor"
             system_metrics.satisfy_round()
-            benchmark_metrics.record_parser_validation(iteration_count, parser_dir_str)
+            benchmark_metrics.record_parser_validation(iteration_count, parser_dir)
         else:
             next_node = "Generator"
         

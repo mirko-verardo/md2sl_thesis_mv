@@ -20,11 +20,11 @@ class SystemMetrics:
     def get_round_number(self) -> int:
         return self.rounds
 
-    def record_parser_compilation(self, parser_file: str, compilation_success: bool) -> None:
+    def record_parser_compilation(self, parser: Path, compilation_success: bool) -> None:
         """Record information about the last compilated parser file."""
         if self.current_round:
             # Name of the last parser file
-            self.rounds_data[self.current_round]["last_parser_file"] = parser_file
+            self.rounds_data[self.current_round]["last_parser"] = str(parser)
             # Compilation status of the last parser
             self.rounds_data[self.current_round]["compilation_success"] = compilation_success
     
@@ -104,22 +104,22 @@ class BenchmarkMetrics:
             "code_coverage": None
         }
     
-    def __record_parser_checkpoint(self, checkpoint: str, iteration: int, parser_folder: str) -> None:
+    def __record_parser_checkpoint(self, checkpoint: str, iteration: int, parser_folder: Path) -> None:
         """Record checkpoint about the parser."""
         if checkpoint in self.checkpoints:
             return
         self.checkpoints.append(checkpoint)
         self.data[f"{checkpoint}_time"] = datetime.now().isoformat()
         self.data[f"{checkpoint}_iteration"] = iteration
-        self.data["best_parser_folder"] = parser_folder
+        self.data["best_parser_folder"] = str(parser_folder)
 
-    def record_parser_compilation(self, iteration: int, parser_folder: str) -> None:
+    def record_parser_compilation(self, iteration: int, parser_folder: Path) -> None:
         self.__record_parser_checkpoint("compilation", iteration, parser_folder)
     
-    def record_parser_testing(self, iteration: int, parser_folder: str) -> None:
+    def record_parser_testing(self, iteration: int, parser_folder: Path) -> None:
         self.__record_parser_checkpoint("testing", iteration, parser_folder)
     
-    def record_parser_validation(self, iteration: int, parser_folder: str) -> None:
+    def record_parser_validation(self, iteration: int, parser_folder: Path) -> None:
         self.__record_parser_checkpoint("validation", iteration, parser_folder)
     
     def get_benchmark(self) -> dict[str, Any]:
