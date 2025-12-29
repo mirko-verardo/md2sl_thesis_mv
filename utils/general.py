@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from getpass import getpass
 from pathlib import Path
 from pydantic import SecretStr
-from subprocess import run
+from subprocess import run, TimeoutExpired
 from tempfile import TemporaryDirectory
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
@@ -160,7 +160,7 @@ def initialize_llm(source: str, temp: float = 0.5):
             model = model_id,
             temperature = temp,
             max_tokens = None,
-            timeout = None,
+            timeout = 60 * 20,
             max_retries = 5,
             api_key = SecretStr(api_key)
         )
@@ -320,12 +320,20 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = False) -
         o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
         command = __get_wsl_cmd(wsl)
 
-    result = run(
-        command + ["gcc", *compiler_flags, c_parser_path_str, *linker_flags, "-o", o_parser_path_str],
-        capture_output=True,
-        text=True,
-        encoding="utf-8"
-    )
+    try:
+        result = run(
+            command + ["gcc", *compiler_flags, c_parser_path_str, *linker_flags, "-o", o_parser_path_str],
+            capture_output = True,
+            text = True,
+            encoding = "utf-8",
+            timeout = 60 * 5
+        )
+    except TimeoutExpired as te:
+        return {
+            'success': False,  
+            'stdout': '',
+            'stderr': f'Failed to compile the code: {te}'
+        }
 
     compilation_stdout = result.stdout if result.stdout else ""
     compilation_stderr = __get_stderr_beautified(result.stderr, c_parser_path_str) if result.stderr else ""
@@ -372,14 +380,22 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = False)
         ]
         command += ["env", f"ASAN_OPTIONS={":".join(asan_options)}"]
     
-    # Run the executable with the raw-bytes file contents as stdin and with asan options (maybe)
-    # NB: no need for encoding because text is equal to False
-    result = run(
-        command + [out_parser_path_str],
-        input=input_bytes,
-        capture_output=True,
-        text=False
-    )
+    try:
+        # Run the executable with the raw-bytes file contents as stdin and with asan options (maybe)
+        # NB: no need for encoding because text is equal to False
+        result = run(
+            command + [out_parser_path_str],
+            input = input_bytes,
+            capture_output = True,
+            text = False,
+            timeout = 60 * 5
+        )
+    except TimeoutExpired as te:
+        return {
+            'success': False,  
+            'stdout': '',
+            'stderr': f'Failed to execute the code, probably due to an infinite loop: {te}'
+        }
 
     # Decode stdout/stderr only for human-readable messages
     def safe_decode(b: bytes) -> str:

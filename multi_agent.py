@@ -1,118 +1,31 @@
 from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph import START, END, StateGraph
-from agents.supervisor.supervisor_agent import supervisor_node
-from agents.orchestrator.orchestrator_agent import orchestrator_node
-from agents.generator.generator_agent import generator_node
-from agents.compiler.compiler_agent import compiler_node
-from agents.tester.tester_agent import tester_node
-from agents.assessor.assessor_agent import assessor_node
-from models import AgentType, AgentState, SystemMetrics, BenchmarkMetrics
+from models import SystemMetrics, BenchmarkMetrics
 from utils import colors
 from utils.general import create_session, get_model_source_from_input, get_file_format_from_input, print_colored
+from utils.graph import build_workflow
 from utils.multi_agent import get_action_from_input, get_request_from_action
 
 
 
-def route_next(state: AgentState) -> AgentType:
-    """Route to the next node based on the state."""
-    return state["next_step"]
-
-def build_workflow():
-    """Build and return the workflow graph."""
-    workflow = StateGraph(AgentState)
-    
-    # Add nodes
-    workflow.add_node("Supervisor", supervisor_node)
-    workflow.add_node("Orchestrator", orchestrator_node)
-    workflow.add_node("Generator", generator_node)
-    workflow.add_node("Compiler", compiler_node)
-    workflow.add_node("Tester", tester_node)
-    workflow.add_node("Assessor", assessor_node)
-    
-    # Set the entry point
-    workflow.add_edge(START, "Supervisor")
-
-    # Add conditional edges
-    workflow.add_conditional_edges(
-        "Supervisor",
-        route_next,
-        {
-            "Orchestrator": "Orchestrator",
-            "FINISH": END
-        }
-    )
-
-    workflow.add_conditional_edges(
-        "Orchestrator", 
-        route_next,
-        {
-            "Supervisor": "Supervisor",
-            "Generator": "Generator",
-            "Compiler": "Compiler",
-            "Tester": "Tester",
-            "Assessor": "Assessor"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "Generator", 
-        route_next,
-        {
-            "Orchestrator": "Orchestrator"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "Compiler", 
-        route_next,
-        {
-            "Orchestrator": "Orchestrator"
-        }
-    )
-
-    workflow.add_conditional_edges(
-        "Tester", 
-        route_next,
-        {
-            "Orchestrator": "Orchestrator"
-        }
-    )
-
-    workflow.add_conditional_edges(
-        "Assessor", 
-        route_next,
-        {
-            "Orchestrator": "Orchestrator"
-        }
-    )
-    
-    return workflow.compile()
-
-
-
 if __name__ == "__main__":
-    # Prompt user to enter the model source directly
-    source = get_model_source_from_input()
-    
     print_colored("\n=== C Parser Generator System ===", colors.CYAN, bold=True)
-    print_colored("You can chat with the Supervisor about C programming or request a parser", colors.CYAN)
 
     # Initialize the graph
     graph = build_workflow()
     config = RunnableConfig(recursion_limit=100)
 
     # Initialize parameters
-    messages = []
     user_action = "GENERATE_PARSER"
+    type = "multi_agent"
+    source = get_model_source_from_input()
     file_format = get_file_format_from_input()
     system_metrics = SystemMetrics()
-    benchmark_metrics = BenchmarkMetrics(1, "multi", file_format)
+    benchmark_metrics = BenchmarkMetrics(1, type, file_format)
+    session_dir, log_file = create_session(source, type, file_format)
+    messages = []
     last_parser = None
-
-    # Create session
-    session_dir, log_file = create_session(source, "multi_agent", file_format)
     
     # Main interaction loop
     while True:
