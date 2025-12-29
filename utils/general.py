@@ -1,6 +1,8 @@
 import os, re
+from datetime import datetime
 from dotenv import load_dotenv
 from getpass import getpass
+from pathlib import Path
 from pydantic import SecretStr
 from subprocess import run
 from tempfile import TemporaryDirectory
@@ -11,15 +13,22 @@ from utils import colors
 
 
 
-def __get_out_file_path(out_file_path: str, runtime: bool) -> str:
-    return f"{out_file_path}_{"rt" if runtime else "bt"}"
+def __get_c_parser_path(parser_path: Path) -> Path:
+    return parser_path / "source.c"
+
+def __get_out_parser_path(parser_path: Path, runtime: bool) -> Path:
+    return parser_path / f"{"runtime" if runtime else "buildtime"}"
+
+def __get_in_parser_path(format: str) -> Path:
+    format = format.lower()
+    return Path("input") / format / f"test.{format}"
 
 def __check_if_wsl(wsl: str) -> bool:
     return (wsl.lower() != "none")
 
-def __to_wsl_path(wsl: str, file_path: str) -> str:
+def __to_wsl_path(wsl: str, path: str) -> str:
     # Use wslpath to convert automatically
-    result = run(["wsl", "-d", wsl, "wslpath", re.escape(file_path)], capture_output=True, text=True, encoding="utf-8")
+    result = run(["wsl", "-d", wsl, "wslpath", re.escape(path)], capture_output=True, text=True, encoding="utf-8")
     return result.stdout.strip()
 
 def __get_wsl_cmd(wsl: str) -> list[str]:
@@ -122,6 +131,21 @@ def get_file_format_from_input() -> str:
         
         print("Invalid file format. Please enter one of these: " + (", ".join(actions)))
 
+def create_session(source: str, type: str, format: str) -> tuple[Path, Path]:
+    """Create a session directory with timestamp and return its path."""
+    format = format.lower()
+
+    session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_dir = Path("output") / source / type / format / f"session_{session_id}"
+    session_dir.mkdir(parents=True)
+    
+    log_file = session_dir / f"conversation.txt"
+    
+    print_colored(f"\nCreated session directory: {session_dir}", colors.CYAN, bold=True)
+    print_colored(f"Log file: {log_file}", colors.CYAN, bold=True)
+    
+    return session_dir, log_file
+
 def initialize_llm(source: str, temp: float = 0.5):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
@@ -192,7 +216,7 @@ def extract_c_code(text: str) -> str:
     # if no code block is found, then return as is
     return text
 
-def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
+def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = False) -> dict[str, bool | str]:
     """Compile the C code using gcc with strict optimization, warnings and hardening."""
 
     runtime_flags = [
@@ -281,23 +305,30 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         "-pie"
     ]
 
-    out_file_path = __get_out_file_path(out_file_path, runtime)
+    c_parser_path = __get_c_parser_path(parser_path)
+    out_parser_path = __get_out_parser_path(parser_path, runtime)
+
+    with open(c_parser_path, "w", encoding="utf-8") as f:
+        f.write(parser_code)
+
+    c_parser_path_str = str(c_parser_path)
+    o_parser_path_str = str(out_parser_path)
     command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_file_path = __to_wsl_path(wsl, c_file_path)
-        out_file_path = __to_wsl_path(wsl, out_file_path)
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
         command = __get_wsl_cmd(wsl)
 
     result = run(
-        command + ["gcc", *compiler_flags, c_file_path, *linker_flags, "-o", out_file_path],
+        command + ["gcc", *compiler_flags, c_parser_path_str, *linker_flags, "-o", o_parser_path_str],
         capture_output=True,
         text=True,
         encoding="utf-8"
     )
 
     compilation_stdout = result.stdout if result.stdout else ""
-    compilation_stderr = __get_stderr_beautified(result.stderr, c_file_path) if result.stderr else ""
+    compilation_stderr = __get_stderr_beautified(result.stderr, c_parser_path_str) if result.stderr else ""
     
     # with -Werror, compilation success means executable created and no warnings
     return {
@@ -306,13 +337,14 @@ def compile_c_code(c_file_path: str, out_file_path: str, runtime: bool = False) 
         'stderr': compilation_stderr
     }
 
-def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runtime: bool = False) -> dict[str, bool | str]:
+def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = False) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
         # NB: read bytes, not text (for a general approach that supports all input files)
         # NB: with rb, no encoding must be specified
-        with open(in_file_path, "rb") as f:
+        in_parser_path = __get_in_parser_path(parser_format)
+        with open(in_parser_path, "rb") as f:
             input_bytes = f.read()
     except Exception as e:
         return {
@@ -322,12 +354,13 @@ def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runt
         }
 
     # Execution command building
-    out_file_path = __get_out_file_path(out_file_path, runtime)
+    c_parser_path_str = str(__get_c_parser_path(parser_path))
+    out_parser_path_str = str(__get_out_parser_path(parser_path, runtime))
     command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_file_path = __to_wsl_path(wsl, c_file_path)
-        out_file_path = __to_wsl_path(wsl, out_file_path)
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
+        out_parser_path_str = __to_wsl_path(wsl, out_parser_path_str)
         command = __get_wsl_cmd(wsl)
     if runtime:
         asan_options = [
@@ -342,7 +375,7 @@ def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runt
     # Run the executable with the raw-bytes file contents as stdin and with asan options (maybe)
     # NB: no need for encoding because text is equal to False
     result = run(
-        command + [out_file_path],
+        command + [out_parser_path_str],
         input=input_bytes,
         capture_output=True,
         text=False
@@ -357,7 +390,7 @@ def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runt
     
     execution_stdout = safe_decode(result.stdout)
     execution_stderr = safe_decode(result.stderr)
-    execution_stderr = __get_stderr_beautified(execution_stderr, c_file_path, out_file_path)
+    execution_stderr = __get_stderr_beautified(execution_stderr, c_parser_path_str, out_parser_path_str)
 
     return {
         'success': (result.returncode == 0),
@@ -367,47 +400,30 @@ def execute_c_code(c_file_path: str, out_file_path: str, in_file_path: str, runt
 
 def compilation_check(text: str) -> dict[str, bool | str]:
     """Function that checks if C code compiles correctly without warnings."""
-    # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
+    # extract the code
     code = extract_c_code(text)
     
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
-        temp_name_file = "tool_test"
-        temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
-        temp_out_file = os.path.join(temp_dir, f"{temp_name_file}.out")
-
-        # write code to file
-        with open(temp_c_file, "w", encoding="utf-8") as f:
-            f.write(code)
-
-        # compile the C code
-        result = compile_c_code(temp_c_file, temp_out_file)
+        # compile the code
+        result = compile_c_code(temp_dir, code)
 
     return result
 
 def execution_check(text: str, format: str) -> dict[str, bool | str]:
     """Function that checks if C code executes correctly without warnings."""
-    # clean the code by removing markdown delimiters: remove ```c from the top, remove ``` from anywhere and trim whitespaces
+    # extract the code
     code = extract_c_code(text)
 
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
-        temp_name_file = "tool_test"
-        temp_c_file = os.path.join(temp_dir, f"{temp_name_file}.c")
-        temp_out_file = os.path.join(temp_dir, temp_name_file)
-
-        # write code to file
-        with open(temp_c_file, "w", encoding="utf-8") as f:
-            f.write(code)
-
-        # compile the C code
-        result = compile_c_code(temp_c_file, temp_out_file)
+        # compile the code
+        result = compile_c_code(temp_dir, code)
         
         # prepare the result
         if result["success"]:
-            # execute the C code
-            test_file_path = f"input/{format}/test.{format}"
-            result = execute_c_code(temp_c_file, temp_out_file, test_file_path)
+            # execute the code
+            result = execute_c_code(temp_dir, format)
     
     return result
 

@@ -1,6 +1,8 @@
-def get_file_name(round_number: int, iteration_number: int) -> str:
+from pathlib import Path
+
+def get_parser_dir(session_dir: Path, round_number: int, iteration_number: int) -> Path:
     iteration_number_str = str(iteration_number).zfill(2)
-    return f"parser_{round_number}_{iteration_number_str}"
+    return session_dir / f"parser_{round_number}_{iteration_number_str}"
 
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
@@ -44,3 +46,16 @@ def get_action_from_input() -> str:
             return map_input_to_action(action)
         
         print("Invalid action. Please enter one of these: " + (", ".join(actions)))
+
+def get_request_from_action(action: str, file_format: str) -> str | None:
+    """Get the request from the user action"""
+    # TODO: optimize the fixed prompts
+
+    if action == "EXIT":
+        return None
+    if action == "GENERATE_PARSER":
+        return f"Generate a parser function for {file_format} files."
+    elif action == "CORRECT_ERROR":
+        return "Correct the problems on the generated parser."
+    
+    return input("\nYou: ")

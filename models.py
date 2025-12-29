@@ -93,34 +93,34 @@ class BenchmarkMetrics:
             "file_format": file_format,
             "start_time": datetime.now().isoformat(),
             "compilation_time": None,
-            "compilation_round": None,
+            "compilation_iteration": None,
             "testing_time": None,
-            "testing_round": None,
+            "testing_iteration": None,
             "validation_time": None,
-            "validation_round": None,
+            "validation_iteration": None,
             "best_parser_folder": None,
             "testing_rate": None,
             "cyclomatic_complexity": None,
             "code_coverage": None
         }
     
-    def __record_parser_checkpoint(self, checkpoint: str, round: int, parser_folder: str) -> None:
+    def __record_parser_checkpoint(self, checkpoint: str, iteration: int, parser_folder: str) -> None:
         """Record checkpoint about the parser."""
         if checkpoint in self.checkpoints:
             return
         self.checkpoints.append(checkpoint)
         self.data[f"{checkpoint}_time"] = datetime.now().isoformat()
-        self.data[f"{checkpoint}_round"] = round
+        self.data[f"{checkpoint}_iteration"] = iteration
         self.data["best_parser_folder"] = parser_folder
 
-    def record_parser_compilation(self, round: int, parser_folder: str) -> None:
-        self.__record_parser_checkpoint("compilation", round, parser_folder)
+    def record_parser_compilation(self, iteration: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("compilation", iteration, parser_folder)
     
-    def record_testing_compilation(self, round: int, parser_folder: str) -> None:
-        self.__record_parser_checkpoint("testing", round, parser_folder)
+    def record_parser_testing(self, iteration: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("testing", iteration, parser_folder)
     
-    def record_validation_compilation(self, round: int, parser_folder: str) -> None:
-        self.__record_parser_checkpoint("validation", round, parser_folder)
+    def record_parser_validation(self, iteration: int, parser_folder: str) -> None:
+        self.__record_parser_checkpoint("validation", iteration, parser_folder)
     
     def get_benchmark(self) -> dict[str, Any]:
         return self.data
@@ -144,6 +144,7 @@ class AgentState(TypedDict):
     next_step: AgentType
     session_dir: Path
     system_metrics: SystemMetrics
+    benchmark_metrics: BenchmarkMetrics
     last_parser: dict[str, str] | None
 
 # Define tools
@@ -157,9 +158,9 @@ CompilationCheck = Tool(
     Use this tool to verify that your C parser implementation is syntactically correct and free of warnings before providing it to the user."""
 )
 
-def ExecutionCheck(file_format: str) -> Tool:
+def ExecutionCheck(format: str) -> Tool:
     def execution_check_format(code: str) -> str:
-        return execution_check(code, file_format.lower())
+        return execution_check(code, format)
 
     return Tool(
         name="execution_check",

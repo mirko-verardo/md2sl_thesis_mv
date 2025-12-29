@@ -114,5 +114,6 @@ def supervisor_node(state: AgentState) -> AgentState:
         "session_dir": state["session_dir"],
         "next_step": next_step,
         "system_metrics": state["system_metrics"],
+        "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": last_parser
     }

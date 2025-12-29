@@ -1,5 +1,3 @@
-from datetime import datetime
-from pathlib import Path
 from traceback import format_exc
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -10,27 +8,12 @@ from agents.generator.generator_agent import generator_node
 from agents.compiler.compiler_agent import compiler_node
 from agents.tester.tester_agent import tester_node
 from agents.assessor.assessor_agent import assessor_node
-from models import AgentType, AgentState, SystemMetrics
+from models import AgentType, AgentState, SystemMetrics, BenchmarkMetrics
 from utils import colors
-from utils.general import get_model_source_from_input, get_file_format_from_input, print_colored
-from utils.multi_agent import get_action_from_input
+from utils.general import create_session, get_model_source_from_input, get_file_format_from_input, print_colored
+from utils.multi_agent import get_action_from_input, get_request_from_action
 
 
-
-def create_session_directory(path: str) -> tuple[Path, Path]:
-    """Create a session directory with timestamp and return its path."""
-    
-    base_dir = Path(path)
-    session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_dir = base_dir / f"session_{session_id}"
-    session_dir.mkdir(parents=True, exist_ok=True)
-    
-    log_file = session_dir / f"conversation_{session_id}.txt"
-    
-    print_colored(f"\nCreated session directory: {session_dir}", colors.CYAN, bold=True)
-    print_colored(f"Log file: {log_file}", colors.CYAN, bold=True)
-    
-    return session_dir, log_file
 
 def route_next(state: AgentState) -> AgentType:
     """Route to the next node based on the state."""
@@ -122,19 +105,21 @@ if __name__ == "__main__":
 
     # Initialize parameters
     messages = []
-    system_metrics = SystemMetrics()
-    last_parser = None
     user_action = "GENERATE_PARSER"
     file_format = get_file_format_from_input()
-    # TODO: optimize this fixed prompt
-    user_input = f"Generate a parser function for {file_format} files."
+    system_metrics = SystemMetrics()
+    benchmark_metrics = BenchmarkMetrics(1, "multi", file_format)
+    last_parser = None
 
     # Create session
-    session_dir, log_file = create_session_directory(f"output/{source}/multi_agent/{file_format.lower()}")
+    session_dir, log_file = create_session(source, "multi_agent", file_format)
     
     # Main interaction loop
     while True:
-        user_message = f"{user_action}: {user_input}"
+        user_request = get_request_from_action(user_action, file_format)
+        if user_request is None:
+            break
+        user_message = f"{user_action}: {user_request}"
         
         try:
             # Start a new round
@@ -144,7 +129,7 @@ if __name__ == "__main__":
             initial_state = {
                 "messages": [ HumanMessage(content=user_message) ],
                 "user_action": user_action,
-                "user_request": user_input,
+                "user_request": user_request,
                 "file_format": file_format,
                 "supervisor_specifications": None,
                 "generator_code": None,
@@ -157,6 +142,7 @@ if __name__ == "__main__":
                 "session_dir": session_dir,
                 "next_step": "Supervisor",
                 "system_metrics": system_metrics,
+                "benchmark_metrics": benchmark_metrics,
                 "last_parser": last_parser
             }
 
@@ -169,6 +155,8 @@ if __name__ == "__main__":
             system_metrics = result["system_metrics"]
             system_metrics.complete_round()
             system_metrics.save_summary(session_dir)
+
+            print(result["benchmark_metrics"].get_benchmark())
             
             # Get last parser
             last_parser = result["last_parser"]
@@ -179,14 +167,6 @@ if __name__ == "__main__":
         
         # Ask the user again
         user_action = get_action_from_input()
-        if user_action == "EXIT":
-            break
-        elif user_action == "CORRECT_ERROR":
-            # TODO: optimize this fixed prompt
-            user_input = f"Correct the problems on the generated parser."
-        else:
-            print_colored("\nYou:", colors.GREEN, bold=True)
-            user_input = input()
     
     # Log conversation
     with open(log_file, "w", encoding="utf-8") as f:

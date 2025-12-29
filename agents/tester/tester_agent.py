@@ -2,7 +2,7 @@ from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
 from utils.general import print_colored, execute_c_code
-from utils.multi_agent import get_file_name
+from utils.multi_agent import get_parser_dir
 
 
 
@@ -13,19 +13,11 @@ def tester_node(state: AgentState) -> AgentState:
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
     system_metrics = state["system_metrics"]
-
-    # Get files for testing
-    file_name = get_file_name(system_metrics.get_round_number(), iteration_count)
-    c_file_name = f"{file_name}.c"
-    parser_dir = session_dir / file_name
-    c_file_path_str = str(parser_dir / c_file_name)
-    o_file_path_str = str(parser_dir / file_name)
-    format = file_format.lower()
-    test_file_path = f"input/{format}/test.{format}"
     
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
-    testing_result = execute_c_code(c_file_path_str, o_file_path_str, test_file_path, runtime=True)
+    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
+    testing_result = execute_c_code(parser_dir, file_format, runtime=True)
     
     # Check if code has been tested with success
     is_tested_ok = testing_result["success"]
@@ -36,9 +28,6 @@ def tester_node(state: AgentState) -> AgentState:
         test_output += f"stdout: {testing_result["stdout"]}\n"
         test_output += f"stderr: {testing_result["stderr"]}"
         f.write(test_output)
-
-    # Record parser testing in metrics
-    system_metrics.record_parser_testing(is_tested_ok)
     
     # Log the results
     print_colored(f"Tester (Iteration {iteration_count}/{max_iterations}):", colors.BLUE, bold=True)
@@ -63,5 +52,6 @@ def tester_node(state: AgentState) -> AgentState:
         "session_dir": session_dir,
         "next_step": "Orchestrator",
         "system_metrics": system_metrics,
+        "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": None
     }

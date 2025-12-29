@@ -1,12 +1,11 @@
 from datetime import datetime
-from pathlib import Path
 from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
 from models import CompilationCheck, ExecutionCheck
 from utils import colors
-from utils.general import initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
+from utils.general import create_session, initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
 
 
 
@@ -189,30 +188,18 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
         max_iterations=10,
         early_stopping_method="force"
     )
-    
-    # create output directory in the specified folder
-    file_format_low = file_format.lower()
-    output_dir = Path(f"output/{source}/{"few_shot" if few_shot else "zero_shot"}/{file_format_low}")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # chat history for the current session
-    session_history = []
-    
-    conversation_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # create 'session_id' directory in output folder
-    session_dir = output_dir / f"session_{conversation_id}"
-    session_dir.mkdir(exist_ok=True)
 
-    log_file = session_dir / f"conversation_{conversation_id}.txt"
+    # Create session
+    session_dir, log_file = create_session(source, "few_shot" if few_shot else "zero_shot", file_format)
+    session_history = []
     f = open(log_file, "a", encoding="utf-8")
 
     # print welcome message
     log(f, "=== C Parser Generator Chat ===", colors.CYAN, bold=True)
     print_colored("Ask for any parser or C function. Type 'exit' to quit.\n", colors.CYAN)
-    print(f"Output directory: {session_dir}")
 
     # Initialize parameters
-    user_input = f"generate a parser function for {file_format} files"
+    user_input = f"Generate a parser function for {file_format} files."
     
     # main chat loop
     while True:
@@ -292,28 +279,17 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             # compile and test it
             print_colored("\n--- Compiling Final C code ---", colors.YELLOW, bold=True)
             
-            # create unique filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            c_file_name = f"parser_{timestamp}.c"
-            c_file_path = session_dir / c_file_name
-            o_file_path = c_file_path.with_suffix('')
-            
-            # save the C code to a file
-            with open(c_file_path, "w", encoding="utf-8") as ff:
-                ff.write(code)
-            
-            print(f"\nC code saved to: {c_file_path}")
-            
             # compile the C code
             print("Compiling...")
-            compilation_result = compile_c_code(str(c_file_path), str(o_file_path))
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            parser_dir = session_dir / f"parser_{timestamp}"
+            compilation_result = compile_c_code(parser_dir, code)
             
             is_compilation_ok = compilation_result["success"]
             if is_compilation_ok:
-                test_file_path = f"input/{file_format_low}/test.{file_format_low}"
                 # testing the C code
                 print("Testing...")
-                testing_result = execute_c_code(str(c_file_path), str(o_file_path), test_file_path)
+                testing_result = execute_c_code(parser_dir, file_format)
             else:
                 testing_result = {
                     "success": False,
@@ -322,8 +298,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
                 }
             
             # save results
-            result_file_name = f"results_{timestamp}.txt"
-            result_file_path = session_dir / result_file_name
+            result_file_path = parser_dir / "results.txt"
             
             with open(result_file_path, "w", encoding="utf-8") as ff:
                 # Compilation
@@ -358,8 +333,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             log(f, format_exc())
         
         # Ask the user
-        log(f, "You:", colors.GREEN, bold=True)
-        user_input = input()        
+        user_input = input("\nYou: ")
         # check for exit command
         if user_input.lower() in ["exit", "quit", "bye"]:
             break
@@ -368,7 +342,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
     f.close()
 
     # save the entire conversation history
-    history_file = session_dir / f"full_history_{conversation_id}.txt"
+    history_file = session_dir / f"full_history.txt"
     with open(history_file, "w", encoding="utf-8") as f:
         f.write(f"=== C Parser Generator Chat History - {datetime.now()} ===\n\n")
         for exchange in session_history:
