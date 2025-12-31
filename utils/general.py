@@ -94,6 +94,10 @@ def get_model_source_from_input(speed_up: bool = True) -> str:
         
         print_colored(f"Invalid source. Please enter one of these: {sources_str}.", colors.RED, bold=True)
 
+def get_parser_dir(session_dir: Path, round_number: int, iteration_number: int) -> Path:
+    iteration_number_str = str(iteration_number).zfill(2)
+    return session_dir / f"parser_{round_number}_{iteration_number_str}"
+
 def map_input_to_file_format(input: int) -> str:
     if input == 1:
         return "CSV"
@@ -211,7 +215,7 @@ def extract_c_code(text: str) -> str:
     # if no code block is found, then return as is
     return text
 
-def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = False) -> dict[str, bool | str]:
+def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) -> dict[str, bool | str]:
     """Compile the C code using gcc with strict optimization, warnings and hardening."""
 
     runtime_flags = [
@@ -340,7 +344,7 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = False) -
         'stderr': compilation_stderr
     }
 
-def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = False) -> dict[str, bool | str]:
+def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
@@ -417,7 +421,9 @@ def compilation_check(text: str) -> dict[str, bool | str]:
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
         # compile the code
-        result = compile_c_code(temp_dir, code)
+        result = compile_c_code(Path(temp_dir), code, runtime=False)
+        if result["success"]:
+            result = compile_c_code(Path(temp_dir), code)
 
     return result
 
@@ -429,12 +435,12 @@ def execution_check(text: str, format: str) -> dict[str, bool | str]:
     # create a temporary directory
     with TemporaryDirectory() as temp_dir:
         # compile the code
-        result = compile_c_code(temp_dir, code)
+        result = compile_c_code(Path(temp_dir), code)
         
         # prepare the result
         if result["success"]:
             # execute the code
-            result = execute_c_code(temp_dir, format)
+            result = execute_c_code(Path(temp_dir), format)
     
     return result
 

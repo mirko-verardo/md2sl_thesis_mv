@@ -1,11 +1,14 @@
-from datetime import datetime
 from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
 from models import CompilationCheck, ExecutionCheck, BenchmarkMetrics
 from utils import colors
-from utils.general import create_session, initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
+from utils.general import (
+    create_session, initialize_llm, get_parser_dir,
+    extract_c_code, compile_c_code, execute_c_code, 
+    print_colored, log, get_parser_requirements
+)
 
 
 
@@ -205,6 +208,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
 
     # initialize first message
     user_input = f"Generate a parser function for {file_format} files."
+    round = 1
     
     # main chat loop
     while True:
@@ -235,6 +239,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
                 log(f, "--- Agent's Reasoning Process ---", colors.MAGENTA, bold=True)
 
                 for step_counter, step in enumerate(steps):
+                    i = step_counter + 1
                     action = step[0]
                     action_output = step[1]
                     
@@ -244,29 +249,40 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
                         
                     attempts = tool_attempts.get(action_tool, 0) + 1
                     tool_attempts.update({ action_tool: attempts })
-                    log(f, f"Step {step_counter + 1}: Using {action_tool} tool (attempt {attempts})", colors.BLUE, bold=True)
-
-                    # code: extract only top lines for preview
-                    code = str(action.tool_input).strip()
-                    code_preview = code.split("\n")
-                    code_preview = "\n".join(code_preview[:10]) + "\n..." if len(code_preview) > 10 else code
-                    log(f, "Checking code (preview):", colors.BLUE)
-                    log(f, code_preview)
+                    log(f, f"Step {i}: Using {action_tool} tool (attempt {attempts})", colors.BLUE, bold=True)
 
                     # log tool results
                     if action_output["success"]:
                         log(f, f"Result: {action_tool} tool successful without warnings! ✓", colors.GREEN, bold=True)
+
+                        # extract code
+                        code = extract_c_code(str(action.tool_input))
+
+                        # Create the parser dir
+                        parser_dir = get_parser_dir(session_dir, round, i)
+                        
+                        if action_tool == "compilation_check":
+                            if benchmark_metrics.record_parser_compilation(i, parser_dir):
+                                parser_dir.mkdir()
+                                compile_c_code(parser_dir, code, runtime=False)
+                                compile_c_code(parser_dir, code)
+                        elif action_tool == "execution_check":
+                            if benchmark_metrics.record_parser_testing(i, parser_dir):
+                                parser_dir.mkdir()
+                                compile_c_code(parser_dir, code, runtime=False)
+                                compile_c_code(parser_dir, code)
+                                execute_c_code(parser_dir, file_format)
+                        else:
+                            raise Exception(f"Cannot recognized {action_tool} tool")
                     else:
                         log(f, f"Result: {action_tool} tool failed! ✗", colors.RED, bold=True)
                     
+                    # extract always errors (NB: theoretically it is needed only when no success)
                     errors = action_output["stderr"]
                     if errors:
-                        # errors: extract only top lines for preview
                         errors = str(errors).strip()
-                        errors_preview = errors.split("\n")
-                        errors_preview = "\n".join(errors_preview[:10]) + "\n..." if len(errors_preview) > 10 else errors
-                        log(f, "Checking errors (preview):", colors.RED)
-                        log(f, errors_preview)
+                        log(f, "Checking errors:", colors.RED)
+                        log(f, errors)
 
                 log(f, "--- End of Reasoning Process ---", colors.MAGENTA, bold=True)
             
@@ -289,15 +305,17 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
             print_colored("\n--- Compiling and Testing Final C code ---", colors.YELLOW, bold=True)
 
             # get the parser dir
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            parser_dir = session_dir / f"parser_{timestamp}"
+            parser_dir = session_dir / "parser_final"
             parser_dir.mkdir()
 
             # compile the C code
             print("Compiling...")
-            compilation_result = compile_c_code(parser_dir, code)
-            
+            compilation_result = compile_c_code(parser_dir, code, runtime=False)
             is_compilation_ok = compilation_result["success"]
+            if is_compilation_ok:
+                compilation_result = compile_c_code(parser_dir, code)
+                is_compilation_ok = compilation_result["success"]
+
             if is_compilation_ok:
                 # testing the C code
                 print("Testing...")
@@ -346,6 +364,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
         
         # Ask the user
         user_input = "exit" if exit_at_first else input("\nYou: ")
+        round += 1
 
     # manually close the stream
     f.close()
@@ -353,7 +372,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
     # save the entire conversation history
     history_file = session_dir / f"full_history.txt"
     with open(history_file, "w", encoding="utf-8") as f:
-        f.write(f"=== C Parser Generator Chat History - {datetime.now()} ===\n\n")
+        f.write(f"=== C Parser Generator Chat History ===\n\n")
         for exchange in session_history:
             f.write(f"You: {exchange['user']}\n\n")
             f.write(f"Agent: {exchange['agent']}\n\n")
@@ -361,5 +380,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
     
     print(f"\nConversation history saved to: {history_file}")
     print(f"Conversation log saved to: {log_file}")
+
+    benchmark_metrics.record_parser_end()
 
     return benchmark_metrics

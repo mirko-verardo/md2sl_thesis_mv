@@ -1,11 +1,3 @@
-from pathlib import Path
-
-
-
-def get_parser_dir(session_dir: Path, round_number: int, iteration_number: int) -> Path:
-    iteration_number_str = str(iteration_number).zfill(2)
-    return session_dir / f"parser_{round_number}_{iteration_number_str}"
-
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
     # NB: this condition imply some constraints on agent's prompt to manage its output (bad)

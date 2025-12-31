@@ -1,7 +1,7 @@
 from models import AgentState
 from utils import colors
-from utils.general import print_colored
-from utils.multi_agent import get_parser_dir, is_satisfactory
+from utils.general import print_colored, get_parser_dir
+from utils.multi_agent import is_satisfactory
 
 
 
@@ -74,7 +74,6 @@ def orchestrator_node(state: AgentState) -> AgentState:
         if is_satisfactory(code_assessment):
             next_node = "Supervisor"
             benchmark_metrics.record_parser_validation(iteration_count, parser_dir)
-            benchmark_metrics.record_parser_end()
         else:
             next_node = "Generator"
         
@@ -91,15 +90,18 @@ def orchestrator_node(state: AgentState) -> AgentState:
         else:
             # Go back to the user
             next_node = "Supervisor"
-            benchmark_metrics.record_parser_end()
             code_assessment = f"{code_assessment}\n" if code_assessment else ""
             code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
-    # NB: always updated
-    last_parser = {
-        "code": generator_code,
-        "assessment": code_assessment
-    } if next_node == "Supervisor" else None
+    # NB: last_parser always updated
+    if next_node == "Supervisor":
+        benchmark_metrics.record_parser_end()
+        last_parser = {
+            "code": generator_code,
+            "assessment": code_assessment
+        }
+    else:
+        last_parser = None
 
     print_colored(f"\nOrchestrator sending flow to {next_node}", colors.YELLOW, bold=True)
     

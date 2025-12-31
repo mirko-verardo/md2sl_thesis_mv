@@ -31,23 +31,24 @@ class BenchmarkMetrics:
             "code_coverage": None
         }
     
-    def __record_parser_checkpoint(self, checkpoint: str, iteration: int, parser_folder: Path) -> None:
+    def __record_parser_checkpoint(self, checkpoint: str, iteration: int, parser_folder: Path) -> bool:
         """Record checkpoint about the parser."""
         if checkpoint in self.checkpoints:
-            return
+            return False
         self.checkpoints.append(checkpoint)
         self.data[f"{checkpoint}_time"] = datetime.now().isoformat()
         self.data[f"{checkpoint}_iteration"] = iteration
         self.data["best_parser_folder"] = str(parser_folder)
+        return True
 
-    def record_parser_compilation(self, iteration: int, parser_folder: Path) -> None:
-        self.__record_parser_checkpoint("compilation", iteration, parser_folder)
+    def record_parser_compilation(self, iteration: int, parser_folder: Path) -> bool:
+        return self.__record_parser_checkpoint("compilation", iteration, parser_folder)
     
-    def record_parser_testing(self, iteration: int, parser_folder: Path) -> None:
-        self.__record_parser_checkpoint("testing", iteration, parser_folder)
+    def record_parser_testing(self, iteration: int, parser_folder: Path) -> bool:
+        return self.__record_parser_checkpoint("testing", iteration, parser_folder)
     
-    def record_parser_validation(self, iteration: int, parser_folder: Path) -> None:
-        self.__record_parser_checkpoint("validation", iteration, parser_folder)
+    def record_parser_validation(self, iteration: int, parser_folder: Path) -> bool:
+        return self.__record_parser_checkpoint("validation", iteration, parser_folder)
     
     def record_parser_end(self) -> None:
         self.data["end_time"] = datetime.now().isoformat()

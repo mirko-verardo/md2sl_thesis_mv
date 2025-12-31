@@ -2,8 +2,7 @@
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
-from utils.general import print_colored, compile_c_code
-from utils.multi_agent import get_parser_dir
+from utils.general import print_colored, compile_c_code, get_parser_dir
 
 
 
@@ -31,14 +30,14 @@ def compiler_node(state: AgentState) -> AgentState:
     
     # Compile the code
     print_colored("\n--- Parser Compilation ---", colors.YELLOW, bold=True)
-    compilation_result = compile_c_code(parser_dir, generator_code)
+    compilation_result = compile_c_code(parser_dir, generator_code, runtime=False)
     
     # Check if code has been compiled with success
     is_compiled = compilation_result["success"]
     compilation_flags = "buildtime"
     if is_compiled:
         # Recompile the code for the tester (runtime flags)
-        compilation_result = compile_c_code(parser_dir, generator_code, runtime=True)
+        compilation_result = compile_c_code(parser_dir, generator_code)
         is_compiled = compilation_result["success"]
         compilation_flags = "runtime"
     

@@ -1,8 +1,7 @@
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
-from utils.general import print_colored, execute_c_code
-from utils.multi_agent import get_parser_dir
+from utils.general import print_colored, execute_c_code, get_parser_dir
 
 
 
@@ -17,7 +16,7 @@ def tester_node(state: AgentState) -> AgentState:
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
     parser_dir = get_parser_dir(session_dir, round, iteration_count)
-    testing_result = execute_c_code(parser_dir, file_format, runtime=True)
+    testing_result = execute_c_code(parser_dir, file_format)
     
     # Check if code has been tested with success
     is_tested_ok = testing_result["success"]
