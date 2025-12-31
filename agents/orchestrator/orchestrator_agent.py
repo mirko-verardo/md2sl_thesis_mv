@@ -12,10 +12,10 @@ def orchestrator_node(state: AgentState) -> AgentState:
     compiler_result = state["compiler_result"]
     tester_result = state["tester_result"]
     code_assessment = state["code_assessment"]
+    round = state["round"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
-    system_metrics = state["system_metrics"]
     benchmark_metrics = state["benchmark_metrics"]
     last_parser = state["last_parser"]
 
@@ -24,7 +24,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         raise Exception("Something goes wrong :(")
     
     # Get current parser directory
-    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
+    parser_dir = get_parser_dir(session_dir, round, iteration_count)
     
     prev_node = messages[-1].name
     if prev_node == "Supervisor":
@@ -40,9 +40,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
             raise Exception("Something goes wrong :(")
         
         # Check compilation results
-        compiler_result_success = compiler_result["success"]
-        system_metrics.record_parser_compilation(parser_dir, compiler_result_success)
-        if compiler_result_success:
+        if compiler_result["success"]:
             # go on with testing
             next_node = "Tester"
             benchmark_metrics.record_parser_compilation(iteration_count, parser_dir)
@@ -57,9 +55,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
             raise Exception("Something goes wrong :(")
         
         # Check testing results
-        tester_result_success = tester_result["success"]
-        system_metrics.record_parser_testing(tester_result_success)
-        if tester_result_success:
+        if tester_result["success"]:
             # go on with qualitative assessment
             next_node = "Assessor"
             benchmark_metrics.record_parser_testing(iteration_count, parser_dir)
@@ -77,8 +73,8 @@ def orchestrator_node(state: AgentState) -> AgentState:
         # Check if qualitative assessment is positive (bad condition)
         if is_satisfactory(code_assessment):
             next_node = "Supervisor"
-            system_metrics.satisfy_round()
             benchmark_metrics.record_parser_validation(iteration_count, parser_dir)
+            benchmark_metrics.record_parser_end()
         else:
             next_node = "Generator"
         
@@ -92,10 +88,10 @@ def orchestrator_node(state: AgentState) -> AgentState:
         if iteration_count < max_iterations:
             # Increment interaction count
             iteration_count += 1
-            system_metrics.increment_generator_interaction()
         else:
             # Go back to the user
             next_node = "Supervisor"
+            benchmark_metrics.record_parser_end()
             code_assessment = f"{code_assessment}\n" if code_assessment else ""
             code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
@@ -117,12 +113,12 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "compiler_result": compiler_result,
         "tester_result": tester_result,
         "code_assessment": code_assessment,
+        "round": round,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": next_node,
-        "system_metrics": system_metrics,
         "benchmark_metrics": benchmark_metrics,
         "last_parser": last_parser
     }

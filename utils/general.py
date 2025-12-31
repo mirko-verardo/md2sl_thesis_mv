@@ -131,20 +131,15 @@ def get_file_format_from_input() -> str:
         
         print("Invalid file format. Please enter one of these: " + (", ".join(actions)))
 
-def create_session(source: str, type: str, format: str) -> tuple[Path, Path]:
+def create_session(source: str, type: str, format: str) -> Path:
     """Create a session directory with timestamp and return its path."""
-    format = format.lower()
-
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    session_dir = Path("output") / source / type / format / f"session_{session_id}"
+    session_dir = Path("output") / source / type / format.lower() / f"session_{session_id}"
     session_dir.mkdir(parents=True)
     
-    log_file = session_dir / f"conversation.txt"
-    
     print_colored(f"\nCreated session directory: {session_dir}", colors.CYAN, bold=True)
-    print_colored(f"Log file: {log_file}", colors.CYAN, bold=True)
     
-    return session_dir, log_file
+    return session_dir
 
 def initialize_llm(source: str, temp: float = 0.5):
     """Initialize a hosted model with appropriate parameters."""

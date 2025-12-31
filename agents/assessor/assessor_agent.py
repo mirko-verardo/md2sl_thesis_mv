@@ -62,12 +62,12 @@ def assessor_node(state: AgentState) -> AgentState:
         "compiler_result": None,
         "tester_result": None,
         "code_assessment": assessor_response,
+        "round": state["round"],
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": "Orchestrator",
-        "system_metrics": state["system_metrics"],
         "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": None
     }

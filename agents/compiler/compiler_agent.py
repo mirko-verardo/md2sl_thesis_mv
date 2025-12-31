@@ -11,10 +11,10 @@ def compiler_node(state: AgentState) -> AgentState:
     """Compiler agent that compiles parser code."""
     file_format = state["file_format"]
     generator_code = state["generator_code"]
+    round = state["round"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
-    system_metrics = state["system_metrics"]
 
     # NB: here it can't be None
     if not generator_code:
@@ -26,7 +26,7 @@ def compiler_node(state: AgentState) -> AgentState:
     #print(i.function_list[0].__dict__)
 
     # Create the parser dir
-    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
+    parser_dir = get_parser_dir(session_dir, round, iteration_count)
     parser_dir.mkdir()
     
     # Compile the code
@@ -62,12 +62,12 @@ def compiler_node(state: AgentState) -> AgentState:
         "compiler_result": compilation_result,
         "tester_result": None,
         "code_assessment": None,
+        "round": round,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": "Orchestrator",
-        "system_metrics": system_metrics,
         "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": None
     }

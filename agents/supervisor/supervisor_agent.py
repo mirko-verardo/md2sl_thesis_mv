@@ -108,12 +108,12 @@ def supervisor_node(state: AgentState) -> AgentState:
         "compiler_result": None,
         "tester_result": None,
         "code_assessment": None,
+        "round": state["round"],
         "iteration_count": state["iteration_count"],
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": next_step,
-        "system_metrics": state["system_metrics"],
         "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": last_parser
     }

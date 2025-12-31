@@ -3,7 +3,7 @@ from traceback import format_exc
 from langchain.prompts import PromptTemplate
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.memory import ConversationBufferMemory
-from models import CompilationCheck, ExecutionCheck
+from models import CompilationCheck, ExecutionCheck, BenchmarkMetrics
 from utils import colors
 from utils.general import create_session, initialize_llm, extract_c_code, compile_c_code, execute_c_code, print_colored, log, get_parser_requirements
 
@@ -154,8 +154,12 @@ return s;
 ```
 </examples>"""
 
-def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
+def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1, react_loops: int = 10, exit_at_first: bool = False) -> BenchmarkMetrics:
     """Start chat with the agent. Save output files to the specified folder."""
+    type = "few_shot" if few_shot else "zero_shot"
+
+    # initialize metrics
+    benchmark_metrics = BenchmarkMetrics(n, type, file_format)
 
     # initialize model
     llm = initialize_llm(source)
@@ -185,24 +189,29 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
         verbose=True,
         handle_parsing_errors=True,
         return_intermediate_steps=True,
-        max_iterations=10,
+        max_iterations=react_loops,
         early_stopping_method="force"
     )
 
-    # Create session
-    session_dir, log_file = create_session(source, "few_shot" if few_shot else "zero_shot", file_format)
+    # create session
     session_history = []
+    session_dir = create_session(source, type, file_format)
+    log_file = session_dir / "conversation.txt"
     f = open(log_file, "a", encoding="utf-8")
 
     # print welcome message
     log(f, "=== C Parser Generator Chat ===", colors.CYAN, bold=True)
     print_colored("Ask for any parser or C function. Type 'exit' to quit.\n", colors.CYAN)
 
-    # Initialize parameters
+    # initialize first message
     user_input = f"Generate a parser function for {file_format} files."
     
     # main chat loop
     while True:
+        # check for exit command
+        if user_input.lower() in ["exit", "quit", "bye"]:
+            break
+
         # log user input
         f.write(f"\n{user_input}\n")
         
@@ -336,10 +345,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
             log(f, format_exc())
         
         # Ask the user
-        user_input = input("\nYou: ")
-        # check for exit command
-        if user_input.lower() in ["exit", "quit", "bye"]:
-            break
+        user_input = "exit" if exit_at_first else input("\nYou: ")
 
     # manually close the stream
     f.close()
@@ -355,3 +361,5 @@ def start_chat(source: str, file_format: str, few_shot: bool = False) -> None:
     
     print(f"\nConversation history saved to: {history_file}")
     print(f"Conversation log saved to: {log_file}")
+
+    return benchmark_metrics

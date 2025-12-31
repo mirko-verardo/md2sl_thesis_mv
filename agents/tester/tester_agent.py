@@ -9,14 +9,14 @@ from utils.multi_agent import get_parser_dir
 def tester_node(state: AgentState) -> AgentState:
     """Tester agent that tests parser code."""
     file_format = state["file_format"]
+    round = state["round"]
     iteration_count = state["iteration_count"]
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
-    system_metrics = state["system_metrics"]
     
     # Test the code
     print_colored("\n--- Parser Testing ---", colors.YELLOW, bold=True)
-    parser_dir = get_parser_dir(session_dir, system_metrics.get_round_number(), iteration_count)
+    parser_dir = get_parser_dir(session_dir, round, iteration_count)
     testing_result = execute_c_code(parser_dir, file_format, runtime=True)
     
     # Check if code has been tested with success
@@ -46,12 +46,12 @@ def tester_node(state: AgentState) -> AgentState:
         "compiler_result": None,
         "tester_result": testing_result,
         "code_assessment": None,
+        "round": round,
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": "Orchestrator",
-        "system_metrics": system_metrics,
         "benchmark_metrics": state["benchmark_metrics"],
         "last_parser": None
     }
