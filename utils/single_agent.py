@@ -328,7 +328,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
                 }
             
             # save results
-            result_file_path = parser_dir / "results.txt"
+            result_file_path = parser_dir / "output.txt"
             
             with open(result_file_path, "w", encoding="utf-8") as ff:
                 # Compilation

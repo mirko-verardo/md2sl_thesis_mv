@@ -20,7 +20,7 @@ if __name__ == "__main__":
     #sources = [ "google", "openai", "anthropic" ]
     formats = [ "CSV", "HTML", "HTTP", "JSON", "PDF", "XML" ]
     reps = range(10)
-    types = [ "multi_agent" ]
+    types = [ "zero_shot" ]
     sources = [ "google" ]
     #formats = [ "CSV", "HTML", "JSON" ]
     #reps = range(2)
