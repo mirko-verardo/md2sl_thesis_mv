@@ -2,5 +2,4 @@
 *.code-workspace
 .venv/
 __pycache__/
-immagini/
 output/
