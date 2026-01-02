@@ -1,4 +1,3 @@
-#from lizard import analyze_file
 from langchain_core.messages import AIMessage
 from models import AgentState
 from utils import colors
@@ -18,11 +17,6 @@ def compiler_node(state: AgentState) -> AgentState:
     # NB: here it can't be None
     if not generator_code:
         raise Exception("Something goes wrong :(")
-
-    # Metric the code
-    #i = analyze_file(c_file_path_str)
-    #print(i.__dict__)
-    #print(i.function_list[0].__dict__)
 
     # Create the parser dir
     parser_dir = get_parser_dir(session_dir, round, iteration_count)

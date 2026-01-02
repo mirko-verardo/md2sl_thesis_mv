@@ -13,10 +13,10 @@ from utils import colors
 
 
 
-def __get_c_parser_path(parser_path: Path) -> Path:
+def get_c_parser_path(parser_path: Path) -> Path:
     return parser_path / "source.c"
 
-def __get_out_parser_path(parser_path: Path, runtime: bool) -> Path:
+def get_o_parser_path(parser_path: Path, runtime: bool) -> Path:
     return parser_path / f"{"runtime" if runtime else "buildtime"}"
 
 def __get_in_parser_path(format: str) -> Path:
@@ -304,14 +304,14 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
         "-pie"
     ]
 
-    c_parser_path = __get_c_parser_path(parser_path)
-    out_parser_path = __get_out_parser_path(parser_path, runtime)
+    c_parser_path = get_c_parser_path(parser_path)
+    o_parser_path = get_o_parser_path(parser_path, runtime)
 
     with open(c_parser_path, "w", encoding="utf-8") as f:
         f.write(parser_code)
 
     c_parser_path_str = str(c_parser_path)
-    o_parser_path_str = str(out_parser_path)
+    o_parser_path_str = str(o_parser_path)
     command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
@@ -321,7 +321,7 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
 
     try:
         result = run(
-            command + ["gcc", *compiler_flags, c_parser_path_str, *linker_flags, "-o", o_parser_path_str],
+            [*command, "gcc", *compiler_flags, c_parser_path_str, *linker_flags, "-o", o_parser_path_str],
             capture_output = True,
             text = True,
             encoding = "utf-8",
@@ -334,10 +334,9 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
             'stderr': f'Failed to compile the code: {te}'
         }
 
-    compilation_stdout = result.stdout if result.stdout else ""
-    compilation_stderr = __get_stderr_beautified(result.stderr, c_parser_path_str) if result.stderr else ""
+    compilation_stdout = result.stdout
+    compilation_stderr = __get_stderr_beautified(result.stderr, c_parser_path_str)
     
-    # with -Werror, compilation success means executable created and no warnings
     return {
         'success': (result.returncode == 0),  
         'stdout': compilation_stdout,
@@ -361,13 +360,13 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) 
         }
 
     # Execution command building
-    c_parser_path_str = str(__get_c_parser_path(parser_path))
-    out_parser_path_str = str(__get_out_parser_path(parser_path, runtime))
+    c_parser_path_str = str(get_c_parser_path(parser_path))
+    o_parser_path_str = str(get_o_parser_path(parser_path, runtime))
     command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
         c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
-        out_parser_path_str = __to_wsl_path(wsl, out_parser_path_str)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
         command = __get_wsl_cmd(wsl)
     if runtime:
         asan_options = [
@@ -383,7 +382,7 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) 
         # Run the executable with the raw-bytes file contents as stdin and with asan options (maybe)
         # NB: no need for encoding because text is equal to False
         result = run(
-            command + [out_parser_path_str],
+            [*command, o_parser_path_str],
             input = input_bytes,
             capture_output = True,
             text = False,
@@ -405,13 +404,86 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) 
     
     execution_stdout = safe_decode(result.stdout)
     execution_stderr = safe_decode(result.stderr)
-    execution_stderr = __get_stderr_beautified(execution_stderr, c_parser_path_str, out_parser_path_str)
+    execution_stderr = __get_stderr_beautified(execution_stderr, c_parser_path_str, o_parser_path_str)
 
     return {
         'success': (result.returncode == 0),
         'stdout': execution_stdout,
         'stderr': execution_stderr
     }
+
+def analyze_c_code(parser_path: Path, parser_format: str) -> str:
+    """Analyze the C code coverage."""
+
+    try:
+        # NB: read bytes, not text (for a general approach that supports all input files)
+        # NB: with rb, no encoding must be specified
+        in_parser_path = __get_in_parser_path(parser_format)
+        with open(in_parser_path, "rb") as f:
+            input_bytes = f.read()
+    except Exception as e:
+        return f"Failed to read input file: {e}"
+
+    coverage_flags = [
+        # strongly recommended for accurate coverage
+        "-O0",
+        # code coverage flags
+        "-fprofile-arcs",
+        "-ftest-coverage"
+    ]
+
+    c_parser_path = get_c_parser_path(parser_path)
+    o_parser_path = parser_path / "analyze"
+
+    c_parser_path_str = str(c_parser_path)
+    o_parser_path_str = str(o_parser_path)
+    
+    command = []
+    wsl = set_if_undefined("WSL")
+    if __check_if_wsl(wsl):
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
+        command = __get_wsl_cmd(wsl)
+
+    try:
+        timeout = 60 * 5
+        
+        # Compile
+        result = run(
+            [*command, "gcc", *coverage_flags, c_parser_path_str, "-o", o_parser_path_str],
+            capture_output = True,
+            text = True,
+            encoding = "utf-8",
+            timeout = timeout
+        )
+        if result.stderr:
+            raise Exception(result.stderr)
+        
+        # Execute
+        result = run(
+            [*command, o_parser_path_str],
+            input = input_bytes,
+            capture_output = True,
+            text = False,
+            timeout = timeout
+        )
+        if result.stderr:
+            raise Exception(result.stderr)
+
+        # Analyze
+        result = run(
+            [*command, "gcov", "--no-output", f"{o_parser_path_str}-{c_parser_path.name.replace(".c", "")}"],
+            capture_output = True,
+            text = True,
+            encoding = "utf-8",
+            timeout = timeout
+        )
+        if result.stderr:
+            raise Exception(result.stderr)
+    except Exception as e:
+        return f"Failed to analyze the code: {e}"
+    
+    return result.stdout
 
 def compilation_check(text: str) -> dict[str, bool | str]:
     """Function that checks if C code compiles correctly without warnings."""

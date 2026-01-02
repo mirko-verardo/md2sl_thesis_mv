@@ -1,11 +1,10 @@
 from csv import DictWriter
 from traceback import format_exc
-from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from models import BenchmarkMetrics
 from utils import colors
 from utils.general import create_session, get_model_source_from_input, get_file_format_from_input, print_colored
-from utils.graph import build_workflow
+from utils.graph import build_workflow, start_workflow
 from utils.multi_agent import get_action_from_input, get_request_from_action
 
 
@@ -23,11 +22,11 @@ if __name__ == "__main__":
     source = get_model_source_from_input()
     file_format = get_file_format_from_input()
     session_dir = create_session(source, type, file_format)
-    messages = []
-    benchmarks = []
     round = 1
     attempts = 10
     last_parser = None
+    messages = []
+    benchmarks = []
     
     # Main interaction loop
     while True:
@@ -35,32 +34,11 @@ if __name__ == "__main__":
         user_request = get_request_from_action(user_action, file_format)
         if user_request is None:
             break
-        user_message = f"{user_action}: {user_request}"
         benchmark_metrics = BenchmarkMetrics(round, type, file_format)
         
         try:
-            # Initial state
-            initial_state = {
-                "messages": [ HumanMessage(content=user_message) ],
-                "user_action": user_action,
-                "user_request": user_request,
-                "file_format": file_format,
-                "supervisor_specifications": None,
-                "generator_code": None,
-                "compiler_result": None,
-                "tester_result": None,
-                "code_assessment": None,
-                "round": round,
-                "iteration_count": 0,
-                "max_iterations": attempts,
-                "model_source": source,
-                "session_dir": session_dir,
-                "next_step": "Supervisor",
-                "benchmark_metrics": benchmark_metrics,
-                "last_parser": last_parser
-            }
-
-            result = graph.invoke(initial_state, config)
+            # Get workflow result
+            result = start_workflow(graph, config, user_action, user_request, file_format, round, attempts, source, session_dir, benchmark_metrics, last_parser)
 
             # Save conversation
             messages += result["messages"]

@@ -1,3 +1,7 @@
+from pathlib import Path
+from typing import Any
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from agents.supervisor.supervisor_agent import supervisor_node
 from agents.orchestrator.orchestrator_agent import orchestrator_node
@@ -5,7 +9,7 @@ from agents.generator.generator_agent import generator_node
 from agents.compiler.compiler_agent import compiler_node
 from agents.tester.tester_agent import tester_node
 from agents.assessor.assessor_agent import assessor_node
-from models import AgentType, AgentState
+from models import AgentType, AgentState, BenchmarkMetrics
 
 
 
@@ -83,3 +87,33 @@ def build_workflow():
     )
     
     return workflow.compile()
+
+def start_workflow(
+        graph, config: RunnableConfig, 
+        user_action: str, user_request: str, file_format: str, round: int, max_iterations: int, 
+        model_source: str, session_dir: Path, benchmark_metrics: BenchmarkMetrics, last_parser: dict[str, str] | None = None
+    ) -> dict[str, Any]:
+    """Start the workflow graph."""
+    user_message = f"{user_action}: {user_request}"
+    
+    initial_state = {
+        "messages": [ HumanMessage(content=user_message) ],
+        "user_action": user_action,
+        "user_request": user_request,
+        "file_format": file_format,
+        "supervisor_specifications": None,
+        "generator_code": None,
+        "compiler_result": None,
+        "tester_result": None,
+        "code_assessment": None,
+        "round": round,
+        "iteration_count": 0,
+        "max_iterations": max_iterations,
+        "model_source": model_source,
+        "session_dir": session_dir,
+        "next_step": "Supervisor",
+        "benchmark_metrics": benchmark_metrics,
+        "last_parser": last_parser
+    }
+
+    return graph.invoke(initial_state, config)
