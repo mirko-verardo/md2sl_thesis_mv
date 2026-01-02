@@ -18,21 +18,21 @@ if __name__ == "__main__":
 
     # Initialize parameters
     user_action = "GENERATE_PARSER"
-    #types = [ "multi_agent", "zero_shot" ]
-    #sources = [ "google", "openai", "anthropic" ]
-    formats = [ "CSV", "HTML", "HTTP", "JSON", "PDF", "XML" ]
     reps = range(10)
-    types = [ "zero_shot" ]
-    sources = [ "google" ]
-    #formats = [ "CSV", "HTML", "JSON" ]
+    #types = [ "multi_agent", "zero_shot" ]
+    formats = [ "CSV", "HTML", "HTTP", "JSON", "PDF", "XML" ]
+    #sources = [ "google", "openai", "anthropic" ]
     #reps = range(2)
+    types = [ "zero_shot" ]
+    #formats = [ "CSV", "HTML", "JSON" ]
+    sources = [ "google" ]
     attempts = 15
     benchmarks = []
 
     for rep in reps:
         for type in types:
-            for source in sources:
-                for format in formats:
+            for format in formats:
+                for source in sources:
                     if type == "zero_shot":
                         # Log benchmark
                         benchmark_metrics = start_chat(source, format, n=rep, react_loops=attempts, exit_at_first=True)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
                         # Initialize parameters
                         session_dir = create_session(source, type, format)
                         user_request = get_request_from_action(user_action, format)
-                        benchmark_metrics = BenchmarkMetrics(rep, type, format)
+                        benchmark_metrics = BenchmarkMetrics(rep, type, format, source)
                         
                         # Get workflow result
                         result = start_workflow(graph, config, user_action, user_request, format, 1, attempts, source, session_dir, benchmark_metrics)

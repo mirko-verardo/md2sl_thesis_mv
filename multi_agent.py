@@ -34,7 +34,7 @@ if __name__ == "__main__":
         user_request = get_request_from_action(user_action, file_format)
         if user_request is None:
             break
-        benchmark_metrics = BenchmarkMetrics(round, type, file_format)
+        benchmark_metrics = BenchmarkMetrics(round, type, file_format, source)
         
         try:
             # Get workflow result

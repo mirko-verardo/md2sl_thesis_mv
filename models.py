@@ -11,12 +11,13 @@ from utils.general import compilation_check, execution_check
 
 class BenchmarkMetrics:
     """Class for benchmark metrics recording."""
-    def __init__(self, n: int, type: str, file_format: str):
+    def __init__(self, n: int, type: str, file_format: str, llm: str):
         self.checkpoints = []
         self.data = {
             "n": n,
             "type": type,
             "file_format": file_format,
+            "llm": llm,
             "start_time": datetime.now().isoformat(),
             "compilation_time": None,
             "compilation_iteration": None,

@@ -162,7 +162,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
     type = "few_shot" if few_shot else "zero_shot"
 
     # initialize metrics
-    benchmark_metrics = BenchmarkMetrics(n, type, file_format)
+    benchmark_metrics = BenchmarkMetrics(n, type, file_format, source)
 
     # initialize model
     llm = initialize_llm(source)
