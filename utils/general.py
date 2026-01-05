@@ -145,7 +145,7 @@ def create_session(source: str, type: str, format: str) -> Path:
     
     return session_dir
 
-def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 20, max_retries: int = 3):
+def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 10, max_retries: int = 3):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
         #model_id = "gemini-2.0-flash"
@@ -155,20 +155,20 @@ def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 20, max_r
         return ChatGoogleGenerativeAI(
             model = model_id,
             temperature = temp,
-            max_tokens = None,
+            max_tokens = 32768,
             timeout = timeout,
             max_retries = max_retries,
             api_key = SecretStr(api_key)
         )
     elif source == "openai":
         #model_id = "gpt-4o-mini"
-        model_id = "gpt-5-nano"
+        model_id = "gpt-4.1-mini"
         api_key = set_if_undefined("OPENAI_API_KEY")
 
         return ChatOpenAI(
             model = model_id,
             temperature = temp,
-            max_tokens = None,
+            max_tokens = 32768,
             timeout = timeout,
             max_retries = max_retries,
             api_key = SecretStr(api_key)
@@ -182,10 +182,11 @@ def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 20, max_r
             model = model_id,
             temperature = temp,
             # can't be None with Anthropic :(
-            max_tokens = 8192,
+            max_tokens = 32768,
             timeout = timeout,
             max_retries = max_retries,
-            api_key = SecretStr(api_key)
+            api_key = SecretStr(api_key),
+            betas=["context-1m-2025-08-07"]
         )
     
     raise ValueError("Invalid source")
