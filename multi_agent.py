@@ -24,7 +24,7 @@ if __name__ == "__main__":
     session_dir = create_session(source, type, file_format)
     round = 1
     attempts = 10
-    last_parser = None
+    last_parser = {}
     messages = []
     benchmarks = []
     
@@ -47,7 +47,7 @@ if __name__ == "__main__":
             benchmarks.append(result["benchmark_metrics"].get_benchmark())
             
             # Save last parser
-            last_parser = result["last_parser"]
+            last_parser = { "code": result["generator_code"], "assessment": result["code_assessment"] }
         except Exception as e:
             print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
             print_colored(format_exc(), colors.RED, bold=True)

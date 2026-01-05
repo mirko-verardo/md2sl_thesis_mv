@@ -17,7 +17,6 @@ def orchestrator_node(state: AgentState) -> AgentState:
     max_iterations = state["max_iterations"]
     session_dir = state["session_dir"]
     benchmark_metrics = state["benchmark_metrics"]
-    last_parser = state["last_parser"]
 
     # NB: here they can't be None
     if not messages:
@@ -29,9 +28,6 @@ def orchestrator_node(state: AgentState) -> AgentState:
     prev_node = messages[-1].name
     if prev_node == "Supervisor":
         next_node = "Generator"
-        if last_parser:
-            generator_code = last_parser["code"]
-            code_assessment = last_parser["assessment"]
     elif prev_node == "Generator":
         next_node = "Compiler"
     elif prev_node == "Compiler":
@@ -93,15 +89,8 @@ def orchestrator_node(state: AgentState) -> AgentState:
             code_assessment = f"{code_assessment}\n" if code_assessment else ""
             code_assessment += "After iterations limit, this is the best parser implementation available. While it is NOT SATISFACTORY, it could serve as a good starting point."
     
-    # NB: last_parser always updated
     if next_node == "Supervisor":
         benchmark_metrics.record_parser_end()
-        last_parser = {
-            "code": generator_code,
-            "assessment": code_assessment
-        }
-    else:
-        last_parser = None
 
     print_colored(f"\nOrchestrator sending flow to {next_node}", colors.YELLOW, bold=True)
     
@@ -121,6 +110,5 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": next_node,
-        "benchmark_metrics": benchmark_metrics,
-        "last_parser": last_parser
+        "benchmark_metrics": benchmark_metrics
     }

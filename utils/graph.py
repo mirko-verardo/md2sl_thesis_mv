@@ -91,7 +91,7 @@ def build_workflow():
 def start_workflow(
         graph, config: RunnableConfig, 
         user_action: str, user_request: str, file_format: str, round: int, max_iterations: int, 
-        model_source: str, session_dir: Path, benchmark_metrics: BenchmarkMetrics, last_parser: dict[str, str] | None = None
+        model_source: str, session_dir: Path, benchmark_metrics: BenchmarkMetrics, last_parser: dict[str, str] = {}
     ) -> dict[str, Any]:
     """Start the workflow graph."""
     user_message = f"{user_action}: {user_request}"
@@ -102,18 +102,17 @@ def start_workflow(
         "user_request": user_request,
         "file_format": file_format,
         "supervisor_specifications": None,
-        "generator_code": None,
+        "generator_code": last_parser.get("code"),
         "compiler_result": None,
         "tester_result": None,
-        "code_assessment": None,
+        "code_assessment": last_parser.get("assessment"),
         "round": round,
         "iteration_count": 0,
         "max_iterations": max_iterations,
         "model_source": model_source,
         "session_dir": session_dir,
         "next_step": "Supervisor",
-        "benchmark_metrics": benchmark_metrics,
-        "last_parser": last_parser
+        "benchmark_metrics": benchmark_metrics
     }
 
     return graph.invoke(initial_state, config)

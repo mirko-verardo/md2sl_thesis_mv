@@ -13,15 +13,45 @@ def supervisor_node(state: AgentState) -> AgentState:
     user_request = state["user_request"]
     generator_code = state["generator_code"]
     code_assessment = state["code_assessment"]
+    iteration_count = state["iteration_count"]
     model_source = state["model_source"]
-    last_parser = state["last_parser"]
     
     # Create the prompt
     supervisor_template = supervisor_prompts.get_supervisor_template()
     supervisor_input = {
         "input": user_request
     }
-    if generator_code and code_assessment:
+    if iteration_count == 0:
+        if user_action == "GENERATE_PARSER":
+            adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
+            supervisor_input.update({
+                "requirements": get_parser_requirements()
+            })
+            purpose = "creating detailed specifications"
+            next_step = "Orchestrator"
+        elif user_action == "CORRECT_ERROR" and generator_code and code_assessment:
+            adaptive_instructions = supervisor_prompts.get_supervisor_input_correct_error()
+            supervisor_input.update({
+                "code": generator_code,
+                "assessment": code_assessment
+            })
+            purpose = "creating updated specifications"
+            next_step = "Orchestrator"
+        elif user_action == "ASSESS_CODE" and generator_code and code_assessment:
+            adaptive_instructions = supervisor_prompts.get_supervisor_input_assess_code()
+            supervisor_input.update({
+                "code": generator_code,
+                "assessment": code_assessment
+            })
+            purpose = "providing code assessment"
+            next_step = "FINISH"
+        elif user_action == "GENERAL_CONVERSATION":
+            adaptive_instructions = supervisor_prompts.get_supervisor_input_general_conversation()
+            purpose = "conversation"
+            next_step = "FINISH"
+        else:
+            raise Exception("Something goes wrong :(")
+    elif generator_code and code_assessment:
         adaptive_instructions = supervisor_prompts.get_supervisor_input_validated()
         supervisor_input.update({
             "code": generator_code,
@@ -29,42 +59,8 @@ def supervisor_node(state: AgentState) -> AgentState:
         })
         purpose = "providing final parser"
         next_step = "FINISH"
-    elif user_action == "GENERATE_PARSER":
-        adaptive_instructions = supervisor_prompts.get_supervisor_input_generate_parser()
-        supervisor_input.update({
-            "requirements": get_parser_requirements()
-        })
-        purpose = "creating detailed specifications"
-        next_step = "Orchestrator"
-    elif user_action == "CORRECT_ERROR":
-        # NB: here it can't be None
-        if not last_parser:
-            raise Exception("Something goes wrong :(")
-        
-        adaptive_instructions = supervisor_prompts.get_supervisor_input_correct_error()
-        supervisor_input.update({
-            "code": last_parser["code"],
-            "assessment": last_parser["assessment"]
-        })
-        purpose = "creating updated specifications"
-        next_step = "Orchestrator"
-    elif user_action == "ASSESS_CODE":
-        # NB: here it can't be None
-        if not last_parser:
-            raise Exception("Something goes wrong :(")
-        
-        adaptive_instructions = supervisor_prompts.get_supervisor_input_assess_code()
-        supervisor_input.update({
-            "code": last_parser["code"],
-            "assessment": last_parser["assessment"]
-        })
-        purpose = "providing code assessment"
-        next_step = "FINISH"
     else:
-        # GENERAL_CONVERSATION
-        adaptive_instructions = supervisor_prompts.get_supervisor_input_general_conversation()
-        purpose = "conversation"
-        next_step = "FINISH"
+        raise Exception("Something goes wrong :(")
     supervisor_template = supervisor_template.replace("{adaptive_instructions}", adaptive_instructions)
     supervisor_prompt = PromptTemplate.from_template(supervisor_template)
 
@@ -104,16 +100,15 @@ def supervisor_node(state: AgentState) -> AgentState:
         "user_request": user_request,
         "file_format": state["file_format"],
         "supervisor_specifications": supervisor_specifications,
-        "generator_code": None,
+        "generator_code": generator_code,
         "compiler_result": None,
         "tester_result": None,
-        "code_assessment": None,
+        "code_assessment": code_assessment,
         "round": state["round"],
-        "iteration_count": state["iteration_count"],
+        "iteration_count": iteration_count,
         "max_iterations": state["max_iterations"],
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": next_step,
-        "benchmark_metrics": state["benchmark_metrics"],
-        "last_parser": last_parser
+        "benchmark_metrics": state["benchmark_metrics"]
     }

@@ -78,6 +78,5 @@ def generator_node(state: AgentState) -> AgentState:
         "model_source": model_source,
         "session_dir": state["session_dir"],
         "next_step": "Orchestrator",
-        "benchmark_metrics": state["benchmark_metrics"],
-        "last_parser": None
+        "benchmark_metrics": state["benchmark_metrics"]
     }

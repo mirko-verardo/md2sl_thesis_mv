@@ -61,6 +61,5 @@ def compiler_node(state: AgentState) -> AgentState:
         "model_source": state["model_source"],
         "session_dir": session_dir,
         "next_step": "Orchestrator",
-        "benchmark_metrics": state["benchmark_metrics"],
-        "last_parser": None
+        "benchmark_metrics": state["benchmark_metrics"]
     }

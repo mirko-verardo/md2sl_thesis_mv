@@ -145,51 +145,46 @@ def create_session(source: str, type: str, format: str) -> Path:
     
     return session_dir
 
-def initialize_llm(source: str, temp: float = 0.5):
+def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 20, max_retries: int = 3):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
-        #model_id = 'gemini-3.0-pro'
-        #model_id = 'gemini-2.5-pro'
-        model_id = 'gemini-2.5-flash'
-        #model_id = 'gemini-2.0-flash'
-        #model_id = 'gemini-2.5-flash-lite'
+        #model_id = "gemini-2.0-flash"
+        model_id = "gemini-2.5-flash"
         api_key = set_if_undefined("GOOGLE_API_KEY")
 
         return ChatGoogleGenerativeAI(
             model = model_id,
             temperature = temp,
             max_tokens = None,
-            timeout = 60 * 20,
-            max_retries = 5,
+            timeout = timeout,
+            max_retries = max_retries,
             api_key = SecretStr(api_key)
         )
     elif source == "openai":
-        model_id = 'gpt-4o-mini'
+        #model_id = "gpt-4o-mini"
+        model_id = "gpt-5-nano"
         api_key = set_if_undefined("OPENAI_API_KEY")
 
         return ChatOpenAI(
             model = model_id,
             temperature = temp,
             max_tokens = None,
-            timeout = None,
-            max_retries = 5,
+            timeout = timeout,
+            max_retries = max_retries,
             api_key = SecretStr(api_key)
         )
     elif source == "anthropic":
-        #model_id = 'claude-3-5-sonnet-20240620'
-        model_id = 'claude-3-7-sonnet-20250219'
+        #model_id = "claude-3-7-sonnet-20250219"
+        model_id = "claude-sonnet-4-20250514"
         api_key = set_if_undefined("ANTHROPIC_API_KEY")
 
         return ChatAnthropic(
-            #model_name = model_id,
             model = model_id,
-            #stop = None,
             temperature = temp,
-            #max_tokens_to_sample = 6144,
-            #max_tokens = 6144,
-            max_tokens = None,
-            timeout = None,
-            max_retries = 5,
+            # can't be None with Anthropic :(
+            max_tokens = 8192,
+            timeout = timeout,
+            max_retries = max_retries,
             api_key = SecretStr(api_key)
         )
     
@@ -447,7 +442,7 @@ def analyze_c_code(parser_path: Path, parser_format: str) -> str:
 
     try:
         timeout = 60 * 5
-        
+
         # Compile
         result = run(
             [*command, "gcc", *coverage_flags, c_parser_path_str, "-o", o_parser_path_str],

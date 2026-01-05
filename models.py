@@ -77,7 +77,6 @@ class AgentState(TypedDict):
     next_step: AgentType
     session_dir: Path
     benchmark_metrics: BenchmarkMetrics
-    last_parser: dict[str, str] | None
 
 # Define tools
 
