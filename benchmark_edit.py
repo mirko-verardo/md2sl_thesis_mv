@@ -18,7 +18,10 @@ if __name__ == "__main__":
     # edit
     coc_pattern = "Lines executed:"
     for row in reader:
-        parser_path = Path(row["best_parser_folder"])
+        parser_path_str = row["best_parser_folder"]
+        if not parser_path_str:
+            continue
+        parser_path = Path(parser_path_str)
         c_parser_path_str = str(get_c_parser_path(parser_path))
         # Cyclomatic Complexity
         cyc_analyzer = analyze_file(c_parser_path_str)
