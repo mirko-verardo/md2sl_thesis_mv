@@ -4,6 +4,7 @@ from models import AgentState
 from agents.assessor import assessor_prompts
 from utils import colors
 from utils.general import print_colored, initialize_llm, get_parser_requirements
+from utils.multi_agent import invoke_agent
 
 
 
@@ -40,13 +41,13 @@ def assessor_node(state: AgentState) -> AgentState:
     print_colored(assessor_prompt_rendered, colors.GREEN)
     
     # Invoke the agent
-    try:
-        assessor_result = assessor_executor.invoke(assessor_input)
-        assessor_response = str(assessor_result.content)
+    assessor_outcome, assessor_response = invoke_agent(assessor_executor, assessor_input)
+    if assessor_outcome:
         assessor_response_color = colors.CYAN
-    except Exception as e:
-        assessor_response = f"Error occurred during code assessment: {str(e)}\n\nPlease try again."
+        code_assessment = assessor_response
+    else:
         assessor_response_color = colors.RED
+        code_assessment = None
     
     # Print the assessment
     print_colored(f"Assessor RESPONSE (Iteration {iteration_count}/{max_iterations}):", assessor_response_color, bold=True)
@@ -61,7 +62,7 @@ def assessor_node(state: AgentState) -> AgentState:
         "generator_code": generator_code,
         "compiler_result": None,
         "tester_result": None,
-        "code_assessment": assessor_response,
+        "code_assessment": code_assessment,
         "round": state["round"],
         "iteration_count": iteration_count,
         "max_iterations": max_iterations,

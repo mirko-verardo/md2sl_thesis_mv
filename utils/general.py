@@ -72,27 +72,36 @@ def set_if_undefined(var: str) -> str:
     
     return value
 
-def get_model_source_from_input(speed_up: bool = True) -> str:
-    """Get the model source name from the user input"""
-
-    # speed up
-    if speed_up:
+def map_input_to_model_source(input: int) -> str:
+    if input == 1:
         return "google"
+    elif input == 2:
+        return "openai"
+    elif input == 3:
+        return "anthropic"
     
-    sources = ["google", "openai", "anthropic"]
-    sources_str = f"'{"', '".join(sources)}'"
-    print_colored("\n=== C Parser Generator Setup ===", colors.CYAN, bold=True)
-    print_colored(f"Available model sources: {sources_str}", colors.YELLOW, bold=True)
-    
-    # get model source
+    raise Exception("Cannot map input to model source")
+
+def get_model_source_from_input() -> str:
+    """Get the model source from the user input"""
+    print_colored("\n=== C Parser Generator Setup ===\n", colors.CYAN, bold=True)
+
+    print("Available model sources:\n")
+    sources = range(1, 4)
+    for i in sources:
+        print(f"- {i}: {map_input_to_model_source(i)}")
+
+    # get the model source
     while True:
-        source = input("\nEnter the model source: ").strip().lower()
+        try:
+            source = int(input("\nEnter the model source: "))
+        except Exception as e:
+            source = 0
         
         if source in sources:
-            print_colored(f"\nSelected model source: {source}", colors.GREEN, bold=True)
-            return source
+            return map_input_to_model_source(source)
         
-        print_colored(f"Invalid source. Please enter one of these: {sources_str}.", colors.RED, bold=True)
+        print("Invalid model source. Please enter one of these: " + (", ".join(sources)))
 
 def get_parser_dir(session_dir: Path, round_number: int, iteration_number: int) -> Path:
     iteration_number_str = str(iteration_number).zfill(2)
@@ -117,7 +126,7 @@ def map_input_to_file_format(input: int) -> str:
     raise Exception("Cannot map input to file format")
 
 def get_file_format_from_input() -> str:
-    """Get the file format from the user input"""    
+    """Get the file format from the user input"""
     print("Available file formats:\n")
     actions = range(1, 8)
     for i in actions:

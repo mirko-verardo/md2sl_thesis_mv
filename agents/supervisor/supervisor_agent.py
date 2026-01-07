@@ -3,6 +3,7 @@ from langchain.prompts import PromptTemplate
 from models import AgentState
 from utils import colors
 from utils.general import print_colored, initialize_llm, get_parser_requirements
+from utils.multi_agent import invoke_agent
 from agents.supervisor import supervisor_prompts
 
 
@@ -82,17 +83,18 @@ def supervisor_node(state: AgentState) -> AgentState:
     print_colored(f"Supervisor PROMPT ({purpose}):", colors.GREEN, bold=True)
     print_colored(supervisor_prompt_rendered, colors.GREEN)
 
-    try:
-        supervisor_result = supervisor_executor.invoke(supervisor_input)
-        supervisor_response = str(supervisor_result.content)
-    except Exception as e:
-        supervisor_response = f"Error occurred during supervisor response: {str(e)}\n\nPlease try again."
+    # Invoke the agent
+    supervisor_outcome, supervisor_response = invoke_agent(supervisor_executor, supervisor_input)
+    if supervisor_outcome:
+        supervisor_response_color = colors.BLUE
+        # Set the specifications (NB: only for orchestrator -> generator)
+        supervisor_specifications = supervisor_response if next_step == "Orchestrator" else None
+    else:
+        supervisor_response_color = colors.RED
+        supervisor_specifications = None
 
-    # NB: set the specifications for generator
-    supervisor_specifications = supervisor_response if next_step == "Orchestrator" else None
-
-    print_colored(f"Supervisor RESPONSE ({purpose}):", colors.BLUE, bold=True)
-    print_colored(supervisor_response, colors.BLUE)
+    print_colored(f"Supervisor RESPONSE ({purpose}):", supervisor_response_color, bold=True)
+    print_colored(supervisor_response, supervisor_response_color)
     
     return {
         "messages": [AIMessage(content=supervisor_response, name="Supervisor")],

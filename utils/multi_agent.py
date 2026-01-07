@@ -1,3 +1,7 @@
+from time import sleep
+
+
+
 def is_satisfactory(assessment: str) -> bool:
     assessment = assessment.lower()
     # NB: this condition imply some constraints on agent's prompt to manage its output (bad)
@@ -53,3 +57,16 @@ def get_request_from_action(action: str, file_format: str) -> str | None:
         return "Correct the problems on the generated parser."
     
     return input("\nYou: ")
+
+def invoke_agent(agent, agent_input: dict[str, str]) -> tuple[bool, str]:
+    for i in range(2):
+        if i > 0:
+            sleep(60)
+        try:
+            agent_result = agent.invoke(agent_input)
+            agent_response = str(agent_result.content)
+            return True, agent_response
+        except Exception as e:
+            agent_response = str(e)    
+    
+    return False, f"Error occurred during agent response: {agent_response}\n\nPlease try again."

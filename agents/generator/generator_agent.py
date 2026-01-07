@@ -4,6 +4,7 @@ from models import AgentState
 from agents.generator import generator_prompts
 from utils import colors
 from utils.general import print_colored, extract_c_code, initialize_llm, get_parser_requirements
+from utils.multi_agent import invoke_agent
 
 
 
@@ -47,15 +48,14 @@ def generator_node(state: AgentState) -> AgentState:
     generator_prompt_rendered = generator_prompt.format(**generator_input)
     print_colored(f"Generator PROMPT (Iteration {iteration_count}/{max_iterations}):", colors.GREEN, bold=True)
     print_colored(generator_prompt_rendered, colors.GREEN)
-    
-    try:
-        generator_result = generator_executor.invoke(generator_input)
-        generator_response = str(generator_result.content)
+
+    # Invoke the agent
+    generator_outcome, generator_response = invoke_agent(generator_executor, generator_input)
+    if generator_outcome:
         generator_response_color = colors.MAGENTA
         # Extract clean c code
         generator_response_code = extract_c_code(generator_response)
-    except Exception as e:
-        generator_response = f"Error occurred during code generation: {str(e)}\n\nPlease try again."
+    else:
         generator_response_color = colors.RED
         generator_response_code = None
     

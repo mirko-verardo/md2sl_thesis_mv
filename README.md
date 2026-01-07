@@ -62,7 +62,6 @@ wsl -d Ubuntu sudo apt install -y build-essential gcc g++
 
 ## TODO
 
-- timeout for llm and testing
 - dynamic analysis
     - fuzzing
 - choose metrics

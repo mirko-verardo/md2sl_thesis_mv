@@ -10,8 +10,6 @@ from utils.multi_agent import get_action_from_input, get_request_from_action
 
 
 if __name__ == "__main__":
-    print_colored("\n=== C Parser Generator System ===", colors.CYAN, bold=True)
-
     # Initialize the graph
     graph = build_workflow()
     config = RunnableConfig(recursion_limit=100)

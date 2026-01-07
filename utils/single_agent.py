@@ -304,7 +304,7 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
             print_colored("\n--- Compiling and Testing Final C code ---", colors.YELLOW, bold=True)
 
             # get the parser dir
-            parser_dir = session_dir / "parser_final"
+            parser_dir = session_dir / f"parser_final_{round}"
             parser_dir.mkdir()
 
             # compile the C code

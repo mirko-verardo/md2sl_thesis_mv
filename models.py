@@ -73,7 +73,7 @@ class AgentState(TypedDict):
     round: int
     iteration_count: int
     max_iterations: int
-    model_source: str
+    model_source: Literal["google", "openai", "anthropic"]
     next_step: AgentType
     session_dir: Path
     benchmark_metrics: BenchmarkMetrics

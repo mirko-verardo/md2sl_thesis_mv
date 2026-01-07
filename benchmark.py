@@ -24,7 +24,7 @@ if __name__ == "__main__":
     #sources = [ "google", "openai", "anthropic" ]
     #reps = range(2)
     #formats = [ "CSV", "JSON" ]
-    sources = [ "openai" ]
+    sources = [ "anthropic" ]
     attempts = 15
     benchmarks = []
 
