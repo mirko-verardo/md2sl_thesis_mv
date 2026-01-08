@@ -354,12 +354,11 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
                 if stderr:
                     log(ff, f"Standard error:\n{stderr}")
             
-            print(f"\nCompilation details saved to: {result_file_path}")
-            
+            print(f"\nCompilation details saved to: {result_file_path}")  
         except Exception as e:
-            log(f, f"Error: {str(e)}", colors.RED, bold=True)
-            log(f, "Detailed error:", colors.RED, bold=True)
-            log(f, format_exc())
+            log(f, f"An error occurred: {e}", colors.RED, bold=True)
+            log(f, format_exc(), colors.RED, bold=True)
+            log(f, "Please try again.", colors.RED, bold=True)
         
         # Ask the user
         user_input = "exit" if exit_at_first else input("\nYou: ")

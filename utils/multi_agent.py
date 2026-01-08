@@ -59,14 +59,16 @@ def get_request_from_action(action: str, file_format: str) -> str | None:
     return input("\nYou: ")
 
 def invoke_agent(agent, agent_input: dict[str, str]) -> tuple[bool, str]:
-    for i in range(2):
+    for i in range(3):
         if i > 0:
+            print("Let's wait before restarting...")
             sleep(60)
         try:
             agent_result = agent.invoke(agent_input)
             agent_response = str(agent_result.content)
             return True, agent_response
         except Exception as e:
-            agent_response = str(e)    
+            agent_response = str(e)
+            print(agent_response)
     
     return False, f"Error occurred during agent response: {agent_response}\n\nPlease try again."

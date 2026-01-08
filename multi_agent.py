@@ -49,7 +49,7 @@ if __name__ == "__main__":
         except Exception as e:
             print_colored(f"\nAn error occurred: {e}", colors.RED, bold=True)
             print_colored(format_exc(), colors.RED, bold=True)
-            print_colored("Please try again with a different query.", colors.RED, bold=True)
+            print_colored("Please try again.", colors.RED, bold=True)
         
         # Ask the user again
         user_action = get_action_from_input()

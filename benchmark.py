@@ -1,5 +1,6 @@
 from csv import DictWriter
 from pathlib import Path
+from traceback import format_exc
 from langchain_core.runnables import RunnableConfig
 from models import BenchmarkMetrics
 from utils.general import create_session
@@ -10,7 +11,7 @@ from utils.single_agent import start_chat
 
 
 if __name__ == "__main__":
-    benchmarks_dir = Path("benchmark")
+    benchmarks_file = Path("benchmark") / "benchmark.csv"
 
     # Initialize the graph
     graph = build_workflow()
@@ -38,25 +39,32 @@ if __name__ == "__main__":
                     else:
                         # Initialize parameters
                         session_dir = create_session(source, type, format)
+                        conversation_file = session_dir / "conversation.txt"
                         user_request = get_request_from_action(user_action, format)
                         benchmark_metrics = BenchmarkMetrics(rep, type, format, source)
                         
-                        # Get workflow result
-                        result = start_workflow(graph, config, user_action, user_request, format, 1, attempts, source, session_dir, benchmark_metrics)
+                        try:
+                            # Get workflow result
+                            result = start_workflow(graph, config, user_action, user_request, format, 1, attempts, source, session_dir, benchmark_metrics)
 
-                        # Log conversation
-                        with open(session_dir / "conversation.txt", "w", encoding="utf-8") as f:
-                            for m in result["messages"]:
-                                f.write(f"{m.pretty_repr()}\n\n")
+                            # Log conversation
+                            with open(conversation_file, "w", encoding="utf-8") as f:
+                                for m in result["messages"]:
+                                    f.write(f"{m.pretty_repr()}\n\n")
 
-                        # Log benchmark
-                        benchmark_metrics = result["benchmark_metrics"]
+                            # Log benchmark
+                            benchmark_metrics = result["benchmark_metrics"]
+                        except Exception as e:
+                            # Log error
+                            with open(conversation_file, "w", encoding="utf-8") as f:
+                                f.write(f"An error occurred: {e}\n\n")
+                                f.write(format_exc())
                     
                     # Save benchmark
                     benchmarks.append(benchmark_metrics.get_benchmark())
     
     # Log benchmark
-    with open(benchmarks_dir / "benchmark.csv", "w", encoding="utf-8", newline="") as f:
+    with open(benchmarks_file, "w", encoding="utf-8", newline="") as f:
         writer = DictWriter(f, fieldnames=benchmarks[0].keys())
         writer.writeheader()
         writer.writerows(benchmarks)
