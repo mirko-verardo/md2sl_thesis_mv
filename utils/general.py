@@ -154,7 +154,7 @@ def create_session(source: str, type: str, format: str) -> Path:
     
     return session_dir
 
-def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 10, max_retries: int = 3):
+def initialize_llm(source: str, temp: float = 0.5, tokens: int = 32768, timeout: int = 60 * 15, retries: int = 3):
     """Initialize a hosted model with appropriate parameters."""
     if source == "google":
         #model_id = "gemini-2.0-flash"
@@ -164,9 +164,9 @@ def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 10, max_r
         return ChatGoogleGenerativeAI(
             model = model_id,
             temperature = temp,
-            max_tokens = 32768,
+            max_tokens = tokens,
             timeout = timeout,
-            max_retries = max_retries,
+            max_retries = retries,
             api_key = SecretStr(api_key)
         )
     elif source == "openai":
@@ -177,9 +177,9 @@ def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 10, max_r
         return ChatOpenAI(
             model = model_id,
             temperature = temp,
-            max_tokens = 32768,
+            max_tokens = tokens,
             timeout = timeout,
-            max_retries = max_retries,
+            max_retries = retries,
             api_key = SecretStr(api_key)
         )
     elif source == "anthropic":
@@ -191,9 +191,9 @@ def initialize_llm(source: str, temp: float = 0.5, timeout: int = 60 * 10, max_r
             model = model_id,
             temperature = temp,
             # can't be None with Anthropic :(
-            max_tokens = 32768,
+            max_tokens = tokens,
             timeout = timeout,
-            max_retries = max_retries,
+            max_retries = retries,
             api_key = SecretStr(api_key),
             betas=["context-1m-2025-08-07"]
         )
