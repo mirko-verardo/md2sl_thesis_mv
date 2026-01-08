@@ -8,7 +8,6 @@ from utils.multi_agent import is_satisfactory
 def orchestrator_node(state: AgentState) -> AgentState:
     """Orchestrator agent that manages the flow."""
     messages = state["messages"]
-    generator_code = state["generator_code"]
     compiler_result = state["compiler_result"]
     tester_result = state["tester_result"]
     code_assessment = state["code_assessment"]
@@ -100,7 +99,7 @@ def orchestrator_node(state: AgentState) -> AgentState:
         "user_request": state["user_request"],
         "file_format": state["file_format"],
         "supervisor_specifications": state["supervisor_specifications"],
-        "generator_code": generator_code,
+        "generator_code": state["generator_code"],
         "compiler_result": compiler_result,
         "tester_result": tester_result,
         "code_assessment": code_assessment,

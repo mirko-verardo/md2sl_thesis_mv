@@ -19,25 +19,24 @@ if __name__ == "__main__":
     coc_pattern = "Lines executed:"
     for row in reader:
         parser_path_str = row["best_parser_folder"]
-        if not parser_path_str:
-            continue
-        parser_path = Path(parser_path_str)
-        c_parser_path_str = str(get_c_parser_path(parser_path))
-        # Cyclomatic Complexity
-        cyc_analyzer = analyze_file(c_parser_path_str)
-        cyc_list = [ cyc_f.cyclomatic_complexity for cyc_f in cyc_analyzer.function_list ]
-        cyc_list = [ cyc_item for cyc_item in cyc_list if cyc_item is not None ]
-        if cyc_list:
-            row["cyclomatic_complexity"] = max(cyc_list)
-        # Code Coverage
-        if row["testing_time"]:
-            result = analyze_c_code(parser_path, row["file_format"])
-            lines = result.splitlines()
-            lines = [line for line in lines if line.startswith(coc_pattern)]
-            if lines:
-                matches = re.search(rf"{coc_pattern}([\d.]+)% of (\d+)", lines[-1])
-                if matches:
-                    row["code_coverage"] = float(matches.group(1))
+        if parser_path_str:
+            parser_path = Path(parser_path_str)
+            c_parser_path_str = str(get_c_parser_path(parser_path))
+            # Cyclomatic Complexity
+            cyc_analyzer = analyze_file(c_parser_path_str)
+            cyc_list = [ cyc_f.cyclomatic_complexity for cyc_f in cyc_analyzer.function_list ]
+            cyc_list = [ cyc_item for cyc_item in cyc_list if cyc_item is not None ]
+            if cyc_list:
+                row["cyclomatic_complexity"] = max(cyc_list)
+            # Code Coverage
+            if row["testing_time"]:
+                result = analyze_c_code(parser_path, row["file_format"])
+                lines = result.splitlines()
+                lines = [line for line in lines if line.startswith(coc_pattern)]
+                if lines:
+                    matches = re.search(rf"{coc_pattern}([\d.]+)% of (\d+)", lines[-1])
+                    if matches:
+                        row["code_coverage"] = float(matches.group(1))
         benchmarks.append(row)
         
     # close
