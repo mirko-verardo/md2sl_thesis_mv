@@ -1,5 +1,4 @@
 python-dotenv==1.2.1
-lizard==1.19.0
 #langchain==1.0.5
 #langchain-openai==1.0.2
 #langchain-anthropic==1.0.1
@@ -10,3 +9,6 @@ langchain-openai==0.3.35
 langchain-anthropic==0.3.22
 langchain-google-genai==2.1.12
 langgraph==0.6.11
+# for benchmarks
+lizard==1.19.0
+pandas==2.3.3

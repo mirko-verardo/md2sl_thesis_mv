@@ -26,9 +26,9 @@ def __get_in_parser_path(format: str) -> Path:
 def __check_if_wsl(wsl: str) -> bool:
     return (wsl.lower() != "none")
 
-def __to_wsl_path(wsl: str, path: str) -> str:
+def __to_wsl_path(wsl: str, path: Path) -> str:
     # Use wslpath to convert automatically
-    result = run(["wsl", "-d", wsl, "wslpath", re.escape(path)], capture_output=True, text=True, encoding="utf-8")
+    result = run(["wsl", "-d", wsl, "wslpath", path.as_posix()], capture_output=True, text=True, encoding="utf-8", check=True)
     return result.stdout.strip()
 
 def __get_wsl_cmd(wsl: str) -> list[str]:
@@ -315,14 +315,15 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
     with open(c_parser_path, "w", encoding="utf-8") as f:
         f.write(parser_code)
 
-    c_parser_path_str = str(c_parser_path)
-    o_parser_path_str = str(o_parser_path)
-    command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+    else:
+        c_parser_path_str = str(c_parser_path)
+        o_parser_path_str = str(o_parser_path)
+        command = []
 
     try:
         result = run(
@@ -364,15 +365,19 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) 
             'stderr': f'Failed to read input file: {e}'
         }
 
-    # Execution command building
-    c_parser_path_str = str(get_c_parser_path(parser_path))
-    o_parser_path_str = str(get_o_parser_path(parser_path, runtime))
-    command = []
+    c_parser_path = get_c_parser_path(parser_path)
+    o_parser_path = get_o_parser_path(parser_path, runtime)
+
+    # Execution command building    
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+    else:
+        c_parser_path_str = str(c_parser_path)
+        o_parser_path_str = str(o_parser_path)
+        command = []
     if runtime:
         asan_options = [
             "detect_leaks=1",
@@ -440,15 +445,15 @@ def analyze_c_code(parser_path: Path, parser_format: str) -> str:
     c_parser_path = get_c_parser_path(parser_path)
     o_parser_path = parser_path / "analyze"
 
-    c_parser_path_str = str(c_parser_path)
-    o_parser_path_str = str(o_parser_path)
-    
-    command = []
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path_str)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path_str)
+        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
+        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+    else:
+        c_parser_path_str = str(c_parser_path)
+        o_parser_path_str = str(o_parser_path)
+        command = []
 
     try:
         timeout = 60 * 5
