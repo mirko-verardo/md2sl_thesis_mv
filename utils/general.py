@@ -26,9 +26,9 @@ def __get_in_parser_path(format: str) -> Path:
 def __check_if_wsl(wsl: str) -> bool:
     return (wsl.lower() != "none")
 
-def __to_wsl_path(wsl: str, path: Path) -> str:
+def __to_wslpath(cmd: list[str], path: str) -> str:
     # Use wslpath to convert automatically
-    result = run(["wsl", "-d", wsl, "wslpath", path.as_posix()], capture_output=True, text=True, encoding="utf-8", check=True)
+    result = run([*cmd, "wslpath", path], capture_output=True, text=True, encoding="utf-8", check=True)
     return result.stdout.strip()
 
 def __get_wsl_cmd(wsl: str) -> list[str]:
@@ -220,7 +220,7 @@ def extract_c_code(text: str) -> str:
     # if no code block is found, then return as is
     return text
 
-def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) -> dict[str, bool | str]:
+def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True, wslpath: bool = False) -> dict[str, bool | str]:
     """Compile the C code using gcc with strict optimization, warnings and hardening."""
 
     runtime_flags = [
@@ -317,13 +317,16 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
 
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+        c_parser_path_str = c_parser_path.as_posix()
+        o_parser_path_str = o_parser_path.as_posix()
+        if wslpath:
+            c_parser_path_str = __to_wslpath(command, c_parser_path_str)
+            o_parser_path_str = __to_wslpath(command, o_parser_path_str)
     else:
+        command = []
         c_parser_path_str = str(c_parser_path)
         o_parser_path_str = str(o_parser_path)
-        command = []
 
     try:
         result = run(
@@ -349,7 +352,7 @@ def compile_c_code(parser_path: Path, parser_code: str, runtime: bool = True) ->
         'stderr': compilation_stderr
     }
 
-def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) -> dict[str, bool | str]:
+def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True, wslpath: bool = False) -> dict[str, bool | str]:
     """Execute the compiled C program, feeding it the contents of the input file."""
 
     try:
@@ -371,13 +374,16 @@ def execute_c_code(parser_path: Path, parser_format: str, runtime: bool = True) 
     # Execution command building    
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+        c_parser_path_str = c_parser_path.as_posix()
+        o_parser_path_str = o_parser_path.as_posix()
+        if wslpath:
+            c_parser_path_str = __to_wslpath(command, c_parser_path_str)
+            o_parser_path_str = __to_wslpath(command, o_parser_path_str)
     else:
+        command = []
         c_parser_path_str = str(c_parser_path)
         o_parser_path_str = str(o_parser_path)
-        command = []
     if runtime:
         asan_options = [
             "detect_leaks=1",
@@ -447,13 +453,13 @@ def analyze_c_code(parser_path: Path, parser_format: str) -> str:
 
     wsl = set_if_undefined("WSL")
     if __check_if_wsl(wsl):
-        c_parser_path_str = __to_wsl_path(wsl, c_parser_path)
-        o_parser_path_str = __to_wsl_path(wsl, o_parser_path)
         command = __get_wsl_cmd(wsl)
+        c_parser_path_str = c_parser_path.as_posix()
+        o_parser_path_str = o_parser_path.as_posix()
     else:
+        command = []
         c_parser_path_str = str(c_parser_path)
         o_parser_path_str = str(o_parser_path)
-        command = []
 
     try:
         timeout = 60 * 5
@@ -500,12 +506,12 @@ def compilation_check(text: str) -> dict[str, bool | str]:
     # extract the code
     code = extract_c_code(text)
     
-    # create a temporary directory
+    # create a temporary directory (NB: it needs wslpath)
     with TemporaryDirectory() as temp_dir:
         # compile the code
-        result = compile_c_code(Path(temp_dir), code, runtime=False)
+        result = compile_c_code(Path(temp_dir), code, runtime=False, wslpath=True)
         if result["success"]:
-            result = compile_c_code(Path(temp_dir), code)
+            result = compile_c_code(Path(temp_dir), code, wslpath=True)
 
     return result
 
@@ -514,15 +520,15 @@ def execution_check(text: str, format: str) -> dict[str, bool | str]:
     # extract the code
     code = extract_c_code(text)
 
-    # create a temporary directory
+    # create a temporary directory (NB: it needs wslpath)
     with TemporaryDirectory() as temp_dir:
         # compile the code
-        result = compile_c_code(Path(temp_dir), code)
+        result = compile_c_code(Path(temp_dir), code, wslpath=True)
         
         # prepare the result
         if result["success"]:
             # execute the code
-            result = execute_c_code(Path(temp_dir), format)
+            result = execute_c_code(Path(temp_dir), format, wslpath=True)
     
     return result
 
