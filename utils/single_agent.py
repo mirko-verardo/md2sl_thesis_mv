@@ -374,7 +374,6 @@ def start_chat(source: str, file_format: str, few_shot: bool = False, n: int = 1
         for exchange in session_history:
             f.write(f"You: {exchange['user']}\n\n")
             f.write(f"Agent: {exchange['agent']}\n\n")
-            f.write("---\n\n")
     
     print(f"\nConversation history saved to: {history_file}")
     print(f"Conversation log saved to: {log_file}")
