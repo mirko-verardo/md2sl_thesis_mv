@@ -30,9 +30,28 @@ if __name__ == "__main__":
     df["validation_seconds"] = (df["validation_time"] - df["start_time"]).dt.total_seconds().astype("float64")
     df["end_seconds"] = (df["end_time"] - df["start_time"]).dt.total_seconds().astype("float64")
     df.drop(columns=["start_time", "compilation_time", "testing_time", "validation_time", "end_time"], inplace=True)
+
+    # set index and check it
+    df["index"] = df["n"].astype("string") + "|" + df["type"] + "|" + df["file_format"] + "|" + df["llm"]
+    df.set_index("index", inplace=True, verify_integrity=True)
     
     df.info()
     print(df)
+
+    #df2 = df[(df["type"] == "single_agent") & (df["llm"] == "openai")]
+    #df2 = df2[["file_format", "compilation_iteration", "testing_iteration", "best_parser_folder"]]
+    #df2["diff"] = df2["testing_iteration"] - df2["compilation_iteration"]
+
+    #for r in df2.itertuples():
+    #    print(r)
+    
+    #df2 = df2[df2["diff"] > 1]
+    #print(df2)
+
+    #for r in df2.itertuples():
+    #    print(r.best_parser_folder)
+
+    #raise SystemExit
 
     df_calc = df.copy()
     df_calc = df_calc.groupby(["type", "file_format", "llm"]).agg(
