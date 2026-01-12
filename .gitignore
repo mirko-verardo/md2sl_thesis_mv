@@ -1,5 +1,6 @@
 *.env
 *.code-workspace
+*.graphml
 .venv/
 __pycache__/
 output/

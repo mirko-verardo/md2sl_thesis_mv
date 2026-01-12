@@ -19,11 +19,10 @@ if __name__ == "__main__":
 
     # Initialize parameters
     user_action = "GENERATE_PARSER"
-    reps = range(1)
-    types = [ "zero_shot" ]
-    formats = [ "XML" ]
-    #sources = [ "google", "openai", "anthropic" ]
-    sources = [ "anthropic" ]
+    reps = range(14, 17)
+    types = [ "multi_agent", "zero_shot" ]
+    formats = [ "CSV", "HTML", "HTTP", "JSON", "PDF", "XML" ]
+    sources = [ "google", "openai", "anthropic" ]
     attempts = 15
     benchmarks = []
 
