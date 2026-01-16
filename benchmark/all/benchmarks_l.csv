@@ -1,0 +1,4 @@
+llm,avg_compilation_iteration,avg_testing_iteration,avg_validation_iteration,avg_cyclomatic_complexity,avg_code_coverage,avg_end_seconds,compilation_rate,testing_rate_abs,testing_rate_rel,validation_rate_abs,validation_rate_rel
+anthropic,1.9188,3.4185,2.8333,24.1371,0.7631,175.1580,0.9657,0.9020,0.9340,0.4412,0.4891
+google,1.7059,3.8786,4.3023,30.9706,0.6534,337.4713,1.0000,0.8480,0.8480,0.4216,0.4971
+openai,2.0100,2.8061,2.7843,31.6550,0.6610,436.1228,0.9804,0.4804,0.4900,0.2500,0.5204

@@ -1,0 +1,7 @@
+type,llm,avg_compilation_iteration,avg_testing_iteration,avg_validation_iteration,avg_cyclomatic_complexity,avg_code_coverage,avg_end_seconds,compilation_rate,testing_rate_abs,testing_rate_rel,validation_rate_abs,validation_rate_rel
+multi_agent,anthropic,1.7745,2.8222,2.8333,29.2059,0.7262,205.8775,1.0000,0.8824,0.8824,0.8824,1.0000
+multi_agent,google,1.9608,3.4483,4.3023,39.8529,0.6336,488.8297,1.0000,0.8529,0.8529,0.8431,0.9885
+multi_agent,openai,2.2300,2.6275,2.7843,38.9300,0.6416,661.6786,0.9804,0.5000,0.5100,0.5000,1.0000
+single_agent,anthropic,2.0737,3.9894,,18.6947,0.8004,144.4384,0.9314,0.9216,0.9895,0.0000,0.0000
+single_agent,google,1.4510,4.3140,,22.0882,0.6743,186.1129,1.0000,0.8431,0.8431,0.0000,0.0000
+single_agent,openai,1.7900,3.0000,,24.3800,0.6838,210.5670,0.9804,0.4608,0.4700,0.0000,0.0000
