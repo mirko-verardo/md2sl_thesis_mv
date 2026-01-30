@@ -12,3 +12,4 @@ langgraph==0.6.11
 # for benchmarks
 lizard==1.19.0
 pandas==2.3.3
+matplotlib==3.10.8
