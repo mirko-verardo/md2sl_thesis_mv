@@ -1,3 +1,2 @@
 type,avg_cmpl_iter,std_cmpl_iter,avg_test_iter,std_test_iter,avg_cyclomatic_complexity,std_cyclomatic_complexity,avg_code_coverage,std_code_coverage,avg_end_time,std_end_time,cmpl_rate,test_rate_abs,test_rate_rel
-multi_agent,1.9868,0.8284,3.0175,2.4602,35.9770,21.8110,0.6735,0.1213,452.1286,428.2899,0.9935,0.7451,0.7500
-single_agent,1.7643,0.7787,3.9075,2.3753,21.7744,11.4165,0.7303,0.0939,180.3728,118.3132,0.9706,0.7418,0.7643
+multi_agent,2.0497,1.3442,6.3041,6.0541,37.3187,24.7280,0.4789,0.3205,447.6894,424.6464,1.0000,1.0000,1.0000
