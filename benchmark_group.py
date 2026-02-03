@@ -51,16 +51,17 @@ if __name__ == "__main__":
     print(df)
 
     # general
-    barWidth = 0.3
+    barWidth = 0.25
     br1 = np.arange(16) 
     br2 = [i + barWidth for i in br1]
-    #br3 = [x + barWidth for x in br2]
+    br3 = [x + barWidth for x in br2]
     #binsCyc = [1, 11, 21, 51, 171]
     binsCyc = range(1, 172, 10)
     binsCod = np.arange(0, 1.1, 0.1)
-    cols = ["cyclomatic_complexity", "code_coverage"]
     bins = [binsCyc, binsCod]
     colors = ["orange", "blue"]
+    cols = ["cyclomatic_complexity", "code_coverage"]
+    it_cols = ["compilation_iteration", "testing_iteration"]
     df_new = df.copy()
     #df_new.loc[df_new["compilation_iteration"].isna(), "compilation_iteration"] = 16
     df_new["compilation_iteration"] = df_new["compilation_iteration"].fillna(16)
@@ -71,57 +72,16 @@ if __name__ == "__main__":
         Patch(facecolor="tab:olive", label="Compilation"),
         Patch(facecolor="tab:green", label="Testing"),
     ]
+    legend_llms = [
+        Patch(facecolor="tab:blue", label="Anthropic"),
+        Patch(facecolor="tab:red", label="Google"),
+        Patch(facecolor="tab:green", label="OpenAI"),
+    ]
+    legend_archs = [
+        Patch(facecolor="tab:red", label="Single-agent"),
+        Patch(facecolor="tab:blue", label="Multi-agent"),
+    ]
     median_style = {"color": "tab:red"}
-
-    if False:
-        # Global plots
-        ## Boxplot
-        bp = plt.boxplot(
-            [df_new["compilation_iteration"].dropna(), df_new["testing_iteration"].dropna()], 
-            tick_labels=["Compilation", "Testing"], 
-            patch_artist=True,
-            medianprops=median_style
-        )
-        bp["boxes"][0].set_facecolor("tab:olive")
-        bp["boxes"][1].set_facecolor("tab:green")
-        plt.title("Compilation and Testing")
-        plt.ylabel("Iterations")
-        plt.legend(handles=legend_elements, loc="best")
-        plt.show()
-        ## Barplot
-        cmpl = [ df_new.loc[df_new["compilation_iteration"] == i + 1, "compilation_iteration"].count() for i in br1 ] 
-        test = [ df_new.loc[df_new["testing_iteration"] == i + 1, "testing_iteration"].count() for i in br1] 
-        plt.bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
-        plt.bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
-        plt.title("Compilation and Testing")
-        plt.xlabel("Iterations")
-        plt.xticks([i + (barWidth/2) for i in br1], br1 + 1)
-        plt.legend(loc="best")
-        plt.show()
-        ## Boxplot
-        col = "cyclomatic_complexity"
-        bp = plt.boxplot(df_new[col].dropna(), tick_labels=[""], patch_artist=True, medianprops=median_style)
-        bp["boxes"][0].set_facecolor("tab:orange")
-        plt.title(beautify_col(col))
-        plt.show()
-        ## Histogram
-        plt.hist(df_new[col].dropna(), color="tab:orange", edgecolor="orange", bins=binsCyc)
-        plt.title(beautify_col(col))
-        plt.xticks(binsCyc) 
-        plt.show()
-        ## Boxplot
-        col = "code_coverage"
-        plt.boxplot(df_new[col].dropna(), tick_labels=[""], patch_artist=True, medianprops=median_style)
-        bp["boxes"][0].set_facecolor("tab:blue")
-        plt.title(beautify_col(col))
-        plt.show()
-        ## Histogram
-        plt.hist(df_new[col].dropna(), color="tab:blue", edgecolor="blue", bins=binsCod)
-        plt.title(beautify_col(col))
-        plt.xticks(binsCod)
-        plt.show()
-    
-    #raise SystemExit
         
     # LLM plots
     llms = ["Anthropic", "Google", "OpenAI"]
@@ -154,25 +114,41 @@ if __name__ == "__main__":
     plt.ylabel("Iterations")
     plt.legend(handles=legend_elements, loc="best")
     plt.show()
+    if False:
+        ## Barplot
+        fig, axes = plt.subplots(3, 1, figsize=(12, 9))  # 3 rows, 1 column
+        df_llms = [
+            df_anth,
+            df_goog,
+            df_open
+        ]
+        for i in range(len(df_llms)):
+            df_llm = df_llms[i]
+            cmpl = [ df_llm.loc[df_llm["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
+            test = [ df_llm.loc[df_llm["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
+            axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
+            axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
+            axes[i].set_title(llms[i])
+            axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
+            axes[i].set_ylim(0, 200)
+            axes[i].legend(handles=legend_elements, loc="upper center")
+        axes[-1].set_xlabel("Iterations")
+        plt.tight_layout()
+        plt.show()
     ## Barplot
-    fig, axes = plt.subplots(3, 1, figsize=(12, 9))  # 3 rows, 1 column
-    df_llms = [
-        df_anth,
-        df_goog,
-        df_open
-    ]
-    for i in range(len(df_llms)):
-        df_llm = df_llms[i]
-        cmpl = [ df_llm.loc[df_llm["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
-        test = [ df_llm.loc[df_llm["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
-        axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
-        axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
-        axes[i].set_title(llms[i])
-        #axes[i].set_xlabel("Iterations")
-        axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
+    fig, axes = plt.subplots(2, 1, figsize=(12, 9))  # 2 rows, 1 column
+    for i, it_col in enumerate(it_cols):
+        df_anth_col = [ df_anth.loc[df_anth[it_col] == j + 1, it_col].count() for j in br1 ]
+        df_goog_col = [ df_goog.loc[df_goog[it_col] == j + 1, it_col].count() for j in br1 ] 
+        df_open_col = [ df_open.loc[df_open[it_col] == j + 1, it_col].count() for j in br1 ] 
+        axes[i].bar(br1, df_anth_col, color="tab:blue", edgecolor="grey", width=barWidth, label="Anthropic") 
+        axes[i].bar(br2, df_goog_col, color="tab:red", edgecolor="grey", width=barWidth, label="Google") 
+        axes[i].bar(br3, df_open_col, color="tab:green", edgecolor="grey", width=barWidth, label="OpenAI") 
+        axes[i].set_title(beautify_col(it_col))
+        axes[i].set_xticks([j + barWidth for j in br1], br1 + 1)
         axes[i].set_ylim(0, 200)
-        axes[i].legend(handles=legend_elements, loc="upper center")
-    axes[len(df_llms) - 1].set_xlabel("Iterations")
+        axes[i].legend(handles=legend_llms, loc="upper center")
+    axes[-1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
@@ -204,7 +180,7 @@ if __name__ == "__main__":
             axes[j].set_title(llms[j])
             axes[j].set_xticks(ticks)
             axes[j].set_ylim(0, ylims[i])
-        axes[len(data) - 1].set_xlabel(beautify_col(col))
+        axes[-1].set_xlabel(beautify_col(col))
         plt.tight_layout()
         plt.show()
 
@@ -236,24 +212,38 @@ if __name__ == "__main__":
     plt.ylabel("Iterations")
     plt.legend(handles=legend_elements, loc="best")
     plt.show()
+    if False:
+        ## Barplot
+        fig, axes = plt.subplots(2, 1, figsize=(12, 9))
+        df_archs = [
+            df_sa,
+            df_ma
+        ]
+        for i in range(len(df_archs)):
+            df_arch = df_archs[i]
+            cmpl = [ df_arch.loc[df_arch["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
+            test = [ df_arch.loc[df_arch["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
+            axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
+            axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
+            axes[i].set_title(archs[i])
+            axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
+            axes[i].set_ylim(0, 280)
+            axes[i].legend(handles=legend_elements, loc="upper center")
+        axes[-1].set_xlabel("Iterations")
+        plt.tight_layout()
+        plt.show()
     ## Barplot
     fig, axes = plt.subplots(2, 1, figsize=(12, 9))
-    df_archs = [
-        df_sa,
-        df_ma
-    ]
-    for i in range(len(df_archs)):
-        df_arch = df_archs[i]
-        cmpl = [ df_arch.loc[df_arch["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
-        test = [ df_arch.loc[df_arch["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
-        axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
-        axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
-        axes[i].set_title(archs[i])
-        #axes[i].set_xlabel("Iterations")
+    for i, it_col in enumerate(it_cols):
+        df_sa_col = [ df_sa.loc[df_sa[it_col] == j + 1, it_col].count() for j in br1 ]
+        df_ma_col = [ df_ma.loc[df_ma[it_col] == j + 1, it_col].count() for j in br1 ] 
+        axes[i].bar(br1, df_sa_col, color="tab:red", edgecolor="grey", width=barWidth, label="Single-agent") 
+        axes[i].bar(br2, df_ma_col, color="tab:blue", edgecolor="grey", width=barWidth, label="Multi-agent") 
+        axes[i].set_title(beautify_col(it_col))
         axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
         axes[i].set_ylim(0, 280)
-        axes[i].legend(handles=legend_elements, loc="upper center")
-    axes[len(df_archs) - 1].set_xlabel("Iterations")
+        axes[i].legend(handles=legend_archs, loc="upper center")
+    axes[-1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
@@ -284,7 +274,7 @@ if __name__ == "__main__":
             axes[j].set_title(archs[j])
             axes[j].set_xticks(ticks)
             axes[j].set_ylim(0, ylims[i])
-        axes[len(data) - 1].set_xlabel(beautify_col(col))
+        axes[-1].set_xlabel(beautify_col(col))
         plt.tight_layout()
         plt.show()
 
@@ -312,7 +302,7 @@ if __name__ == "__main__":
 
     for name, group in groups.items():
         # group aggregation
-        df_group = df.copy().groupby(group).agg(
+        df_group = df_new.groupby(group).agg(
             cnt_all=("n", "count"),
             cnt_compiled=("compilation_iteration", "count"),
             cnt_testing=("testing_iteration", "count"),
