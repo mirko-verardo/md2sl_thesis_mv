@@ -156,15 +156,15 @@ if __name__ == "__main__":
     plt.show()
     ## Barplot
     fig, axes = plt.subplots(3, 1, figsize=(12, 9))  # 3 rows, 1 column
-    data = [
+    df_llms = [
         df_anth,
         df_goog,
         df_open
     ]
-    for i in range(len(data)):
-        df = data[i]
-        cmpl = [ df.loc[df["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
-        test = [ df.loc[df["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
+    for i in range(len(df_llms)):
+        df_llm = df_llms[i]
+        cmpl = [ df_llm.loc[df_llm["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
+        test = [ df_llm.loc[df_llm["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
         axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
         axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
         axes[i].set_title(llms[i])
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
         axes[i].set_ylim(0, 200)
         axes[i].legend(handles=legend_elements, loc="upper center")
-    axes[len(data) - 1].set_xlabel("Iterations")
+    axes[len(df_llms) - 1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
@@ -214,15 +214,14 @@ if __name__ == "__main__":
     archs = ["Single-agent", "Multi-agent"]
     df_sa = df_new[df_new["type"] == "single_agent"]
     df_ma = df_new[df_new["type"] == "multi_agent"]
-    data = [ 
-        df_sa["compilation_iteration"].dropna(), 
-        df_sa["testing_iteration"].dropna(), 
-        df_ma["compilation_iteration"].dropna(),
-        df_ma["testing_iteration"].dropna()
-    ]
     ## Boxplot
     bp = plt.boxplot(
-        data, 
+        [ 
+            df_sa["compilation_iteration"].dropna(), 
+            df_sa["testing_iteration"].dropna(), 
+            df_ma["compilation_iteration"].dropna(),
+            df_ma["testing_iteration"].dropna()
+        ], 
         positions=[1, 2, 4, 5], 
         patch_artist=True,
         medianprops=median_style
@@ -239,14 +238,14 @@ if __name__ == "__main__":
     plt.show()
     ## Barplot
     fig, axes = plt.subplots(2, 1, figsize=(12, 9))
-    data = [
+    df_archs = [
         df_sa,
         df_ma
     ]
-    for i in range(len(data)):
-        df = data[i]
-        cmpl = [ df.loc[df["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
-        test = [ df.loc[df["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
+    for i in range(len(df_archs)):
+        df_arch = df_archs[i]
+        cmpl = [ df_arch.loc[df_arch["compilation_iteration"] == j + 1, "compilation_iteration"].count() for j in br1 ] 
+        test = [ df_arch.loc[df_arch["testing_iteration"] == j + 1, "testing_iteration"].count() for j in br1] 
         axes[i].bar(br1, cmpl, color="tab:olive", edgecolor="grey", width=barWidth, label="Compilation") 
         axes[i].bar(br2, test, color="tab:green", edgecolor="grey", width=barWidth, label="Testing") 
         axes[i].set_title(archs[i])
@@ -254,7 +253,7 @@ if __name__ == "__main__":
         axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
         axes[i].set_ylim(0, 280)
         axes[i].legend(handles=legend_elements, loc="upper center")
-    axes[len(data) - 1].set_xlabel("Iterations")
+    axes[len(df_archs) - 1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
