@@ -170,13 +170,13 @@ if __name__ == "__main__":
         axes[i].set_title(llms[i])
         #axes[i].set_xlabel("Iterations")
         axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
-        axes[i].set_ylim(0, 160)
+        axes[i].set_ylim(0, 200)
         axes[i].legend(handles=legend_elements, loc="upper center")
     axes[len(data) - 1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
-    ylims = [80, 160]
+    ylims = [100, 180]
     for i in range(len(cols)):
         col = cols[i]
         ticks = bins[i]
@@ -252,13 +252,13 @@ if __name__ == "__main__":
         axes[i].set_title(archs[i])
         #axes[i].set_xlabel("Iterations")
         axes[i].set_xticks([j + (barWidth/2) for j in br1], br1 + 1)
-        axes[i].set_ylim(0, 220)
+        axes[i].set_ylim(0, 280)
         axes[i].legend(handles=legend_elements, loc="upper center")
     axes[len(data) - 1].set_xlabel("Iterations")
     plt.tight_layout()
     plt.show()
 
-    ylims = [120, 120]
+    ylims = [160, 140]
     for i in range(len(cols)):
         col = cols[i]
         ticks = bins[i]
