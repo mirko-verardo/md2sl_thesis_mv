@@ -46,6 +46,20 @@ if __name__ == "__main__":
 
     # save
     df.to_csv(benchmarks_dir / f"benchmarks_new.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f")
+    df_corr = df[[
+        "compilation_iteration", 
+        "testing_iteration", 
+        "cyclomatic_complexity", 
+        "code_coverage",
+        "end_seconds"
+    ]].rename(columns={
+        "compilation_iteration": "Compl. Iter.", 
+        "testing_iteration": "Test Iter.", 
+        "cyclomatic_complexity": "Cyc. Complex.",
+        "code_coverage": "Code Cov.",
+        "end_seconds": "Time"
+    }).corr()
+    df_corr.to_csv(benchmarks_dir / f"benchmarks_corr.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f")
 
     # set index and check it
     df["index"] = df["n"].astype("string") + "|" + df["type"] + "|" + df["file_format"] + "|" + df["llm"]
@@ -88,8 +102,24 @@ if __name__ == "__main__":
             Patch(facecolor="orange", label="Single-agent", alpha=0.6),
             Patch(facecolor="purple", label="Multi-agent", alpha=0.6),
         ]
-        median_style = {"color": "tab:red", "linewidth": 1.5}
-            
+        median_style = {"color": "red", "linewidth": 1.5}
+
+        # Set global window size
+        plt.rcParams.update({
+            "figure.figsize": (11, 7),
+            "figure.dpi": 100
+        })
+
+        # Correlation heatmap plot
+        mask = np.triu(df_corr)
+        np.fill_diagonal(mask, 0)
+        ax = sns.heatmap(df_corr, mask=mask, annot=True, cmap="RdYlGn", vmin=-1, vmax=1, center=0, annot_kws={"size": 12})
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
+        plt.title("Correlation Heatmap")
+        plt.show()
+
+        #raise SystemExit
+        
         # LLM plots
         llms = ["Anthropic", "Google", "OpenAI"]
         df_anth = df_new[df_new["llm"] == "anthropic"]
@@ -169,6 +199,8 @@ if __name__ == "__main__":
             plt.legend()
             plt.tight_layout()
             plt.show()
+        
+        #raise SystemExit
 
         # Architecture plots
         archs = ["Single-agent", "Multi-agent"]
