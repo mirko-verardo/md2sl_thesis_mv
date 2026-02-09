@@ -4,10 +4,11 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from matplotlib.patches import Patch
+from scipy import stats
 
 
 REPLACE_NA = False
-SHOW_PLOTS = True
+SHOW_PLOTS = False
 SHOW_BARPLOTS = False
 
 def beautify_col(col: str) -> str:
@@ -53,8 +54,8 @@ if __name__ == "__main__":
         "code_coverage",
         "end_seconds"
     ]].rename(columns={
-        "compilation_iteration": "Compl. Iter.", 
-        "testing_iteration": "Test Iter.", 
+        "compilation_iteration": "Comp. Iter.", 
+        "testing_iteration": "Test. Iter.", 
         "cyclomatic_complexity": "Cyc. Complex.",
         "code_coverage": "Code Cov.",
         "end_seconds": "Time"
@@ -274,19 +275,6 @@ if __name__ == "__main__":
             plt.tight_layout()
             plt.show()
 
-    #df2 = df[(df["type"] == "single_agent") & (df["llm"] == "openai")]
-    #df2 = df2[["file_format", "compilation_iteration", "testing_iteration", "best_parser_folder"]]
-    #df2["diff"] = df2["testing_iteration"] - df2["compilation_iteration"]
-
-    #for r in df2.itertuples():
-    #    print(r)
-    
-    #df2 = df2[df2["diff"] > 1]
-    #print(df2)
-
-    #for r in df2.itertuples():
-    #    print(r.best_parser_folder)
-
     #raise SystemExit
 
     groups = {
@@ -302,58 +290,151 @@ if __name__ == "__main__":
         # group aggregation
         df_group = df_new.groupby(group).agg(
             cnt_all=("n", "count"),
-            cnt_compiled=("compilation_iteration", "count"),
-            cnt_testing=("testing_iteration", "count"),
-            cnt_validated=("validation_iteration", "count"),
 
             avg_compilation_iteration=("compilation_iteration", "mean"),
             std_compilation_iteration=("compilation_iteration", "std"),
+            cnt_compilation_iteration=("compilation_iteration", "count"),
 
             avg_testing_iteration=("testing_iteration", "mean"),
             std_testing_iteration=("testing_iteration", "std"),
-
-            #avg_validation_iteration=("validation_iteration", "mean"),
-            #std_validation_iteration=("validation_iteration", "std"),
+            cnt_testing_iteration=("testing_iteration", "count"),
 
             avg_cyclomatic_complexity=("cyclomatic_complexity", "mean"),
             std_cyclomatic_complexity=("cyclomatic_complexity", "std"),
+            cnt_cyclomatic_complexity=("cyclomatic_complexity", "count"),
 
             avg_code_coverage=("code_coverage", "mean"),
             std_code_coverage=("code_coverage", "std"),
+            cnt_code_coverage=("code_coverage", "count"),
 
             avg_end_seconds=("end_seconds", "mean"),
-            std_end_seconds=("end_seconds", "std")
+            std_end_seconds=("end_seconds", "std"),
+            cnt_end_seconds=("end_seconds", "count")
         )
         # group rate calculation
-        df_group["compilation_rate"] = df_group["cnt_compiled"] / df_group["cnt_all"]
-        df_group["testing_rate_abs"] = df_group["cnt_testing"] / df_group["cnt_all"]
-        df_group["testing_rate_rel"] = df_group["cnt_testing"] / df_group["cnt_compiled"]
-        #df_group["validation_rate_abs"] = df_group["cnt_validated"] / df_group["cnt_all"]
-        #df_group["validation_rate_rel"] = df_group["cnt_validated"] / df_group["cnt_testing"]
-        # drop stats not useful anymore
-        df_group.drop(columns=["cnt_compiled", "cnt_testing", "cnt_validated", "cnt_all"], inplace=True)
-        # more compact columns names
-        df_group.rename(columns={
-            "avg_compilation_iteration": "avg_cmpl_iter", 
-            "std_compilation_iteration": "STD_cmpl_iter",
-            "avg_testing_iteration": "avg_test_iter", 
-            "std_testing_iteration": "STD_test_iter",
-            #"avg_validation_iteration": "avg_vald_iter", 
-            #"std_validation_iteration": "STD_vald_iter",
-            "avg_cyclomatic_complexity": "avg_cyc_cmplx",
-            "std_cyclomatic_complexity": "STD_cyc_cmplx",
-            "avg_code_coverage": "avg_cod_cov",
-            "std_code_coverage": "STD_cod_cov",
-            "avg_end_seconds": "avg_end_time", 
-            "std_end_seconds": "STD_end_time",
-            "compilation_rate": "cmpl_rate",
-            "testing_rate_abs": "test_rate_abs",
-            "testing_rate_rel": "test_rate_rel",
-            #"validation_rate_abs": "vald_rate_abs",
-            #"validation_rate_rel": "vald_rate_rel"
-        }, inplace=True)
+        df_group["compilation_rate"] = df_group["cnt_compilation_iteration"] / df_group["cnt_all"]
+        df_group["testing_rate"] = df_group["cnt_testing_iteration"] / df_group["cnt_all"]
+        #df_group["testing_rate_abs"] = df_group["cnt_testing_iteration"] / df_group["cnt_all"]
+        #df_group["testing_rate_rel"] = df_group["cnt_testing_iteration"] / df_group["cnt_compilation_iteration"]
+        df_group.drop(columns=["cnt_all"], inplace=True)
+
+        metrics = [
+            "compilation_iteration",
+            "testing_iteration",
+            "cyclomatic_complexity",
+            "code_coverage",
+            "end_seconds"
+        ]
+        alpha = 0.05
+
+        for m in metrics:
+            # parameters
+            means = df_group[f"avg_{m}"]
+            stds = df_group[f"std_{m}"]
+            ns = df_group[f"cnt_{m}"]
+            ci = stats.t.ppf(1 - (alpha / 2), df=ns-1) * (stds / np.sqrt(ns))
+            # calculations
+            df_group[f"snr_{m}"] = means / stds
+            df_group[f"lcb_{m}"] = means - ci
+            df_group[f"ucb_{m}"] = means + ci
+            # cleaning
+            df_group.drop(columns=[f"cnt_{m}"], inplace=True)
+
+        # reorder columns
+        df_group = df_group[[
+            "compilation_rate",
+            "avg_compilation_iteration", 
+            "std_compilation_iteration",
+            "snr_compilation_iteration",
+            "lcb_compilation_iteration",
+            "ucb_compilation_iteration",
+            "testing_rate",
+            "avg_testing_iteration", 
+            "std_testing_iteration",
+            "snr_testing_iteration",
+            "lcb_testing_iteration",
+            "ucb_testing_iteration",
+            "avg_cyclomatic_complexity",
+            "std_cyclomatic_complexity",
+            "snr_cyclomatic_complexity",
+            "lcb_cyclomatic_complexity",
+            "ucb_cyclomatic_complexity",
+            "avg_code_coverage",
+            "std_code_coverage",
+            "snr_code_coverage",
+            "lcb_code_coverage",
+            "ucb_code_coverage",
+            "avg_end_seconds", 
+            "std_end_seconds",
+            "snr_end_seconds",
+            "lcb_end_seconds",
+            "ucb_end_seconds"
+        ]]
+
         # print
         df_group.info()
         print(df_group)
-        # save
-        df_group.to_csv(benchmarks_dir / f"benchmarks_{name}.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f")
+
+        # save CSV (more compact columns names)
+        df_csv = df_group.rename(columns={
+            "compilation_rate": "cmpl_rate",
+            "avg_compilation_iteration": "AVG_cmpl_iter", 
+            "std_compilation_iteration": "STD_cmpl_iter",
+            "snr_compilation_iteration": "SNR_cmpl_iter",
+            "lcb_compilation_iteration": "LCB_cmpl_iter",
+            "ucb_compilation_iteration": "UCB_cmpl_iter",
+            "testing_rate": "test_rate",
+            "avg_testing_iteration": "AVG_test_iter", 
+            "std_testing_iteration": "STD_test_iter",
+            "snr_testing_iteration": "SNR_test_iter",
+            "lcb_testing_iteration": "LCB_test_iter",
+            "ucb_testing_iteration": "UCB_test_iter",
+            "avg_cyclomatic_complexity": "AVG_cyc_cmplx",
+            "std_cyclomatic_complexity": "STD_cyc_cmplx",
+            "snr_cyclomatic_complexity": "SNR_cyc_cmplx",
+            "lcb_cyclomatic_complexity": "LCB_cyc_cmplx",
+            "ucb_cyclomatic_complexity": "UCB_cyc_cmplx",
+            "avg_code_coverage": "AVG_cod_cov",
+            "std_code_coverage": "STD_cod_cov",
+            "snr_code_coverage": "SNR_cod_cov",
+            "lcb_code_coverage": "LCB_cod_cov",
+            "ucb_code_coverage": "UCB_cod_cov",
+            "avg_end_seconds": "AVG_end_time", 
+            "std_end_seconds": "STD_end_time",
+            "snr_end_seconds": "SNR_end_time",
+            "lcb_end_seconds": "LCB_end_time",
+            "ucb_end_seconds": "UCB_end_time"
+        })
+        df_csv.to_csv(benchmarks_dir / f"benchmarks_{name}.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f")
+
+        # save HTML (more friendly columns names)
+        df_html = df_group.rename(columns={
+            "compilation_rate": "Compilation rate",
+            "avg_compilation_iteration": "μ Compilation iterations", 
+            "std_compilation_iteration": "σ Compilation iterations",
+            "snr_compilation_iteration": "SNR Compilation iterations",
+            "lcb_compilation_iteration": "LCB Compilation iterations",
+            "ucb_compilation_iteration": "UCB Compilation iterations",
+            "testing_rate": "Testing rate",
+            "avg_testing_iteration": "μ Testing iterations", 
+            "std_testing_iteration": "σ Testing iterations",
+            "snr_testing_iteration": "SNR Testing iterations",
+            "lcb_testing_iteration": "LCB Testing iterations",
+            "ucb_testing_iteration": "UCB Testing iterations",
+            "avg_cyclomatic_complexity": "μ Cyclomatic complexity",
+            "std_cyclomatic_complexity": "σ Cyclomatic complexity",
+            "snr_cyclomatic_complexity": "SNR Cyclomatic complexity",
+            "lcb_cyclomatic_complexity": "LCB Cyclomatic complexity",
+            "ucb_cyclomatic_complexity": "UCB Cyclomatic complexity",
+            "avg_code_coverage": "μ Code coverage",
+            "std_code_coverage": "σ Code coverage",
+            "snr_code_coverage": "SNR Code coverage",
+            "lcb_code_coverage": "LCB Code coverage",
+            "ucb_code_coverage": "UCB Code coverage",
+            "avg_end_seconds": "μ End time (s)", 
+            "std_end_seconds": "σ End time (s)",
+            "snr_end_seconds": "SNR End time (s)",
+            "lcb_end_seconds": "LCB End time (s)",
+            "ucb_end_seconds": "UCB End time (s)"
+        })
+        df_html.to_html(benchmarks_dir / f"benchmarks_{name}.html", encoding="utf-8", na_rep="", float_format="%.3f")

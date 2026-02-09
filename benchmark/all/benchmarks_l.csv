@@ -1,4 +1,4 @@
-llm,avg_cmpl_iter,STD_cmpl_iter,avg_test_iter,STD_test_iter,avg_cyc_cmplx,STD_cyc_cmplx,avg_cod_cov,STD_cod_cov,avg_end_time,STD_end_time,cmpl_rate,test_rate_abs,test_rate_rel
-anthropic,1.9405,0.5892,3.4600,2.3320,24.4833,12.1067,0.7629,0.1103,172.6480,141.5807,0.9746,0.9058,0.9294
-google,1.6836,0.7533,3.9442,3.0991,32.1891,25.6660,0.6504,0.0770,331.0474,331.0620,0.9964,0.8442,0.8473
-openai,2.0257,1.0288,2.7669,1.2302,32.0147,18.3552,0.6588,0.1067,436.1108,430.4222,0.9855,0.4819,0.4890
+llm,cmpl_rate,AVG_cmpl_iter,STD_cmpl_iter,SNR_cmpl_iter,LCB_cmpl_iter,UCB_cmpl_iter,test_rate,AVG_test_iter,STD_test_iter,SNR_test_iter,LCB_test_iter,UCB_test_iter,AVG_cyc_cmplx,STD_cyc_cmplx,SNR_cyc_cmplx,LCB_cyc_cmplx,UCB_cyc_cmplx,AVG_cod_cov,STD_cod_cov,SNR_cod_cov,LCB_cod_cov,UCB_cod_cov,AVG_end_time,STD_end_time,SNR_end_time,LCB_end_time,UCB_end_time
+anthropic,0.9746,1.9405,0.5892,3.2933,1.8698,2.0113,0.9058,3.4600,2.3320,1.4837,3.1695,3.7505,24.4833,12.1067,2.0223,23.0299,25.9366,0.7629,0.1103,6.9157,0.7490,0.7768,172.6480,141.5807,1.2194,155.8710,189.4250
+google,0.9964,1.6836,0.7533,2.2351,1.5942,1.7731,0.8442,3.9442,3.0991,1.2727,3.5442,4.3442,32.1891,25.6660,1.2542,29.1422,35.2360,0.6504,0.0770,8.4521,0.6404,0.6604,331.0474,331.0620,1.0000,291.8174,370.2774
+openai,0.9855,2.0257,1.0288,1.9691,1.9029,2.1485,0.4819,2.7669,1.2302,2.2491,2.5559,2.9779,32.0147,18.3552,1.7442,29.8236,34.2058,0.6588,0.1067,6.1750,0.6386,0.6791,436.1108,430.4222,1.0132,385.1069,487.1148
