@@ -332,7 +332,8 @@ if __name__ == "__main__":
             means = df_group[f"avg_{m}"]
             stds = df_group[f"std_{m}"]
             ns = df_group[f"cnt_{m}"]
-            ci = stats.t.ppf(1 - (alpha / 2), df=ns-1) * (stds / np.sqrt(ns))
+            se = stds / np.sqrt(ns) # standard error
+            ci = stats.t.ppf(1 - (alpha / 2), df=ns-1) * se
             # calculations
             df_group[f"snr_{m}"] = means / stds
             df_group[f"lcb_{m}"] = means - ci
@@ -437,4 +438,37 @@ if __name__ == "__main__":
             "lcb_end_seconds": "LCB End time (s)",
             "ucb_end_seconds": "UCB End time (s)"
         })
-        df_html.to_html(benchmarks_dir / f"benchmarks_{name}.html", encoding="utf-8", na_rep="", float_format="%.3f")
+        #df_html.to_html(benchmarks_dir / f"benchmarks_{name}.html", encoding="utf-8", na_rep="", float_format="%.3f", border=False)
+        df_html[[
+            "Compilation rate",
+            "Testing rate"
+        ]].to_html(benchmarks_dir / f"benchmarks_{name}_1.html", encoding="utf-8", na_rep="", float_format="%.3f", border=False)
+        df_html[[
+            "μ Compilation iterations", 
+            "σ Compilation iterations",
+            "SNR Compilation iterations",
+            "LCB Compilation iterations",
+            "UCB Compilation iterations",
+            "μ Testing iterations", 
+            "σ Testing iterations",
+            "SNR Testing iterations",
+            "LCB Testing iterations",
+            "UCB Testing iterations"
+        ]].to_html(benchmarks_dir / f"benchmarks_{name}_2.html", encoding="utf-8", na_rep="", float_format="%.3f", border=False)
+        df_html[[
+            "μ Cyclomatic complexity",
+            "σ Cyclomatic complexity",
+            "SNR Cyclomatic complexity",
+            "LCB Cyclomatic complexity",
+            "UCB Cyclomatic complexity",
+            "μ Code coverage",
+            "σ Code coverage",
+            "SNR Code coverage",
+            "LCB Code coverage",
+            "UCB Code coverage",
+            "μ End time (s)", 
+            "σ End time (s)",
+            "SNR End time (s)",
+            "LCB End time (s)",
+            "UCB End time (s)"
+        ]].to_html(benchmarks_dir / f"benchmarks_{name}_3.html", encoding="utf-8", na_rep="", float_format="%.3f", border=False)
