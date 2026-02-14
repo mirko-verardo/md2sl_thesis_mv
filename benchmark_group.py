@@ -548,9 +548,7 @@ if __name__ == "__main__":
                     vmin=min, 
                     vmax=max
                 ).format("{:.3f}").to_html(
-                    #benchmarks_dir / f"benchmarks_{name}_1_{col.lower().replace(" ", "_")}.html", 
                     encoding="utf-8", 
-                    na_rep="", 
                     border=False
                 )
 
@@ -559,22 +557,27 @@ if __name__ == "__main__":
 
         else:
             # only rates
-            df_html[[
+            df_html_rates = df_html[[
                 "Compilation rate",
                 "Testing rate"
-            ]].style.background_gradient(
+            ]]
+            df_html_rates.style.background_gradient(
                 cmap ="RdYlGn", 
                 vmin=0, 
                 vmax=1
             ).format("{:.3f}").to_html(
                 benchmarks_dir / f"benchmarks_{name}_1.html", 
                 encoding="utf-8", 
-                na_rep="", 
                 border=False
             )
+            df_html_rates.to_latex(
+                benchmarks_dir / f"benchmarks_{name}_rates.tex", 
+                encoding="utf-8", 
+                float_format="%.3f"
+            )
             
-            # only iterations
-            df_html_iterations = df_html[[
+            # else
+            df_html = df_html[[
                 "n Compilation iterations", 
                 "μ Compilation iterations", 
                 "σ Compilation iterations",
@@ -592,9 +595,21 @@ if __name__ == "__main__":
                 "σ Execution time (s)",
                 "SNR Execution time (s)",
                 "LCB Execution time (s)",
-                "UCB Execution time (s)"
+                "UCB Execution time (s)",
+                "n Cyclomatic complexity",
+                "μ Cyclomatic complexity",
+                "σ Cyclomatic complexity",
+                "SNR Cyclomatic complexity",
+                "LCB Cyclomatic complexity",
+                "UCB Cyclomatic complexity",
+                "n Code coverage",
+                "μ Code coverage",
+                "σ Code coverage",
+                "SNR Code coverage",
+                "LCB Code coverage",
+                "UCB Code coverage"
             ]]
-            df_html_iterations.columns = pd.MultiIndex.from_tuples([
+            df_html.columns = pd.MultiIndex.from_tuples([
                 ("Compilation iterations", "n"),
                 ("Compilation iterations", "μ"),
                 ("Compilation iterations", "σ"),
@@ -613,31 +628,6 @@ if __name__ == "__main__":
                 ("Execution time (s)", "SNR"),
                 ("Execution time (s)", "LCB"),
                 ("Execution time (s)", "UCB"),
-            ])
-            df_html_iterations.to_html(
-                benchmarks_dir / f"benchmarks_{name}_2.html", 
-                encoding="utf-8", 
-                na_rep="", 
-                float_format="%.3f", 
-                border=False
-            )
-            
-            # only vulnerability
-            df_vuln = df_html[[
-                "n Cyclomatic complexity",
-                "μ Cyclomatic complexity",
-                "σ Cyclomatic complexity",
-                "SNR Cyclomatic complexity",
-                "LCB Cyclomatic complexity",
-                "UCB Cyclomatic complexity",
-                "n Code coverage",
-                "μ Code coverage",
-                "σ Code coverage",
-                "SNR Code coverage",
-                "LCB Code coverage",
-                "UCB Code coverage"
-            ]]
-            df_vuln.columns = pd.MultiIndex.from_tuples([
                 ("Cyclomatic complexity", "n"),
                 ("Cyclomatic complexity", "μ"),
                 ("Cyclomatic complexity", "σ"),
@@ -651,10 +641,40 @@ if __name__ == "__main__":
                 ("Code coverage", "LCB"),
                 ("Code coverage", "UCB")
             ])
-            df_vuln.to_html(
-                benchmarks_dir / f"benchmarks_{name}_3.html", 
+            # only iterations
+            df_html[[
+                "Compilation iterations",
+                "Testing iterations",
+                "Execution time (s)"
+            ]].to_html(
+                benchmarks_dir / f"benchmarks_{name}_2.html", 
                 encoding="utf-8", 
-                na_rep="", 
                 float_format="%.3f", 
                 border=False
             )
+            # only vulnerability
+            df_html[[
+                "Cyclomatic complexity",
+                "Code coverage"
+            ]].to_html(
+                benchmarks_dir / f"benchmarks_{name}_3.html", 
+                encoding="utf-8", 
+                float_format="%.3f", 
+                border=False
+            )
+
+            # for latex
+            df_html.rename(columns={"μ": r"$\mu$", "σ": r"$\sigma$"}, level=1, inplace=True)
+
+            latex = ""
+            for col in [
+                "Compilation iterations",
+                "Testing iterations",
+                "Execution time (s)",
+                "Cyclomatic complexity",
+                "Code coverage"
+            ]:
+                latex += "\n\n" + df_html[col].to_latex(None, float_format="%.3f")
+            
+            with open(benchmarks_dir / f"benchmarks_{name}.tex", "w", encoding="utf-8") as f:
+                f.write(latex)
