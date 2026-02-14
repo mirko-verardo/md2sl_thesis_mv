@@ -379,33 +379,36 @@ if __name__ == "__main__":
             df_group[f"snr_{m}"] = means / stds
             df_group[f"lcb_{m}"] = means - ci
             df_group[f"ucb_{m}"] = means + ci
-            # cleaning
-            df_group.drop(columns=[f"cnt_{m}"], inplace=True)
 
         # reorder columns
         df_group = df_group[[
             "compilation_rate",
+            "cnt_compilation_iteration", 
             "avg_compilation_iteration", 
             "std_compilation_iteration",
             "snr_compilation_iteration",
             "lcb_compilation_iteration",
             "ucb_compilation_iteration",
             "testing_rate",
+            "cnt_testing_iteration", 
             "avg_testing_iteration", 
             "std_testing_iteration",
             "snr_testing_iteration",
             "lcb_testing_iteration",
             "ucb_testing_iteration",
+            "cnt_cyclomatic_complexity",
             "avg_cyclomatic_complexity",
             "std_cyclomatic_complexity",
             "snr_cyclomatic_complexity",
             "lcb_cyclomatic_complexity",
             "ucb_cyclomatic_complexity",
+            "cnt_code_coverage",
             "avg_code_coverage",
             "std_code_coverage",
             "snr_code_coverage",
             "lcb_code_coverage",
             "ucb_code_coverage",
+            "cnt_end_seconds", 
             "avg_end_seconds", 
             "std_end_seconds",
             "snr_end_seconds",
@@ -421,27 +424,32 @@ if __name__ == "__main__":
             # save CSV (more compact columns names)
             df_csv = df_group.rename(columns={
                 "compilation_rate": "cmpl_rate",
+                "cnt_compilation_iteration": "CNT_cmpl_iter",
                 "avg_compilation_iteration": "AVG_cmpl_iter", 
                 "std_compilation_iteration": "STD_cmpl_iter",
                 "snr_compilation_iteration": "SNR_cmpl_iter",
                 "lcb_compilation_iteration": "LCB_cmpl_iter",
                 "ucb_compilation_iteration": "UCB_cmpl_iter",
                 "testing_rate": "test_rate",
+                "cnt_testing_iteration": "CNT_test_iter",
                 "avg_testing_iteration": "AVG_test_iter", 
                 "std_testing_iteration": "STD_test_iter",
                 "snr_testing_iteration": "SNR_test_iter",
                 "lcb_testing_iteration": "LCB_test_iter",
                 "ucb_testing_iteration": "UCB_test_iter",
+                "cnt_cyclomatic_complexity": "CNT_cyc_cmplx",
                 "avg_cyclomatic_complexity": "AVG_cyc_cmplx",
                 "std_cyclomatic_complexity": "STD_cyc_cmplx",
                 "snr_cyclomatic_complexity": "SNR_cyc_cmplx",
                 "lcb_cyclomatic_complexity": "LCB_cyc_cmplx",
                 "ucb_cyclomatic_complexity": "UCB_cyc_cmplx",
+                "cnt_code_coverage": "CNT_cod_cov",
                 "avg_code_coverage": "AVG_cod_cov",
                 "std_code_coverage": "STD_cod_cov",
                 "snr_code_coverage": "SNR_cod_cov",
                 "lcb_code_coverage": "LCB_cod_cov",
                 "ucb_code_coverage": "UCB_cod_cov",
+                "cnt_end_seconds": "CNT_end_time",
                 "avg_end_seconds": "AVG_end_time", 
                 "std_end_seconds": "STD_end_time",
                 "snr_end_seconds": "SNR_end_time",
@@ -459,110 +467,194 @@ if __name__ == "__main__":
         # save HTML (more friendly columns names)
         df_html = df_group.rename(columns={
             "compilation_rate": "Compilation rate",
+            "cnt_compilation_iteration": "n Compilation iterations",
             "avg_compilation_iteration": "μ Compilation iterations", 
             "std_compilation_iteration": "σ Compilation iterations",
             "snr_compilation_iteration": "SNR Compilation iterations",
             "lcb_compilation_iteration": "LCB Compilation iterations",
             "ucb_compilation_iteration": "UCB Compilation iterations",
             "testing_rate": "Testing rate",
+            "cnt_testing_iteration": "n Testing iterations", 
             "avg_testing_iteration": "μ Testing iterations", 
             "std_testing_iteration": "σ Testing iterations",
             "snr_testing_iteration": "SNR Testing iterations",
             "lcb_testing_iteration": "LCB Testing iterations",
             "ucb_testing_iteration": "UCB Testing iterations",
+            "cnt_cyclomatic_complexity": "n Cyclomatic complexity",
             "avg_cyclomatic_complexity": "μ Cyclomatic complexity",
             "std_cyclomatic_complexity": "σ Cyclomatic complexity",
             "snr_cyclomatic_complexity": "SNR Cyclomatic complexity",
             "lcb_cyclomatic_complexity": "LCB Cyclomatic complexity",
             "ucb_cyclomatic_complexity": "UCB Cyclomatic complexity",
+            "cnt_code_coverage": "n Code coverage",
             "avg_code_coverage": "μ Code coverage",
             "std_code_coverage": "σ Code coverage",
             "snr_code_coverage": "SNR Code coverage",
             "lcb_code_coverage": "LCB Code coverage",
             "ucb_code_coverage": "UCB Code coverage",
-            "avg_end_seconds": "μ End time (s)", 
-            "std_end_seconds": "σ End time (s)",
-            "snr_end_seconds": "SNR End time (s)",
-            "lcb_end_seconds": "LCB End time (s)",
-            "ucb_end_seconds": "UCB End time (s)"
+            "cnt_end_seconds": "n Execution time (s)", 
+            "avg_end_seconds": "μ Execution time (s)", 
+            "std_end_seconds": "σ Execution time (s)",
+            "snr_end_seconds": "SNR Execution time (s)",
+            "lcb_end_seconds": "LCB Execution time (s)",
+            "ucb_end_seconds": "UCB Execution time (s)"
         })
 
         # overall
-        if name == "tfl":
-            for col in ["Compilation rate", "Testing rate"]:
-                df_html[[col]].reset_index().pivot_table(
-                    index=["LLM", "Architecture"],
+        if name in ["tfl", "tf", "lf"]:
+            if name == "tfl":
+                ind = ["LLM", "Architecture"]
+            elif name == "tf":
+                ind = ["Architecture"]
+            else:
+                ind = ["LLM"]
+            html = "<h1>Benchmarks</h1>"
+            for col in [
+                "Compilation rate", 
+                "Testing rate", 
+                "μ Compilation iterations",
+                "μ Testing iterations",
+                "μ Cyclomatic complexity",
+                "μ Code coverage",
+                "μ Execution time (s)"
+            ]:
+                if "rate" in col:
+                    map = "RdYlGn"
+                    min = 0
+                    max = 1
+                elif "iterations" in col:
+                    map = "RdYlGn_r"
+                    min = 1
+                    max = 15
+                elif "Cyclomatic" in col:
+                    map = "RdYlGn_r"
+                    min = 1
+                    max = 100
+                elif "coverage" in col:
+                    map = "RdYlGn"
+                    min = 0
+                    max = 1
+                else:
+                    map = "RdYlGn_r"
+                    min = 1
+                    max = 1000
+
+                html += f"<br><h2>{col}</h2>" + df_html[[col]].reset_index().pivot_table(
+                    index=ind,
                     columns="File format",
                     values=col
                 ).style.background_gradient(
-                    cmap ="RdYlGn", 
-                    vmin=0, 
-                    vmax=1
+                    cmap=map, 
+                    vmin=min, 
+                    vmax=max
                 ).format("{:.3f}").to_html(
-                    benchmarks_dir / f"benchmarks_{name}_1_{col.lower().replace(" ", "_")}.html", 
+                    #benchmarks_dir / f"benchmarks_{name}_1_{col.lower().replace(" ", "_")}.html", 
                     encoding="utf-8", 
                     na_rep="", 
                     border=False
                 )
-            continue
 
-        # only rates
-        df_html[[
-            "Compilation rate",
-            "Testing rate"
-        ]].style.background_gradient(
-            cmap ="RdYlGn", 
-            vmin=0, 
-            vmax=1
-        ).format("{:.3f}").to_html(
-            benchmarks_dir / f"benchmarks_{name}_1.html", 
-            encoding="utf-8", 
-            na_rep="", 
-            #float_format="%.3f", 
-            border=False
-        )
-        
-        # only iterations
-        df_html[[
-            "μ Compilation iterations", 
-            "σ Compilation iterations",
-            "SNR Compilation iterations",
-            "LCB Compilation iterations",
-            "UCB Compilation iterations",
-            "μ Testing iterations", 
-            "σ Testing iterations",
-            "SNR Testing iterations",
-            "LCB Testing iterations",
-            "UCB Testing iterations"
-        ]].to_html(
-            benchmarks_dir / f"benchmarks_{name}_2.html", 
-            encoding="utf-8", 
-            na_rep="", 
-            float_format="%.3f", 
-            border=False
-        )
-        
-        # else
-        df_html[[
-            "μ Cyclomatic complexity",
-            "σ Cyclomatic complexity",
-            "SNR Cyclomatic complexity",
-            "LCB Cyclomatic complexity",
-            "UCB Cyclomatic complexity",
-            "μ Code coverage",
-            "σ Code coverage",
-            "SNR Code coverage",
-            "LCB Code coverage",
-            "UCB Code coverage",
-            "μ End time (s)", 
-            "σ End time (s)",
-            "SNR End time (s)",
-            "LCB End time (s)",
-            "UCB End time (s)"
-        ]].to_html(
-            benchmarks_dir / f"benchmarks_{name}_3.html", 
-            encoding="utf-8", 
-            na_rep="", 
-            float_format="%.3f", 
-            border=False
-        )
+            with open(benchmarks_dir / f"benchmarks_{name}.html", "w", encoding="utf-8") as f:
+                f.write(html)
+
+        else:
+            # only rates
+            df_html[[
+                "Compilation rate",
+                "Testing rate"
+            ]].style.background_gradient(
+                cmap ="RdYlGn", 
+                vmin=0, 
+                vmax=1
+            ).format("{:.3f}").to_html(
+                benchmarks_dir / f"benchmarks_{name}_1.html", 
+                encoding="utf-8", 
+                na_rep="", 
+                border=False
+            )
+            
+            # only iterations
+            df_html_iterations = df_html[[
+                "n Compilation iterations", 
+                "μ Compilation iterations", 
+                "σ Compilation iterations",
+                "SNR Compilation iterations",
+                "LCB Compilation iterations",
+                "UCB Compilation iterations",
+                "n Testing iterations", 
+                "μ Testing iterations", 
+                "σ Testing iterations",
+                "SNR Testing iterations",
+                "LCB Testing iterations",
+                "UCB Testing iterations",
+                "n Execution time (s)", 
+                "μ Execution time (s)", 
+                "σ Execution time (s)",
+                "SNR Execution time (s)",
+                "LCB Execution time (s)",
+                "UCB Execution time (s)"
+            ]]
+            df_html_iterations.columns = pd.MultiIndex.from_tuples([
+                ("Compilation iterations", "n"),
+                ("Compilation iterations", "μ"),
+                ("Compilation iterations", "σ"),
+                ("Compilation iterations", "SNR"),
+                ("Compilation iterations", "LCB"),
+                ("Compilation iterations", "UCB"),
+                ("Testing iterations", "n"),
+                ("Testing iterations", "μ"),
+                ("Testing iterations", "σ"),
+                ("Testing iterations", "SNR"),
+                ("Testing iterations", "LCB"),
+                ("Testing iterations", "UCB"),
+                ("Execution time (s)", "n"),
+                ("Execution time (s)", "μ"),
+                ("Execution time (s)", "σ"),
+                ("Execution time (s)", "SNR"),
+                ("Execution time (s)", "LCB"),
+                ("Execution time (s)", "UCB"),
+            ])
+            df_html_iterations.to_html(
+                benchmarks_dir / f"benchmarks_{name}_2.html", 
+                encoding="utf-8", 
+                na_rep="", 
+                float_format="%.3f", 
+                border=False
+            )
+            
+            # only vulnerability
+            df_vuln = df_html[[
+                "n Cyclomatic complexity",
+                "μ Cyclomatic complexity",
+                "σ Cyclomatic complexity",
+                "SNR Cyclomatic complexity",
+                "LCB Cyclomatic complexity",
+                "UCB Cyclomatic complexity",
+                "n Code coverage",
+                "μ Code coverage",
+                "σ Code coverage",
+                "SNR Code coverage",
+                "LCB Code coverage",
+                "UCB Code coverage"
+            ]]
+            df_vuln.columns = pd.MultiIndex.from_tuples([
+                ("Cyclomatic complexity", "n"),
+                ("Cyclomatic complexity", "μ"),
+                ("Cyclomatic complexity", "σ"),
+                ("Cyclomatic complexity", "SNR"),
+                ("Cyclomatic complexity", "LCB"),
+                ("Cyclomatic complexity", "UCB"),
+                ("Code coverage", "n"),
+                ("Code coverage", "μ"),
+                ("Code coverage", "σ"),
+                ("Code coverage", "SNR"),
+                ("Code coverage", "LCB"),
+                ("Code coverage", "UCB")
+            ])
+            df_vuln.to_html(
+                benchmarks_dir / f"benchmarks_{name}_3.html", 
+                encoding="utf-8", 
+                na_rep="", 
+                float_format="%.3f", 
+                border=False
+            )
