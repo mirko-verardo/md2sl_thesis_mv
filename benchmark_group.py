@@ -10,9 +10,8 @@ from pingouin import pairwise_gameshowell
 
 
 REPLACE_NA = False
-SHOW_PLOTS = True
+SHOW_PLOTS = False
 SHOW_BARPLOTS = False
-SAVE_CSV = False
 
 def beautify_col(col: str) -> str:
     return col.capitalize().replace("_", " ")
@@ -66,6 +65,23 @@ if __name__ == "__main__":
         "start_time", "compilation_time", "testing_time", "validation_time", "end_time"
     ], inplace=True)
 
+    if False:
+        print(df["compilation_iteration"].kurt())
+        print(df["testing_iteration"].kurt())
+        print(df["cyclomatic_complexity"].kurt())
+        print(df["execution_time"].kurt())
+
+        # NEW: clean
+        df = df[df["cyclomatic_complexity"] < 150]
+        df = df[df["execution_time"] < 1500]
+
+        print(df["compilation_iteration"].kurt())
+        print(df["testing_iteration"].kurt())
+        print(df["cyclomatic_complexity"].kurt())
+        print(df["execution_time"].kurt())
+
+        raise SystemExit
+
     # save
     df.to_csv(benchmarks_dir / f"benchmarks_new.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f", index=False)
     
@@ -83,8 +99,6 @@ if __name__ == "__main__":
         "code_coverage": "Code Cov.",
         "execution_time": "Time"
     }).corr()
-    if SAVE_CSV:
-        df_corr.to_csv(benchmarks_dir / f"benchmarks_corr.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f")
 
     # set index and check it
     df["index"] = df["n"].astype("string") + "|" + df["type"] + "|" + df["file_format"] + "|" + df["llm"]
@@ -367,8 +381,8 @@ if __name__ == "__main__":
     df_latex = df_latex[["A", "B", "CI_l", "CI_u", "pval", "cohen"]].rename(columns={
         "A": "LLM$_1$", 
         "B": "LLM$_2$", 
-        "CI_l": "$\Delta CI_l$", 
-        "CI_u": "$\Delta CI_u$",
+        "CI_l": r"$\Delta CI_l$", 
+        "CI_u": r"$\Delta CI_u$",
         "pval": "$p$-value",
         "cohen": "Cohen's $d$"
     })
@@ -402,28 +416,33 @@ if __name__ == "__main__":
 
     for name, group in groups.items():
         # group aggregation
-        # NB: std could have a problem with ddof (degree of freedom) but they are countless if the sample size is huge
+        # NB: pandas default ddof for std is equal to 1 (ok for sample std)
         df_group = df_new.groupby(group).agg(
             cnt_all=("n", "count"),
 
             avg_compilation_iteration=("compilation_iteration", "mean"),
             std_compilation_iteration=("compilation_iteration", "std"),
+            med_compilation_iteration=("compilation_iteration", "median"),
             cnt_compilation_iteration=("compilation_iteration", "count"),
 
             avg_testing_iteration=("testing_iteration", "mean"),
             std_testing_iteration=("testing_iteration", "std"),
+            med_testing_iteration=("testing_iteration", "median"),
             cnt_testing_iteration=("testing_iteration", "count"),
 
             avg_cyclomatic_complexity=("cyclomatic_complexity", "mean"),
             std_cyclomatic_complexity=("cyclomatic_complexity", "std"),
+            med_cyclomatic_complexity=("cyclomatic_complexity", "median"),
             cnt_cyclomatic_complexity=("cyclomatic_complexity", "count"),
 
             avg_code_coverage=("code_coverage", "mean"),
             std_code_coverage=("code_coverage", "std"),
+            med_code_coverage=("code_coverage", "median"),
             cnt_code_coverage=("code_coverage", "count"),
 
             avg_execution_time=("execution_time", "mean"),
             std_execution_time=("execution_time", "std"),
+            med_execution_time=("execution_time", "median"),
             cnt_execution_time=("execution_time", "count")
         )
         # group rate calculation
@@ -448,27 +467,32 @@ if __name__ == "__main__":
             "cnt_compilation_iteration", 
             "avg_compilation_iteration", 
             "std_compilation_iteration",
+            "med_compilation_iteration",
             "lcb_compilation_iteration",
             "ucb_compilation_iteration",
             "testing_rate",
             "cnt_testing_iteration", 
             "avg_testing_iteration", 
             "std_testing_iteration",
+            "med_testing_iteration",
             "lcb_testing_iteration",
             "ucb_testing_iteration",
             "cnt_cyclomatic_complexity",
             "avg_cyclomatic_complexity",
             "std_cyclomatic_complexity",
+            "med_cyclomatic_complexity",
             "lcb_cyclomatic_complexity",
             "ucb_cyclomatic_complexity",
             "cnt_code_coverage",
             "avg_code_coverage",
             "std_code_coverage",
+            "med_code_coverage",
             "lcb_code_coverage",
             "ucb_code_coverage",
             "cnt_execution_time", 
             "avg_execution_time", 
             "std_execution_time",
+            "med_execution_time",
             "lcb_execution_time",
             "ucb_execution_time"
         ]]
@@ -477,72 +501,38 @@ if __name__ == "__main__":
         #df_group.info()
         #print(df_group)
 
-        if SAVE_CSV:
-            # save CSV (more compact columns names)
-            df_csv = df_group.rename(columns={
-                "compilation_rate": "cmpl_rate",
-                "cnt_compilation_iteration": "CNT_cmpl_iter",
-                "avg_compilation_iteration": "AVG_cmpl_iter", 
-                "std_compilation_iteration": "STD_cmpl_iter",
-                "lcb_compilation_iteration": "LCB_cmpl_iter",
-                "ucb_compilation_iteration": "UCB_cmpl_iter",
-                "testing_rate": "test_rate",
-                "cnt_testing_iteration": "CNT_test_iter",
-                "avg_testing_iteration": "AVG_test_iter", 
-                "std_testing_iteration": "STD_test_iter",
-                "lcb_testing_iteration": "LCB_test_iter",
-                "ucb_testing_iteration": "UCB_test_iter",
-                "cnt_cyclomatic_complexity": "CNT_cyc_cmplx",
-                "avg_cyclomatic_complexity": "AVG_cyc_cmplx",
-                "std_cyclomatic_complexity": "STD_cyc_cmplx",
-                "lcb_cyclomatic_complexity": "LCB_cyc_cmplx",
-                "ucb_cyclomatic_complexity": "UCB_cyc_cmplx",
-                "cnt_code_coverage": "CNT_cod_cov",
-                "avg_code_coverage": "AVG_cod_cov",
-                "std_code_coverage": "STD_cod_cov",
-                "lcb_code_coverage": "LCB_cod_cov",
-                "ucb_code_coverage": "UCB_cod_cov",
-                "cnt_execution_time": "CNT_exe_time",
-                "avg_execution_time": "AVG_exe_time", 
-                "std_execution_time": "STD_exe_time",
-                "lcb_execution_time": "LCB_exe_time",
-                "ucb_execution_time": "UCB_exe_time"
-            })
-            df_csv.to_csv(
-                benchmarks_dir / f"benchmarks_{name}.csv", 
-                encoding="utf-8", 
-                sep=",", 
-                na_rep="", 
-                float_format="%.4f"
-            )
-
         # save HTML (more friendly columns names)
         df_html = df_group.rename(columns={
             "compilation_rate": "Compilation rate",
             "cnt_compilation_iteration": "n Compilation iterations",
             "avg_compilation_iteration": "μ Compilation iterations", 
             "std_compilation_iteration": "σ Compilation iterations",
+            "med_compilation_iteration": "η Compilation iterations",
             "lcb_compilation_iteration": "LCB Compilation iterations",
             "ucb_compilation_iteration": "UCB Compilation iterations",
             "testing_rate": "Testing rate",
             "cnt_testing_iteration": "n Testing iterations", 
             "avg_testing_iteration": "μ Testing iterations", 
             "std_testing_iteration": "σ Testing iterations",
+            "med_testing_iteration": "η Testing iterations",
             "lcb_testing_iteration": "LCB Testing iterations",
             "ucb_testing_iteration": "UCB Testing iterations",
             "cnt_cyclomatic_complexity": "n Cyclomatic complexity",
             "avg_cyclomatic_complexity": "μ Cyclomatic complexity",
             "std_cyclomatic_complexity": "σ Cyclomatic complexity",
+            "med_cyclomatic_complexity": "η Cyclomatic complexity",
             "lcb_cyclomatic_complexity": "LCB Cyclomatic complexity",
             "ucb_cyclomatic_complexity": "UCB Cyclomatic complexity",
             "cnt_code_coverage": "n Code coverage",
             "avg_code_coverage": "μ Code coverage",
             "std_code_coverage": "σ Code coverage",
+            "med_code_coverage": "η Code coverage",
             "lcb_code_coverage": "LCB Code coverage",
             "ucb_code_coverage": "UCB Code coverage",
             "cnt_execution_time": "n Execution time", 
             "avg_execution_time": "μ Execution time", 
             "std_execution_time": "σ Execution time",
+            "med_execution_time": "η Execution time",
             "lcb_execution_time": "LCB Execution time",
             "ucb_execution_time": "UCB Execution time"
         })
@@ -627,56 +617,52 @@ if __name__ == "__main__":
             "n Compilation iterations", 
             "μ Compilation iterations", 
             "σ Compilation iterations",
+            "η Compilation iterations",
             "LCB Compilation iterations",
             "UCB Compilation iterations",
             "n Testing iterations", 
             "μ Testing iterations", 
             "σ Testing iterations",
+            "η Testing iterations",
             "LCB Testing iterations",
             "UCB Testing iterations",
             "n Execution time", 
             "μ Execution time", 
             "σ Execution time",
+            "η Execution time",
             "LCB Execution time",
             "UCB Execution time",
             "n Cyclomatic complexity",
             "μ Cyclomatic complexity",
             "σ Cyclomatic complexity",
+            "η Cyclomatic complexity",
             "LCB Cyclomatic complexity",
             "UCB Cyclomatic complexity",
             "n Code coverage",
             "μ Code coverage",
             "σ Code coverage",
+            "η Code coverage",
             "LCB Code coverage",
             "UCB Code coverage"
         ]]
-        df_html.columns = pd.MultiIndex.from_tuples([
-            ("Compilation iterations", "n"),
-            ("Compilation iterations", "μ"),
-            ("Compilation iterations", "σ"),
-            ("Compilation iterations", "LCB"),
-            ("Compilation iterations", "UCB"),
-            ("Testing iterations", "n"),
-            ("Testing iterations", "μ"),
-            ("Testing iterations", "σ"),
-            ("Testing iterations", "LCB"),
-            ("Testing iterations", "UCB"),
-            ("Execution time", "n"),
-            ("Execution time", "μ"),
-            ("Execution time", "σ"),
-            ("Execution time", "LCB"),
-            ("Execution time", "UCB"),
-            ("Cyclomatic complexity", "n"),
-            ("Cyclomatic complexity", "μ"),
-            ("Cyclomatic complexity", "σ"),
-            ("Cyclomatic complexity", "LCB"),
-            ("Cyclomatic complexity", "UCB"),
-            ("Code coverage", "n"),
-            ("Code coverage", "μ"),
-            ("Code coverage", "σ"),
-            ("Code coverage", "LCB"),
-            ("Code coverage", "UCB")
-        ])
+        
+        metrics_out = [
+            "Compilation iterations",
+            "Testing iterations",
+            "Execution time",
+            "Cyclomatic complexity",
+            "Code coverage"
+        ]
+        my_list = []
+        for mo in metrics_out:
+            my_list.append((mo, "n"))
+            my_list.append((mo, "μ"))
+            my_list.append((mo, "σ"))
+            my_list.append((mo, "η"))
+            my_list.append((mo, "LCB"))
+            my_list.append((mo, "UCB"))
+        df_html.columns = pd.MultiIndex.from_tuples(my_list)
+
         # only iterations
         df_html[[
             "Compilation iterations",
@@ -703,6 +689,7 @@ if __name__ == "__main__":
         df_html.rename(columns={
             "μ": r"$\bar{x}$", 
             "σ": "$s$", 
+            "η": r"$\eta$", 
             "LCB": "$CI_l$", 
             "UCB": "$CI_u$"
         }, level=1, inplace=True)
@@ -717,6 +704,7 @@ if __name__ == "__main__":
             df_latex_sub = df_html[col].copy()
             df_latex_sub["Metric"] = col
             df_latex = pd.concat([df_latex, df_latex_sub])
-        df_latex.set_index("Metric", inplace=True)
+        df_latex.reset_index(inplace=True)
+        df_latex.set_index(["Metric"] + group, inplace=True)
         with open(benchmarks_dir / f"benchmarks_{name}.tex", "w", encoding="utf-8") as f:
-            f.write(df_latex.to_latex(None, float_format="%.3f"))
+            f.write(df_latex.to_latex(None, float_format="%.3f", multirow=False))
