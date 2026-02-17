@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from matplotlib.patches import Patch
-from scipy.stats import t, ttest_ind, f_oneway
+from scipy.stats import t, ttest_ind, f_oneway, bootstrap
 from pingouin import pairwise_gameshowell
 
 
@@ -64,23 +64,6 @@ if __name__ == "__main__":
         # not useful anymore
         "start_time", "compilation_time", "testing_time", "validation_time", "end_time"
     ], inplace=True)
-
-    if False:
-        print(df["compilation_iteration"].kurt())
-        print(df["testing_iteration"].kurt())
-        print(df["cyclomatic_complexity"].kurt())
-        print(df["execution_time"].kurt())
-
-        # NEW: clean
-        df = df[df["cyclomatic_complexity"] < 150]
-        df = df[df["execution_time"] < 1500]
-
-        print(df["compilation_iteration"].kurt())
-        print(df["testing_iteration"].kurt())
-        print(df["cyclomatic_complexity"].kurt())
-        print(df["execution_time"].kurt())
-
-        raise SystemExit
 
     # save
     df.to_csv(benchmarks_dir / f"benchmarks_new.csv", encoding="utf-8", sep=",", na_rep="", float_format="%.4f", index=False)
@@ -325,70 +308,37 @@ if __name__ == "__main__":
     ]
     alpha = 0.05
 
-    df_latex = pd.DataFrame()
     for m in metrics:
         print(m)
         x1 = df_new.loc[df_new["type"] == "multi_agent", m].dropna()
         x2 = df_new.loc[df_new["type"] == "single_agent", m].dropna()
-        res = ttest_ind(
-            x1,
-            x2,
-            equal_var=False, # Welch t-test
-            nan_policy="omit"
-        )
-        print(res)
-        print(res.confidence_interval())
-        print(f"Cohen's d: {cohens_d(x1, x2)}")
-        if False:
-            # it's the same damn thing
-            res = f_oneway(
-                x1,
-                x2,
-                equal_var=False, # Welch ANOVA
-                nan_policy="omit"
+        for data in [x1, x2]:
+            result = bootstrap(
+                (data,),
+                statistic = np.mean,
+                confidence_level=0.95,
+                n_resamples=10000,
+                method="BCa",
+                random_state=42
             )
-            print(res)
-            d = pairwise_gameshowell(dv=m, between="type", data=df_new, effsize="cohen")
-            d["CI"] = t.ppf(1 - (alpha / 2), df=d["df"]) * d["se"]
-            d["CI_l"] = d["diff"] - d["CI"]
-            d["CI_u"] = d["diff"] + d["CI"]
-            print(d)
-        print("")
-        res = f_oneway(
-            df_new.loc[df_new["llm"] == "anthropic", m],
-            df_new.loc[df_new["llm"] == "google", m],
-            df_new.loc[df_new["llm"] == "openai", m],
-            equal_var=False, # Welch ANOVA
-            nan_policy="omit"
-        )
-        print(res)
-        d = pairwise_gameshowell(dv=m, between="llm", data=df_new, effsize="cohen")
-        d["Metric"] = m
-        d["CI"] = t.ppf(1 - (alpha / 2), df=d["df"]) * d["se"]
-        d["CI_l"] = d["diff"] - d["CI"]
-        d["CI_u"] = d["diff"] + d["CI"]
-        df_latex = pd.concat([df_latex, d])
-        print(d)
-        print("\n\n")
-    
-    for m in metrics:
-        df_latex.loc[df_latex["Metric"] == m, "Metric"] = beautify_col(m)
-    for col in ["A", "B"]:
-        df_latex.loc[df_latex[col] == "anthropic", col] = "Anthropic"
-        df_latex.loc[df_latex[col] == "google", col] = "Google"
-        df_latex.loc[df_latex[col] == "openai", col] = "OpenAI"
-    df_latex.set_index("Metric", inplace=True)
-    df_latex = df_latex[["A", "B", "CI_l", "CI_u", "pval", "cohen"]].rename(columns={
-        "A": "LLM$_1$", 
-        "B": "LLM$_2$", 
-        "CI_l": r"$\Delta CI_l$", 
-        "CI_u": r"$\Delta CI_u$",
-        "pval": "$p$-value",
-        "cohen": "Cohen's $d$"
-    })
-    with open(benchmarks_dir / f"benchmarks_tests.tex", "w", encoding="utf-8") as f:
-        f.write(df_latex.to_latex(None, float_format="%.3f"))
+            print(result.confidence_interval)
 
+    for m in metrics:
+        print(m)
+        x1 = df_new.loc[df_new["llm"] == "anthropic", m].dropna()
+        x2 = df_new.loc[df_new["llm"] == "google", m].dropna()
+        x3 = df_new.loc[df_new["llm"] == "openai", m].dropna()
+        for data in [x1, x2, x3]:
+            result = bootstrap(
+                (data,),
+                statistic = np.mean,
+                confidence_level=0.95,
+                n_resamples=10000,
+                method="BCa",
+                random_state=42
+            )
+            print(result.confidence_interval)
+    
     #raise SystemExit
 
     # name friendly
@@ -404,6 +354,84 @@ if __name__ == "__main__":
         "file_format": "File format",
         "llm": "LLM"
     }, inplace=True)
+
+    df_t_tests = pd.DataFrame()
+    df_l_tests = pd.DataFrame()
+    for m in metrics:
+        print(m)
+        x1 = df_new.loc[df_new["Architecture"] == "Multi-agent", m].dropna()
+        x2 = df_new.loc[df_new["Architecture"] == "Single-agent", m].dropna()
+        if False:
+            # it's the same damn thing
+            res = ttest_ind(
+                x1,
+                x2,
+                equal_var=False, # Welch t-test
+                nan_policy="omit"
+            )
+            print(res)
+            print(res.confidence_interval())
+            print(f"Cohen's d: {cohens_d(x1, x2)}") # this needs for dropna
+        res = f_oneway(
+            x1,
+            x2,
+            equal_var=False, # Welch ANOVA
+            nan_policy="omit"
+        )
+        print(res)
+        d = pairwise_gameshowell(dv=m, between="Architecture", data=df_new, effsize="cohen")
+        d["Metric"] = beautify_col(m)
+        d["CI"] = t.ppf(1 - (alpha / 2), df=d["df"]) * d["se"]
+        d["CI_l"] = d["diff"] - d["CI"]
+        d["CI_u"] = d["diff"] + d["CI"]
+        df_t_tests = pd.concat([df_t_tests, d])
+        print(d)
+        print("")
+        res = f_oneway(
+            df_new.loc[df_new["LLM"] == "Anthropic", m],
+            df_new.loc[df_new["LLM"] == "Google", m],
+            df_new.loc[df_new["LLM"] == "OpenAI", m],
+            equal_var=False, # Welch ANOVA
+            nan_policy="omit"
+        )
+        print(res)
+        d = pairwise_gameshowell(dv=m, between="LLM", data=df_new, effsize="cohen")
+        d["Metric"] = beautify_col(m)
+        d["CI"] = t.ppf(1 - (alpha / 2), df=d["df"]) * d["se"]
+        d["CI_l"] = d["diff"] - d["CI"]
+        d["CI_u"] = d["diff"] + d["CI"]
+        df_l_tests = pd.concat([df_l_tests, d])
+        print(d)
+        print("\n\n")
+    
+    if False:
+        for m in metrics:
+            df_t_tests.loc[df_t_tests["Metric"] == m, "Metric"] = beautify_col(m)
+            df_l_tests.loc[df_l_tests["Metric"] == m, "Metric"] = beautify_col(m)
+        for col in ["A", "B"]:
+            df_t_tests.loc[df_t_tests[col] == "single_agent", col] = "Single-agent"
+            df_t_tests.loc[df_t_tests[col] == "multi_agent", col] = "Multi-agent"
+            df_l_tests.loc[df_l_tests[col] == "anthropic", col] = "Anthropic"
+            df_l_tests.loc[df_l_tests[col] == "google", col] = "Google"
+            df_l_tests.loc[df_l_tests[col] == "openai", col] = "OpenAI"
+    df_t_tests.set_index("Metric", inplace=True)
+    df_l_tests.set_index("Metric", inplace=True)
+    df_tests_map = {
+        "A": "LLM$_1$", 
+        "B": "LLM$_2$", 
+        "CI_l": r"$\Delta CI_l$", 
+        "CI_u": r"$\Delta CI_u$",
+        "pval": "$p$-value",
+        "cohen": "Cohen's $d$"
+    }
+    df_t_tests = df_t_tests[list(df_tests_map.keys())].rename(columns=df_tests_map)
+    df_l_tests = df_l_tests[list(df_tests_map.keys())].rename(columns=df_tests_map)
+    with open(benchmarks_dir / f"benchmarks_t_tests.tex", "w", encoding="utf-8") as f:
+        f.write(df_t_tests.to_latex(None, float_format="%.3f"))
+    with open(benchmarks_dir / f"benchmarks_l_tests.tex", "w", encoding="utf-8") as f:
+        f.write(df_l_tests.to_latex(None, float_format="%.3f"))
+
+    #raise SystemExit
 
     groups = {
         #"tfl": ["Architecture", "LLM", "File format"],
@@ -612,36 +640,36 @@ if __name__ == "__main__":
             float_format="%.3f"
         )
         
-        # else
+        # else (and reordered)
         df_html = df_html[[
             "n Compilation iterations", 
+            "η Compilation iterations",
             "μ Compilation iterations", 
             "σ Compilation iterations",
-            "η Compilation iterations",
             "LCB Compilation iterations",
             "UCB Compilation iterations",
             "n Testing iterations", 
+            "η Testing iterations",
             "μ Testing iterations", 
             "σ Testing iterations",
-            "η Testing iterations",
             "LCB Testing iterations",
             "UCB Testing iterations",
             "n Execution time", 
+            "η Execution time",
             "μ Execution time", 
             "σ Execution time",
-            "η Execution time",
             "LCB Execution time",
             "UCB Execution time",
             "n Cyclomatic complexity",
+            "η Cyclomatic complexity",
             "μ Cyclomatic complexity",
             "σ Cyclomatic complexity",
-            "η Cyclomatic complexity",
             "LCB Cyclomatic complexity",
             "UCB Cyclomatic complexity",
             "n Code coverage",
+            "η Code coverage",
             "μ Code coverage",
             "σ Code coverage",
-            "η Code coverage",
             "LCB Code coverage",
             "UCB Code coverage"
         ]]
@@ -655,10 +683,11 @@ if __name__ == "__main__":
         ]
         my_list = []
         for mo in metrics_out:
+            # NB: same order
             my_list.append((mo, "n"))
+            my_list.append((mo, "η"))
             my_list.append((mo, "μ"))
             my_list.append((mo, "σ"))
-            my_list.append((mo, "η"))
             my_list.append((mo, "LCB"))
             my_list.append((mo, "UCB"))
         df_html.columns = pd.MultiIndex.from_tuples(my_list)
