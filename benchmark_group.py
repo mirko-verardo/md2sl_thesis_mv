@@ -303,24 +303,22 @@ if __name__ == "__main__":
 
     #raise SystemExit
 
-    # Fit Poisson regression (ok for count data) 
-    # NB: check overdispersion for Negative Binomial
     models = {
-        "compilation_iteration": {
-            "model": sm.families.Poisson(),
-            "model_name": "Poisson",
-            "link": "log",
-            "effect_name": "IRR"
-        }, 
+        #"compilation_iteration": {
+        #    "model": sm.families.Poisson(),
+        #    "model_name": "Poisson",
+        #    "link": "log",
+        #    "effect_name": "Rate ratio"
+        #}, 
         "testing_iteration": {
-            "model": sm.families.NegativeBinomial(alpha=1),
+            "model": sm.families.NegativeBinomial(alpha=0.2),
             "model_name": "Negative Binomial",
             "link": "log",
-            "effect_name": "IRR"
+            "effect_name": "Rate ratio"
         },
         "execution_time": {
-            "model": sm.families.Gamma(link=sm.families.links.Log()),
-            "model_name": "Gamma",
+            "model": sm.families.Gaussian(link=sm.families.links.Log()),
+            "model_name": "Gaussian",
             "link": "log",
             "effect_name": "Mean ratio"
         }, 
@@ -330,12 +328,12 @@ if __name__ == "__main__":
             "link": "log",
             "effect_name": "Mean ratio"
         },
-        "code_coverage": {
-            "model": sm.families.Gaussian(),
-            "model_name": "Gaussian",
-            "link": "identity",
-            "effect_name": "Mean diff."
-        }
+        #"code_coverage": {
+        #    "model": sm.families.Gaussian(),
+        #    "model_name": "Gaussian",
+        #    "link": "identity",
+        #    "effect_name": "Mean diff."
+        #}
     }
 
     df_t_count = pd.DataFrame()
@@ -346,6 +344,9 @@ if __name__ == "__main__":
             family=obj["model"]
         ).fit()
         print(model.summary())
+
+        marginal = model.get_margeff(at='overall')
+        print(marginal.summary())
 
         effect = model.params["type[T.single_agent]"]
         ci = model.conf_int().loc["type[T.single_agent]"]
@@ -358,7 +359,7 @@ if __name__ == "__main__":
             "Model": obj["model_name"],
             "Link": obj["link"],
             "$p$-value": model.pvalues["type[T.single_agent]"],
-            "Effect name": obj["effect_name"],
+            #"Effect name": obj["effect_name"],
             "Effect": effect,
             "$CI_l$": ci.values[0],
             "$CI_u$": ci.values[1]
@@ -482,8 +483,8 @@ if __name__ == "__main__":
     df_t_tests.set_index("Metric", inplace=True)
     #df_l_tests.set_index("Metric", inplace=True)
     df_tests_map = {
-        "A": "LLM$_1$", 
-        "B": "LLM$_2$", 
+        "A": "C$_1$", 
+        "B": "C$_2$", 
         "CI_l": r"$\Delta CI_l$", 
         "CI_u": r"$\Delta CI_u$",
         "pval": "$p$-value",
