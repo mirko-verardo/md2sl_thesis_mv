@@ -106,7 +106,7 @@ if __name__ == "__main__":
         br1 = np.arange(16) 
         br2 = [i + barWidth for i in br1]
         br3 = [i + barWidth for i in br2]
-        binsCyc = [1, 10, 20, 50]
+        binsCyc = [1, 10, 20, 50, 180]
         #binsCyc = [1, 11, 21, 51, 171]
         #binsCyc = range(1, 172, 10)
         binsCod = np.arange(0, 1.1, 0.1)
@@ -309,27 +309,32 @@ if __name__ == "__main__":
         "compilation_iteration": {
             "model": sm.families.Poisson(),
             "model_name": "Poisson",
-            "link": "log"
+            "link": "log",
+            "effect_name": "IRR"
         }, 
         "testing_iteration": {
             "model": sm.families.NegativeBinomial(alpha=1),
             "model_name": "Negative Binomial",
-            "link": "log"
+            "link": "log",
+            "effect_name": "IRR"
         },
         "execution_time": {
             "model": sm.families.Gamma(link=sm.families.links.Log()),
             "model_name": "Gamma",
-            "link": "log"
+            "link": "log",
+            "effect_name": "Mean ratio"
         }, 
         "cyclomatic_complexity": {
             "model": sm.families.Gaussian(link=sm.families.links.Log()),
             "model_name": "Gaussian",
-            "link": "log"
+            "link": "log",
+            "effect_name": "Mean ratio"
         },
         "code_coverage": {
             "model": sm.families.Gaussian(),
             "model_name": "Gaussian",
-            "link": "identity"
+            "link": "identity",
+            "effect_name": "Mean diff."
         }
     }
 
@@ -340,26 +345,23 @@ if __name__ == "__main__":
             data=df_new,
             family=obj["model"]
         ).fit()
-        model_name = obj["model_name"]
-
         print(model.summary())
 
-        # Effect size: Incidence Rate Ratio (IRR)
-        irr = np.exp(model.params["type[T.single_agent]"])
-        ci = np.exp(model.conf_int().loc["type[T.single_agent]"])
-
-        print("\nEffect size (IRR):", irr)
-        print("95% CI:", ci.values)
-        print("p-value:", model.pvalues["type[T.single_agent]"])
+        effect = model.params["type[T.single_agent]"]
+        ci = model.conf_int().loc["type[T.single_agent]"]
+        if obj["link"] == "log":
+            effect = np.exp(effect)
+            ci = np.exp(ci)
 
         d = pd.DataFrame([{
             "Metric": beautify_col(outcome),
-            "Model": model_name,
+            "Model": obj["model_name"],
             "Link": obj["link"],
             "$p$-value": model.pvalues["type[T.single_agent]"],
-            "IRR": irr,
-            "IRR $CI_l$": ci.values[0],
-            "IRR $CI_u$": ci.values[1]
+            "Effect name": obj["effect_name"],
+            "Effect": effect,
+            "$CI_l$": ci.values[0],
+            "$CI_u$": ci.values[1]
         }])
         df_t_count = pd.concat([df_t_count, d])
 
@@ -394,21 +396,22 @@ if __name__ == "__main__":
             )
             print(result.confidence_interval)
 
-    for m in metrics:
-        print(m)
-        x1 = df_new.loc[df_new["llm"] == "anthropic", m].dropna()
-        x2 = df_new.loc[df_new["llm"] == "google", m].dropna()
-        x3 = df_new.loc[df_new["llm"] == "openai", m].dropna()
-        for data in [x1, x2, x3]:
-            result = bootstrap(
-                (data,),
-                statistic = np.mean,
-                confidence_level=0.95,
-                n_resamples=10000,
-                method="BCa",
-                random_state=42
-            )
-            print(result.confidence_interval)
+    if False:
+        for m in metrics:
+            print(m)
+            x1 = df_new.loc[df_new["llm"] == "anthropic", m].dropna()
+            x2 = df_new.loc[df_new["llm"] == "google", m].dropna()
+            x3 = df_new.loc[df_new["llm"] == "openai", m].dropna()
+            for data in [x1, x2, x3]:
+                result = bootstrap(
+                    (data,),
+                    statistic = np.mean,
+                    confidence_level=0.95,
+                    n_resamples=10000,
+                    method="BCa",
+                    random_state=42
+                )
+                print(result.confidence_interval)
     
     #raise SystemExit
 
