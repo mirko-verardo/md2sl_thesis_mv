@@ -383,23 +383,6 @@ if __name__ == "__main__":
                 random_state=42
             )
             print(result.confidence_interval)
-
-    if False:
-        for m in metrics:
-            print(m)
-            x1 = df_new.loc[df_new["llm"] == "anthropic", m].dropna()
-            x2 = df_new.loc[df_new["llm"] == "google", m].dropna()
-            x3 = df_new.loc[df_new["llm"] == "openai", m].dropna()
-            for data in [x1, x2, x3]:
-                result = bootstrap(
-                    (data,),
-                    statistic = np.mean,
-                    confidence_level=0.95,
-                    n_resamples=10000,
-                    method="BCa",
-                    random_state=42
-                )
-                print(result.confidence_interval)
     
     #raise SystemExit
 
