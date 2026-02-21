@@ -119,11 +119,6 @@ if __name__ == "__main__":
             Patch(facecolor="olive", label="Compilation", alpha=0.8),
             Patch(facecolor="darkgreen", label="Testing", alpha=0.8),
         ]
-        legend_llms = [
-            Patch(facecolor="blue", label="Anthropic", alpha=0.4),
-            Patch(facecolor="red", label="Google", alpha=0.4),
-            Patch(facecolor="green", label="OpenAI", alpha=0.4),
-        ]
         legend_archs = [
             Patch(facecolor="orange", label="Single-agent", alpha=0.6),
             Patch(facecolor="purple", label="Multi-agent", alpha=0.6),
