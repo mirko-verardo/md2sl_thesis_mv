@@ -14,6 +14,7 @@ from pingouin import pairwise_gameshowell
 REPLACE_NA = False
 SHOW_PLOTS = False
 SHOW_BARPLOTS = False
+RESIDUALS_ANALYSIS = False
 
 def beautify_col(col: str) -> str:
     return col.capitalize().replace("_", " ")
@@ -144,89 +145,6 @@ if __name__ == "__main__":
         plt.show()
 
         #raise SystemExit
-        
-        if False:
-            # LLM plots
-            llms = ["Anthropic", "Google", "OpenAI"]
-            df_anth = df_new[df_new["llm"] == "anthropic"]
-            df_goog = df_new[df_new["llm"] == "google"]
-            df_open = df_new[df_new["llm"] == "openai"]
-            ## Boxplot
-            data = [ 
-                df_anth["compilation_iteration"].dropna(), 
-                df_anth["testing_iteration"].dropna(), 
-                df_goog["compilation_iteration"].dropna(),
-                df_goog["testing_iteration"].dropna(),
-                df_open["compilation_iteration"].dropna(),
-                df_open["testing_iteration"].dropna()
-            ]
-            bp = plt.boxplot(
-                data, 
-                positions=[1, 2, 4, 5, 7, 8], 
-                patch_artist=True,
-                medianprops=median_style
-            )
-            # Set legend
-            for i in range(len(data)):
-                c = legend_steps[0 if (i % 2) == 0 else 1].get_facecolor()
-                bp["boxes"][i].set_facecolor(c)
-            # Tick positions = centers of each pair
-            tick_positions = [1.5, 4.5, 7.5]
-            plt.xticks(tick_positions, llms)
-            plt.title("Compilation and Testing")
-            plt.ylabel("Iterations")
-            plt.legend(handles=legend_steps, loc="best")
-            plt.show()
-            if SHOW_BARPLOTS:
-                ## Barplot
-                fig, axes = plt.subplots(2, 1, figsize=(12, 9))  # 2 rows, 1 column
-                for i, it_col in enumerate(it_cols):
-                    df_anth_col = [ df_anth.loc[df_anth[it_col] == j + 1, it_col].count() for j in br1 ]
-                    df_goog_col = [ df_goog.loc[df_goog[it_col] == j + 1, it_col].count() for j in br1 ] 
-                    df_open_col = [ df_open.loc[df_open[it_col] == j + 1, it_col].count() for j in br1 ] 
-                    axes[i].bar(br1, df_anth_col, color=legend_llms[0].get_facecolor(), edgecolor="grey", width=barWidth, label="Anthropic") 
-                    axes[i].bar(br2, df_goog_col, color=legend_llms[1].get_facecolor(), edgecolor="grey", width=barWidth, label="Google") 
-                    axes[i].bar(br3, df_open_col, color=legend_llms[2].get_facecolor(), edgecolor="grey", width=barWidth, label="OpenAI") 
-                    axes[i].set_title(beautify_col(it_col))
-                    axes[i].set_xticks([j + barWidth for j in br1], br1 + 1)
-                    axes[i].set_ylim(0, 200)
-                    axes[i].legend(handles=legend_llms, loc="upper center")
-                axes[-1].set_xlabel("Iterations")
-                plt.tight_layout()
-                plt.show()
-
-            for i in range(len(cols)):
-                col = cols[i]
-                ticks = bins[i]
-                ## Boxplot
-                data = [
-                    df_anth[col].dropna(), 
-                    df_goog[col].dropna(),
-                    df_open[col].dropna()
-                ]
-                bp = plt.boxplot(
-                    data,
-                    tick_labels=llms,
-                    patch_artist=True, 
-                    medianprops=median_style
-                )
-                for j in range(len(data)):
-                    c = legend_llms[j].get_facecolor()
-                    bp["boxes"][j].set_facecolor(c)
-                plt.title(beautify_col(col))
-                plt.show()
-                ## Histogram
-                for j in range(len(data)):
-                    c = legend_llms[j].get_facecolor()
-                    sns.histplot(data[j], color=c, edgecolor=c, label=llms[j], bins=ticks, kde=True)
-                plt.title(f"{beautify_col(col)} (KDE)")
-                plt.xlabel("")
-                plt.xticks(ticks)
-                plt.legend()
-                plt.tight_layout()
-                plt.show()
-        
-        #raise SystemExit
 
         # Architecture plots
         archs = ["Single-agent", "Multi-agent"]
@@ -302,6 +220,75 @@ if __name__ == "__main__":
             plt.show()
 
     #raise SystemExit
+
+    if RESIDUALS_ANALYSIS:
+        fig1, axes1 = plt.subplots(1, 3, figsize=(10, 5))
+        fig2, axes2 = plt.subplots(3, 3, figsize=(16, 8))
+        fig3, axes3 = plt.subplots(1, 3, figsize=(10, 5))
+        j = 0
+        df_t_count = pd.DataFrame()
+        for outcome in ["testing_iteration", "execution_time", "cyclomatic_complexity"]:
+            # log-normal
+            model = smf.ols(
+                formula=f"np.log({outcome}) ~ type + llm + file_format",
+                data=df_new
+            ).fit()
+            print(model.summary())
+
+            # fitted values
+            fitted = model.fittedvalues
+            # standard residuals
+            residuals = model.resid_pearson
+            
+            # -----------------------------
+            # 1. Fitted vs Residuals plot (Well specified predictors check)
+            # (if there are trends, then it's required to add interactions or other predictors)
+            # -----------------------------
+            sns.scatterplot(x=fitted, y=residuals, ax=axes1[j])
+            axes1[j].axhline(0, linestyle='--')
+            axes1[j].set_xlabel("Fitted values")
+            axes1[j].set_ylabel("Std. residuals")
+            axes1[j].set_title(f"{beautify_col(outcome)}")
+            
+            # -----------------------------------------
+            # 2. Covariate vs Residuals boxplots (Heteroschedasticity check)
+            # -----------------------------------------
+            for i, var in enumerate(["type", "llm", "file_format"]):
+                ddd = df_new.loc[model.resid.index, var]
+                sns.boxplot(x=ddd, y=residuals, ax=axes2[j, i])
+                axes2[j, i].set_xlabel(var)
+                axes2[j, i].set_ylabel("Std. residuals")
+                axes2[j, i].set_title(f"{beautify_col(outcome)}")
+            
+            # -----------------------------
+            # 3. Residuals Boxplot (Normal distribution check with mean equal to 0)
+            # -----------------------------
+            sns.boxplot(y=residuals, ax=axes3[j])
+            axes3[j].set_ylabel("Std. residuals")
+            axes3[j].set_title(f"{beautify_col(outcome)}")
+
+            j = j + 1
+
+            effect = np.exp(model.params["type[T.single_agent]"])
+            ci = np.exp(model.conf_int().loc["type[T.single_agent]"])
+
+            d = pd.DataFrame([{
+                "Metric": beautify_col(outcome),
+                "Model": "Log-Normal",
+                "$p$-value": model.pvalues["type[T.single_agent]"],
+                "Effect": effect,
+                "$CI_l$": ci.values[0],
+                "$CI_u$": ci.values[1]
+            }])
+            df_t_count = pd.concat([df_t_count, d])
+
+        print(df_t_count)
+        fig1.tight_layout()
+        fig2.tight_layout()
+        fig3.tight_layout()
+        plt.show()
+
+        raise SystemExit
 
     models = {
         #"compilation_iteration": {
@@ -431,7 +418,6 @@ if __name__ == "__main__":
     }, inplace=True)
 
     df_t_tests = pd.DataFrame()
-    #df_l_tests = pd.DataFrame()
     for m in metrics:
         print(m)
         x1 = df_new.loc[df_new["Architecture"] == "Multi-agent", m].dropna()
@@ -461,27 +447,9 @@ if __name__ == "__main__":
         d["CI_u"] = d["diff"] + d["CI"]
         df_t_tests = pd.concat([df_t_tests, d])
         print(d)
-        if False:
-            print("")
-            res = f_oneway(
-                df_new.loc[df_new["LLM"] == "Anthropic", m],
-                df_new.loc[df_new["LLM"] == "Google", m],
-                df_new.loc[df_new["LLM"] == "OpenAI", m],
-                equal_var=False, # Welch ANOVA
-                nan_policy="omit"
-            )
-            print(res)
-            d = pairwise_gameshowell(dv=m, between="LLM", data=df_new, effsize="cohen")
-            d["Metric"] = beautify_col(m)
-            d["CI"] = t.ppf(1 - (alpha / 2), df=d["df"]) * d["se"]
-            d["CI_l"] = d["diff"] - d["CI"]
-            d["CI_u"] = d["diff"] + d["CI"]
-            df_l_tests = pd.concat([df_l_tests, d])
-            print(d)
         print("\n\n")
     
     df_t_tests.set_index("Metric", inplace=True)
-    #df_l_tests.set_index("Metric", inplace=True)
     df_tests_map = {
         "A": "C$_1$", 
         "B": "C$_2$", 
@@ -491,21 +459,14 @@ if __name__ == "__main__":
         "cohen": "Cohen's $d$"
     }
     df_t_tests = df_t_tests[list(df_tests_map.keys())].rename(columns=df_tests_map)
-    #df_l_tests = df_l_tests[list(df_tests_map.keys())].rename(columns=df_tests_map)
     with open(benchmarks_dir / f"benchmarks_t_tests.tex", "w", encoding="utf-8") as f:
         f.write(df_t_tests.to_latex(None, float_format="%.3f"))
-    #with open(benchmarks_dir / f"benchmarks_l_tests.tex", "w", encoding="utf-8") as f:
-    #    f.write(df_l_tests.to_latex(None, float_format="%.3f"))
 
     #raise SystemExit
 
     groups = {
         #"tfl": ["Architecture", "LLM", "File format"],
-        #"tl": ["Architecture", "LLM"],
-        #"tf": ["Architecture", "File format"],
-        #"lf": ["LLM", "File format"],
         "t": ["Architecture"],
-        #"l": ["LLM"]
     }
 
     for name, group in groups.items():
@@ -632,13 +593,7 @@ if __name__ == "__main__":
         })
 
         # overall
-        if False and name in ["tfl", "tf", "lf"]:
-            if name == "tfl":
-                ind = ["LLM", "Architecture"]
-            elif name == "tf":
-                ind = ["Architecture"]
-            else:
-                ind = ["LLM"]
+        if False and name == "tfl":
             html = "<h1>Benchmarks</h1>"
             for col in [
                 "Compilation rate", 
@@ -671,7 +626,7 @@ if __name__ == "__main__":
                     max = 1000
 
                 html += f"<br><h2>{col}</h2>" + df_html[[col]].reset_index().pivot_table(
-                    index=ind,
+                    index=["LLM", "Architecture"],
                     columns="File format",
                     values=col
                 ).style.background_gradient(
