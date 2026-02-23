@@ -117,10 +117,8 @@ def map_input_to_file_format(input: int) -> str:
     elif input == 4:
         return "JSON"
     elif input == 5:
-        return "GEOJSON"
-    elif input == 6:
         return "PDF"
-    elif input == 7:
+    elif input == 6:
         return "XML"
     
     raise Exception("Cannot map input to file format")

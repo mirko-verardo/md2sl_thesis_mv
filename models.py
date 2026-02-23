@@ -64,7 +64,7 @@ class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], add]
     user_action: Literal["GENERATE_PARSER", "CORRECT_ERROR", "ASSESS_CODE", "GENERAL_CONVERSATION"]
     user_request: str
-    file_format: Literal["CSV", "HTML", "HTTP", "JSON", "GEOJSON", "PDF", "XML"]
+    file_format: Literal["CSV", "HTML", "HTTP", "JSON", "PDF", "XML"]
     supervisor_specifications: str | None
     generator_code: str | None
     compiler_result: dict[str, bool | str] | None
