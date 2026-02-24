@@ -27,7 +27,38 @@ wsl --install -d Ubuntu
 wsl -d Ubuntu sudo apt install -y build-essential gcc g++
 ```
 
-## DONE
+## How to run (on Windows)
+
+**First**, move to project folder and activate the virtual environment built on `requirements.txt`:
+```
+.venv\Scripts\activate
+```
+
+### Single-agent
+```
+python zero_shot_agent.py
+```
+
+### Multi-agent
+```
+python multi_agent.py
+```
+
+### Benchmark
+**NB**: check first the settings inside the file `benchmark.py`
+```
+python benchmark.py
+# when the above is finished 
+python benchmark_edit.py
+```
+
+### Benchmark statistics
+**NB**: check first the flags at the top and the input directory inside the file
+```
+python benchmark_group.py
+```
+
+## Done
 
 - general code refactoring
     - agents prompts isolated from the logic

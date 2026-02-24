@@ -246,7 +246,7 @@ if __name__ == "__main__":
             axes1[j].set_title(f"{beautify_col(outcome)}")
             
             # -----------------------------------------
-            # 2. Covariate vs Residuals boxplots (Heteroschedasticity check)
+            # 2. Covariate vs Residuals boxplots (Heteroskedasticity check)
             # -----------------------------------------
             for i, var in enumerate(["type", "llm", "file_format"]):
                 ddd = df_new.loc[model.resid.index, var]
